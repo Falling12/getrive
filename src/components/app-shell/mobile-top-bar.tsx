@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AuthMark } from "@/components/auth/auth-mark";
 import { ProjectSwitcher, type ProjectSummary } from "@/components/app-shell/project-switcher";
+import { UserAvatar } from "@/components/app-shell/user-avatar";
 
 // Replaces the desktop sidebar's brand mark, project switcher, and account
 // link on narrow viewports — the sidebar is `hidden` below md with nothing
@@ -11,14 +12,14 @@ export function MobileTopBar({
   projectName,
   projects,
   email,
+  image,
 }: {
   projectId: string;
   projectName: string;
   projects: ProjectSummary[];
   email: string;
+  image?: string | null;
 }) {
-  const initial = email.charAt(0).toUpperCase();
-
   return (
     <header className="sticky top-0 z-40 flex h-14 shrink-0 items-center justify-between border-b border-border bg-background/95 px-3 backdrop-blur-md md:hidden">
       <Link
@@ -36,12 +37,8 @@ export function MobileTopBar({
         projects={projects}
       />
 
-      <Link
-        href="/settings"
-        className="flex size-7 shrink-0 items-center justify-center rounded-full border border-border bg-secondary/40 font-mono text-xs text-foreground"
-        aria-label="Account settings"
-      >
-        {initial}
+      <Link href="/settings" aria-label="Account settings" className="shrink-0">
+        <UserAvatar email={email} image={image} className="size-7 border border-border" />
       </Link>
     </header>
   );

@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { SettingsSection } from "@/components/settings/settings-section";
 import { NotificationToggle } from "@/components/settings/notification-toggle";
 import { SignOutButton } from "@/components/settings/sign-out-button";
+import { UserAvatar } from "@/components/app-shell/user-avatar";
 
 export const metadata: Metadata = { title: "Account settings — Getrive" };
 
@@ -38,7 +39,13 @@ export default async function AccountSettingsPage() {
         </div>
 
         <SettingsSection title="Account" subtitle="Signed in as">
-          <p className="text-sm text-foreground">{user.email}</p>
+          <div className="flex items-center gap-3">
+            <UserAvatar email={user.email} image={user.image} className="size-10 border border-border" />
+            <div className="flex min-w-0 flex-col">
+              {user.name && <p className="truncate text-sm font-medium text-foreground">{user.name}</p>}
+              <p className="truncate text-sm text-muted-foreground">{user.email}</p>
+            </div>
+          </div>
         </SettingsSection>
 
         <SettingsSection title="Notifications" subtitle="Alert frequency">

@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { SITE_URL, SITE_NAME, SITE_TITLE, SITE_DESCRIPTION } from "@/lib/seo";
+import { isLocalDev } from "@/lib/limits";
 
 const geistSans = Geist({
   variable: "--font-sans",
@@ -75,9 +76,15 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}{/* impeccable-live-start */}
-        <script src="http://localhost:8400/live.js"></script>
-        {/* impeccable-live-end */}
+      <body className="min-h-full flex flex-col">
+        {children}
+        {isLocalDev && (
+          <>
+            {/* impeccable-live-start */}
+            <script src="http://localhost:8400/live.js"></script>
+            {/* impeccable-live-end */}
+          </>
+        )}
       </body>
     </html>
   );

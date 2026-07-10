@@ -14,12 +14,14 @@ export function AppSidebar({
   projects,
   unrepliedSignalCount,
   email,
+  image,
 }: {
   projectId: string;
   projectName: string;
   projects: ProjectSummary[];
   unrepliedSignalCount: number;
   email: string;
+  image?: string | null;
 }) {
   const pathname = usePathname();
   const base = `/projects/${projectId}`;
@@ -64,7 +66,7 @@ export function AppSidebar({
         })}
       </nav>
 
-      <AccountLink email={email} />
+      <AccountLink email={email} image={image} />
     </aside>
   );
 }

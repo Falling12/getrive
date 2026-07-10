@@ -47,6 +47,7 @@ export default async function ProjectLayout({
         projects={projects}
         unrepliedSignalCount={unrepliedSignalCount}
         email={session.user.email ?? ""}
+        image={session.user.image}
       />
       <div className="flex h-full flex-1 flex-col overflow-hidden">
         <MobileTopBar
@@ -54,6 +55,7 @@ export default async function ProjectLayout({
           projectName={project.name}
           projects={projects}
           email={session.user.email ?? ""}
+          image={session.user.image}
         />
         <main className="relative z-10 flex-1 overflow-y-auto pb-20 md:pb-0">{children}</main>
         <MobileBottomNav projectId={projectId} unrepliedSignalCount={unrepliedSignalCount} />
