@@ -66,6 +66,10 @@ export function captureSnippetBody(): string {
   return CAPTURE_SNIPPET_BODY;
 }
 
+export function reportSnippetBodyFor(appUrl: string): string {
+  return reportSnippetBody();
+}
+
 // Full <script>...</script> markup for founders to copy-paste onto their
 // own (non-React) site — see TrackingSnippetCard / project settings.
 export function buildCaptureSnippet(): string {
