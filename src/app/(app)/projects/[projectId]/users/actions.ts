@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
-import { buildTrackedUrl } from "@/lib/tracked-links";
+import { buildTrackedUrl, generateTrackedLinkSlug } from "@/lib/tracked-links";
 
 export type LogSignupState = { error?: string; success?: boolean };
 
@@ -53,6 +53,7 @@ export async function createTrackedLinkAction(
 
   const link = await prisma.trackedLink.create({
     data: {
+      slug: generateTrackedLinkSlug(),
       productId: product.id,
       label: utmCampaign || `${utmSource} link`,
       utmSource,

@@ -303,12 +303,16 @@ model Signal {
 // A UTM-tagged link. Created either from Signal Detail (tied to the signal
 // whose reply it's inserted into), from Outreach (tied to the lead it was
 // drafted for), or standalone from the Users page's tracked-link generator
-// (both signalId and leadId null). clickCount is real, automatic tracking
-// (via the /r/[id] redirect route); a Signup itself still has to be
-// manually confirmed since Getrive has no visibility into the founder's own
+// (both signalId and leadId null). The link shown to founders is the short
+// /r/[slug] redirect (slug is a short random code, not the cuid id — the
+// bare id is too long to paste into a Reddit reply without looking spammy);
+// the redirect resolves it, bumps clickCount, and forwards to the real
+// UTM-tagged destination URL. A Signup itself still has to be manually
+// confirmed since Getrive has no visibility into the founder's own
 // product's signup database.
 model TrackedLink {
   id          String   @id @default(cuid())
+  slug        String   @unique
   productId   String
   product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   signalId    String?
