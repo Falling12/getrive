@@ -1,8 +1,10 @@
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { SITE_URL, SITE_NAME, SITE_TITLE, SITE_DESCRIPTION } from "@/lib/seo";
 import { isLocalDev } from "@/lib/limits";
+import { captureSnippetBody } from "@/lib/tracking-snippet";
 
 const geistSans = Geist({
   variable: "--font-sans",
@@ -78,6 +80,20 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         {children}
+        {/* Getrive dogfoods its own signup-attribution feature (Option B —
+            see project settings) on getrive itself: this is the capture half,
+            running on every page so a visitor arriving via a tagged reply
+            link (?utm_content=<TrackedLink id>) gets remembered across the
+            visit. The report half lives on /onboarding, Getrive's own
+            post-signup landing page — see that layout. beforeInteractive
+            (only usable in the root layout) is the closest match to the
+            plain synchronous <script> a founder pastes onto their own site —
+            runs before hydration, so a fast bounce still gets captured. */}
+        <Script
+          id="getrive-attr-capture"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{ __html: captureSnippetBody() }}
+        />
         {isLocalDev && (
           <>
             {/* impeccable-live-start */}

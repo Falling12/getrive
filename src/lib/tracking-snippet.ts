@@ -5,10 +5,16 @@
 // actually signs up. The capture snippet remembers the attribution across
 // the visit; the report snippet (added only to the signup/welcome page)
 // tells Getrive it happened.
+//
+// The raw (unwrapped) bodies are exported separately from the founder-facing
+// build*Snippet() functions below so Getrive can inject the exact same logic
+// natively into its own pages (see app/layout.tsx and
+// app/onboarding/layout.tsx) via <script dangerouslySetInnerHTML>, without
+// nesting a literal "<script>" string inside a React <script> element's
+// content — the browser would treat that inner "</script>" as a closing tag
+// and truncate the code.
 
-export function buildCaptureSnippet(): string {
-  return `<script>
-(function () {
+const CAPTURE_SNIPPET_BODY = `(function () {
   var params = new URLSearchParams(window.location.search);
   var linkId = params.get('utm_content');
   if (!linkId) return;
@@ -19,13 +25,10 @@ export function buildCaptureSnippet(): string {
   } catch (e) {}
   var token = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : (Date.now() + '-' + Math.random());
   localStorage.setItem(KEY, JSON.stringify({ l: linkId, t: token }));
-})();
-</script>`;
-}
+})();`;
 
-export function buildReportSnippet(appUrl: string): string {
-  return `<script>
-(function () {
+function reportSnippetBody(appUrl: string): string {
+  return `(function () {
   var KEY = 'getrive_attr';
   var stored;
   try { stored = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) {}
@@ -37,6 +40,25 @@ export function buildReportSnippet(appUrl: string): string {
     keepalive: true,
   });
   localStorage.removeItem(KEY);
-})();
-</script>`;
+})();`;
+}
+
+// Raw JS, no wrapping <script> tags — for injecting directly into this
+// app's own pages.
+export function captureSnippetBody(): string {
+  return CAPTURE_SNIPPET_BODY;
+}
+
+export function reportSnippetBodyFor(appUrl: string): string {
+  return reportSnippetBody(appUrl);
+}
+
+// Full <script>...</script> markup for founders to copy-paste onto their
+// own (non-React) site — see TrackingSnippetCard / project settings.
+export function buildCaptureSnippet(): string {
+  return `<script>\n${CAPTURE_SNIPPET_BODY}\n</script>`;
+}
+
+export function buildReportSnippet(appUrl: string): string {
+  return `<script>\n${reportSnippetBody(appUrl)}\n</script>`;
 }
