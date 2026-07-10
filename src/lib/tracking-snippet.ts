@@ -27,30 +27,43 @@ const CAPTURE_SNIPPET_BODY = `(function () {
   localStorage.setItem(KEY, JSON.stringify({ l: linkId, t: token }));
 })();`;
 
-function reportSnippetBody(appUrl: string): string {
+function reportSnippetBody(): string {
   return `(function () {
-  var KEY = 'getrive_attr';
-  var stored;
-  try { stored = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) {}
-  if (!stored || !stored.l || !stored.t) return;
-  fetch('${appUrl}/api/track/signup', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ trackedLinkId: stored.l, visitorToken: stored.t }),
-    keepalive: true,
-  });
-  localStorage.removeItem(KEY);
-})();`;
+    var KEY = 'getrive_attr';
+    var stored;
+
+    try {
+      stored = JSON.parse(localStorage.getItem(KEY) || 'null');
+    } catch (_) {
+      return;
+    }
+
+    if (!stored || !stored.l || !stored.t) return;
+
+    void fetch(window.location.origin + '/api/track/signup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        trackedLinkId: stored.l,
+        visitorToken: stored.t,
+      }),
+      keepalive: true,
+    })
+      .then(function (response) {
+        if (response.ok) {
+          localStorage.removeItem(KEY);
+        }
+      })
+      .catch(function () {
+        // Ignore network failures.
+      });
+  })();`;
 }
 
 // Raw JS, no wrapping <script> tags — for injecting directly into this
 // app's own pages.
 export function captureSnippetBody(): string {
   return CAPTURE_SNIPPET_BODY;
-}
-
-export function reportSnippetBodyFor(appUrl: string): string {
-  return reportSnippetBody(appUrl);
 }
 
 // Full <script>...</script> markup for founders to copy-paste onto their
@@ -60,5 +73,5 @@ export function buildCaptureSnippet(): string {
 }
 
 export function buildReportSnippet(appUrl: string): string {
-  return `<script>\n${reportSnippetBody(appUrl)}\n</script>`;
+  return `<script>\n${reportSnippetBody()}\n</script>`;
 }
