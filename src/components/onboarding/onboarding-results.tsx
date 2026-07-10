@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useMemo, useState } from "react";
-import { AtSign, CheckCircle2, LockKeyhole, Mic, RadioTower, Search } from "lucide-react";
+import { CheckCircle2, Mic, RadioTower, Search } from "lucide-react";
 import type { SourceType } from "@/generated/prisma/client";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -25,12 +25,6 @@ const CHANNEL_META: Record<
     icon: Search,
     order: 1,
   },
-  TWITTER_SEARCH: {
-    label: "Twitter/X",
-    detail: "Potentially useful for named-person discovery, but monitoring is paused until API access and cost are confirmed.",
-    icon: AtSign,
-    order: 2,
-  },
 };
 
 function priorityLabel(priority: number) {
@@ -48,7 +42,7 @@ export function OnboardingResults({
 }) {
   const [state, formAction, isPending] = useActionState(confirmSourcesAction, {});
   const defaultSelected = useMemo(
-    () => new Set(suggestions.filter((s) => s.selectable && s.priority <= 2).map((s) => s.id)),
+    () => new Set(suggestions.filter((s) => s.priority <= 2).map((s) => s.id)),
     [suggestions]
   );
   const [selected, setSelected] = useState<Set<string>>(defaultSelected);
@@ -79,8 +73,6 @@ export function OnboardingResults({
     });
   }
 
-  const selectableCount = suggestions.filter((s) => s.selectable).length;
-
   return (
     <form action={formAction} className="flex w-full flex-1 flex-col pb-32">
       <input type="hidden" name="productId" value={productId} />
@@ -95,8 +87,8 @@ export function OnboardingResults({
           Activate your first sources
         </h1>
         <p className="max-w-lg font-mono text-xs leading-relaxed text-muted-foreground">
-          Getrive ranked the channels for your ICP. Start with the lowest-friction nodes, keep
-          Reddit where the fit is strongest, and leave setup-dependent channels parked for now.
+          Getrive ranked the channels for your ICP. Start with the lowest-friction nodes and keep
+          Reddit where the fit is strongest.
         </p>
       </header>
 
@@ -133,37 +125,29 @@ export function OnboardingResults({
               <div className="flex flex-col divide-y divide-border/50">
                 {items.map((suggestion) => {
                   const isChecked = selected.has(suggestion.id);
-                  const isLocked = !suggestion.selectable;
 
                   return (
                     <label
                       key={suggestion.id}
                       className={cn(
-                        "group relative flex items-start gap-4 p-5 transition-colors md:p-6",
-                        isLocked ? "cursor-not-allowed opacity-70" : "cursor-pointer hover:bg-secondary/10",
+                        "group relative flex cursor-pointer items-start gap-4 p-5 transition-colors hover:bg-secondary/10 md:p-6",
                         isChecked && "bg-primary/5"
                       )}
                     >
-                      {isLocked ? (
-                        <span className="mt-1 flex size-5 shrink-0 items-center justify-center rounded border border-border text-muted-foreground">
-                          <LockKeyhole className="size-3" />
-                        </span>
-                      ) : (
-                        <Checkbox
-                          name="sourceIds"
-                          value={suggestion.id}
-                          checked={isChecked}
-                          onCheckedChange={() => toggle(suggestion.id)}
-                          className="mt-1 size-5 shrink-0 rounded-[4px]"
-                        />
-                      )}
+                      <Checkbox
+                        name="sourceIds"
+                        value={suggestion.id}
+                        checked={isChecked}
+                        onCheckedChange={() => toggle(suggestion.id)}
+                        className="mt-1 size-5 shrink-0 rounded-[4px]"
+                      />
 
                       <div className="flex flex-1 flex-col gap-2">
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="font-sans text-base font-medium text-foreground">
                             {formatSourceLabel(suggestion.type, suggestion.name)}
                           </span>
-                          {suggestion.selectable && suggestion.priority <= 2 && (
+                          {suggestion.priority <= 2 && (
                             <span className="rounded-sm border border-accent/30 bg-accent/10 px-1.5 py-0.5 font-mono text-[9px] tracking-widest text-accent uppercase">
                               Recommended
                             </span>
@@ -171,11 +155,6 @@ export function OnboardingResults({
                           {isChecked && (
                             <span className="rounded-sm border border-border bg-secondary/20 px-1.5 py-0.5 font-mono text-[9px] tracking-widest text-muted-foreground uppercase">
                               Selected
-                            </span>
-                          )}
-                          {isLocked && (
-                            <span className="rounded-sm border border-dashed border-border px-1.5 py-0.5 font-mono text-[9px] tracking-widest text-muted-foreground uppercase">
-                              API setup required
                             </span>
                           )}
                         </div>
@@ -200,7 +179,7 @@ export function OnboardingResults({
             Active sources
           </span>
           <span className="font-sans text-lg font-medium text-foreground">
-            {selected.size} / {selectableCount}
+            {selected.size} / {suggestions.length}
           </span>
         </div>
         <Button

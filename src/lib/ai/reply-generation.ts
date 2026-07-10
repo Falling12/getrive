@@ -33,8 +33,6 @@ function sourceGuidance(sourceType: SourceType, sourceName: string): string {
         "Lead with substance a technical reader would respect; keep the product mention especially " +
         "brief and factual, closer to an aside than Reddit's already-low-key standard."
       );
-    case "TWITTER_SEARCH":
-      return "This is a reply to a tweet, not a Reddit comment — keep it short enough for the platform.";
     case "REDDIT_SUBREDDIT":
     default:
       return (

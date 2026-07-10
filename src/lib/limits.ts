@@ -26,8 +26,8 @@ export const isLocalDev = process.env.NODE_ENV !== "production";
 export const MAX_PROJECTS_PER_ACCOUNT = 1;
 
 // Enforced on manual "add a source" (src/app/(app)/projects/[projectId]/sources/actions.ts),
-// counting all source types combined (Reddit + Hacker News + future
-// Twitter/X) within that one project.
+// counting all source types combined (Reddit + Hacker News) within that one
+// project.
 export const MAX_MONITORED_SOURCES = 5;
 
 // Account-wide companion to MAX_MONITORED_SOURCES, the same way

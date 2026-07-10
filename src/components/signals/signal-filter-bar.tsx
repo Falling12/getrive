@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Filter, Plus, Hash, RadioTower, AtSign } from "lucide-react";
+import { Filter, Plus, Hash, RadioTower } from "lucide-react";
 import type { SourceType } from "@/generated/prisma/client";
 import { cn } from "@/lib/utils";
 
@@ -16,7 +16,6 @@ const STATUS_OPTIONS = [
 const CHANNEL_ICON: Record<SourceType, typeof Hash> = {
   REDDIT_SUBREDDIT: Hash,
   HACKERNEWS: RadioTower,
-  TWITTER_SEARCH: AtSign,
 };
 
 export function SignalFilterBar({

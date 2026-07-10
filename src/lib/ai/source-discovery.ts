@@ -29,12 +29,6 @@ const sourceDiscoverySchema = z.object({
       "2-3 sentences explaining Reddit's role in the channel plan, including whether it needs karma-building first."
     ),
   redditSources: z.array(redditSuggestionSchema).min(3).max(6),
-  twitterPriority: z.number().int().min(1).max(3),
-  twitterReasoning: z
-    .string()
-    .describe(
-      "2-3 sentences on whether Twitter/X would be useful for this ICP, explicitly noting it requires API/access setup before Getrive can monitor it."
-    ),
 });
 
 const TARGET_REDDIT_SOURCE_COUNT = 5;
@@ -45,7 +39,6 @@ export interface SourceSuggestion {
   reasoning: string;
   rank: number;
   priority: number;
-  selectable: boolean;
 }
 
 export async function discoverSources({
@@ -80,11 +73,10 @@ export async function discoverSources({
       "Create a prioritized cross-channel activation plan using ONLY these channel families:",
       "1. Hacker News — one shared public feed, zero access barrier, already implementable.",
       "2. Reddit — specific subreddits, implementable, but some communities require karma-building first.",
-      "3. Twitter/X — useful for some ICPs, but requires API/access setup and is NOT implementable yet.",
       "",
       "Return Hacker News as a first-class channel with priority/reasoning, then recommend 3-6 specific",
-      "subreddits, and include a Twitter/X planning note. Do not over-index on founder communities unless",
-      "the selected ICP really is founders. Prefer channels where the actual buyer feels the pain in public.",
+      "subreddits. Do not over-index on founder communities unless the selected ICP really is founders.",
+      "Prefer channels where the actual buyer feels the pain in public.",
       "Rank priority 1 as the best place to start, 2 as next, 3 as later/setup-dependent.",
     ]
       .filter(Boolean)
@@ -102,7 +94,6 @@ export async function discoverSources({
       reasoning: object.hackerNewsReasoning,
       rank: 0,
       priority: object.hackerNewsPriority,
-      selectable: true,
     },
     ...redditSources.map((source, index) => ({
       type: "REDDIT_SUBREDDIT" as const,
@@ -110,16 +101,7 @@ export async function discoverSources({
       reasoning: source.reasoning,
       rank: index + 1,
       priority: object.redditPriority,
-      selectable: true,
     })),
-    {
-      type: "TWITTER_SEARCH",
-      name: "Twitter/X",
-      reasoning: object.twitterReasoning,
-      rank: redditSources.length + 1,
-      priority: object.twitterPriority,
-      selectable: false,
-    },
   ];
 
   return suggestions.sort((a, b) => a.priority - b.priority || a.rank - b.rank);

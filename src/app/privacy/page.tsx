@@ -15,14 +15,20 @@ export default function PrivacyPage() {
       </p>
 
       <h2>Account &amp; product data</h2>
-      <p>We collect what you give us directly: your email, password (hashed, never stored in plain text), and the product details you enter (name, description, target customer, website URL, signup goal).</p>
+      <p>
+        We collect what you give us directly: your email, and, if you sign up with a password
+        rather than Google, that password (hashed, never stored in plain text). If you sign in
+        with Google, we receive your name, email, and profile picture from Google — nothing else
+        from your Google account. Either way, we also collect the product details you enter (name,
+        description, target customer, website URL, signup goal).
+      </p>
 
       <h2>Post content from monitored channels</h2>
       <p>
         To find relevant signals, Getrive fetches public post content from the channels you choose to
         monitor — Reddit subreddits (via Reddit&apos;s public RSS feeds) and Hacker News (via its
-        public API). Twitter/X monitoring is planned but not yet active. We only process
-        publicly-visible posts — never private messages, DMs, or anything requiring a login to view.
+        public API). We only process publicly-visible posts — never private messages, DMs, or
+        anything requiring a login to view.
       </p>
 
       <h2>Outreach lead data</h2>

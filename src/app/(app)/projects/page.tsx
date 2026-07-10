@@ -7,9 +7,13 @@ import { prisma } from "@/lib/prisma";
 
 export const metadata: Metadata = { title: "Your projects — Getrive" };
 
-// Only reached when a founder has more than one completed project — the
-// root page redirects straight into the single project's dashboard
-// otherwise, so this picker never gets in the way of the common case.
+// The canonical post-login landing spot (see (auth)/actions.ts's
+// safeCallbackUrl) — self-routes from there without callers needing to know
+// which state the account is in: no completed project yet -> onboarding,
+// exactly one -> straight into its dashboard, more than one -> this picker.
+// With MAX_PROJECTS_PER_ACCOUNT capped at 1 (see lib/limits.ts), the picker
+// itself is effectively unreachable today, but stays in place for if that
+// cap is ever raised.
 export default async function ProjectsPage() {
   const session = await requireSession();
 
@@ -24,6 +28,7 @@ export default async function ProjectsPage() {
   });
 
   if (projects.length === 0) redirect("/onboarding");
+  if (projects.length === 1) redirect(`/projects/${projects[0].id}/dashboard`);
 
   return (
     <div className="flex w-full flex-col items-center pt-16 pb-16 md:pt-24">

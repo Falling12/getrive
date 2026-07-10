@@ -17,8 +17,8 @@ export default function TermsPage() {
 
       <h2>What Getrive does</h2>
       <p>
-        Getrive helps founders find posts — on Reddit, Hacker News, and (planned) other channels —
-        that describe the pain point their product solves, and drafts a suggested reply or outreach
+        Getrive helps founders find posts — on Reddit and Hacker News — that describe the pain
+        point their product solves, and drafts a suggested reply or outreach
         message using AI. <strong>Getrive never posts, comments, DMs, or sends anything on your
         behalf.</strong> Every draft is something you review, edit, and send yourself, under your own
         account on that platform, subject to that platform&apos;s own rules and terms.
@@ -26,7 +26,10 @@ export default function TermsPage() {
 
       <h2>Your account</h2>
       <ul>
-        <li>You&apos;re responsible for keeping your login credentials secure.</li>
+        <li>
+          You&apos;re responsible for keeping your account secure — your password if you sign in
+          with email, or your Google account if you sign in with Google.
+        </li>
         <li>You must provide accurate information when creating an account and describing your product.</li>
         <li>You&apos;re responsible for the content of anything you choose to post or send — Getrive only drafts suggestions.</li>
       </ul>

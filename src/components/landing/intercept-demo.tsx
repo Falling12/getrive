@@ -10,8 +10,7 @@ import { formatSourceLabel } from "@/lib/sources/format";
 // and every drafted reply follows generateReply's own real constraints
 // (lib/ai/reply-generation.ts): lead with genuine help, one brief, low-key
 // product mention near the end, never the main point. Only Reddit and
-// Hacker News appear — Twitter/X isn't live yet, so it isn't shown as if it
-// already is.
+// Hacker News appear — those are the only channels Getrive monitors.
 interface Scenario {
   sourceType: "REDDIT_SUBREDDIT" | "HACKERNEWS";
   sourceName: string;

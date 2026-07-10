@@ -100,7 +100,7 @@ export type AddSourceState = { error?: string; success?: boolean };
 // for the AI to suggest it. Added sources are monitored immediately (no
 // separate "select" step, unlike onboarding's suggestions) since choosing
 // to add one here already is the confirmation. The cap counts every source
-// type combined (Reddit + Hacker News + future Twitter/X), not just Reddit.
+// type combined (Reddit + Hacker News), not just Reddit.
 export async function addRedditSourceAction(
   projectId: string,
   _prevState: AddSourceState,
@@ -183,9 +183,7 @@ export type DiscoverSourcesState =
 // it's re-runnable any time and additive rather than a one-shot
 // wipe-and-replace — a founder's audience understanding evolves past day
 // zero, and re-discovery shouldn't touch sources they're already
-// monitoring. Twitter/X is dropped from the results entirely: it's not
-// actionable yet (see the permanent "Paused" card below), so surfacing a
-// second "requires setup" reasoning card here would just be noise.
+// monitoring.
 export async function discoverNewSourcesAction(projectId: string): Promise<DiscoverSourcesState> {
   const session = await requireSession();
   const product = await prisma.product.findFirst({
@@ -218,14 +216,12 @@ export async function discoverNewSourcesAction(projectId: string): Promise<Disco
 
   return {
     status: "results",
-    suggestions: suggestions
-      .filter((s) => s.type !== "TWITTER_SEARCH")
-      .map((s) => ({
-        type: s.type,
-        name: s.name,
-        reasoning: s.reasoning,
-        alreadyActive: existingKeys.has(`${s.type}:${s.name.toLowerCase()}`),
-      })),
+    suggestions: suggestions.map((s) => ({
+      type: s.type,
+      name: s.name,
+      reasoning: s.reasoning,
+      alreadyActive: existingKeys.has(`${s.type}:${s.name.toLowerCase()}`),
+    })),
   };
 }
 

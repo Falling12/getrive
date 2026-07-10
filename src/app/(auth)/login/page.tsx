@@ -1,7 +1,10 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { AuthCard } from "@/components/auth/auth-card";
+import { AuthDivider } from "@/components/auth/auth-divider";
+import { GoogleSignInButton } from "@/components/auth/google-signin-button";
 import { LoginForm } from "@/components/auth/login-form";
+import { isGoogleAuthConfigured } from "@/lib/auth-providers";
 
 export const metadata: Metadata = { title: "Log in — Getrive" };
 
@@ -15,6 +18,12 @@ export default async function LoginPage({
   return (
     <>
       <AuthCard title="Sign in" subtitle="Access your Getrive account">
+        {isGoogleAuthConfigured() && (
+          <>
+            <GoogleSignInButton callbackUrl={callbackUrl} />
+            <AuthDivider />
+          </>
+        )}
         <LoginForm callbackUrl={callbackUrl} />
       </AuthCard>
 

@@ -15,9 +15,9 @@ import { formatSourceLabel } from "@/lib/sources/format";
 import type { SourceType } from "@/generated/prisma/client";
 
 // This file lives under lib/reddit/ from when Getrive only ingested Reddit;
-// it's now the shared multi-source polling engine (Reddit + Hacker News, with
-// Twitter/X reserved). Left at this path to avoid an import-path rename
-// across every consumer for what's otherwise a naming-only concern.
+// it's now the shared multi-source polling engine (Reddit + Hacker News).
+// Left at this path to avoid an import-path rename across every consumer
+// for what's otherwise a naming-only concern.
 
 export interface PollSummary {
   sourcesPolled: number;

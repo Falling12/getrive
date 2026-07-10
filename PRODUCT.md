@@ -10,7 +10,7 @@ Solo and early-stage SaaS founders, pre-product-market-fit, trying to get their 
 
 ## Product Purpose
 
-Getrive listens across channels (Reddit today; Hacker News and Twitter/X next) for people already expressing, in their own words, the exact pain point a founder's product solves — scores relevance with AI, then helps the founder respond authentically instead of cold-pitching. It never posts, DMs, tweets, or emails on the founder's behalf anywhere: every output is a draft the founder reviews, edits, copies, and sends themselves. Attribution tracks real signups back to the reply/channel that produced them, so "did this actually get me users" has a real answer, not a vanity metric. Success looks like a founder going from zero distribution channel to their first real customers using only genuine, one-to-one conversations Getrive surfaced.
+Getrive listens across channels (Reddit and Hacker News today) for people already expressing, in their own words, the exact pain point a founder's product solves — scores relevance with AI, then helps the founder respond authentically instead of cold-pitching. It never posts, DMs, tweets, or emails on the founder's behalf anywhere: every output is a draft the founder reviews, edits, copies, and sends themselves. Attribution tracks real signups back to the reply/channel that produced them, so "did this actually get me users" has a real answer, not a vanity metric. Success looks like a founder going from zero distribution channel to their first real customers using only genuine, one-to-one conversations Getrive surfaced.
 
 ## Brand Personality
 

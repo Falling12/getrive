@@ -10,7 +10,7 @@ import { formatSourceChannel, formatSourceChannelDetail } from "@/lib/sources/fo
 
 export const metadata: Metadata = { title: "Sources — Getrive" };
 
-const CHANNEL_ORDER: SourceType[] = ["HACKERNEWS", "REDDIT_SUBREDDIT", "TWITTER_SEARCH"];
+const CHANNEL_ORDER: SourceType[] = ["HACKERNEWS", "REDDIT_SUBREDDIT"];
 
 export default async function SourcesPage({
   params,
@@ -51,7 +51,7 @@ export default async function SourcesPage({
   const grouped = CHANNEL_ORDER.map((type) => ({
     type,
     sources: sources.filter((source) => source.type === type),
-  })).filter((group) => group.sources.length > 0 || group.type === "TWITTER_SEARCH");
+  })).filter((group) => group.sources.length > 0);
 
   return (
     <div className="flex w-full flex-col items-center pt-16 pb-16 md:pt-0">
@@ -60,8 +60,7 @@ export default async function SourcesPage({
           <h1 className="text-2xl font-medium tracking-wide text-foreground">Sources</h1>
           <p className="mt-1 max-w-[68ch] font-mono text-xs leading-relaxed text-muted-foreground">
             Manage the channel mix Getrive listens on. Hacker News is broad and immediate,
-            Reddit is community-specific and gated by karma, and Twitter/X stays parked until API
-            access is confirmed.
+            Reddit is community-specific and gated by karma.
           </p>
         </header>
 
@@ -76,29 +75,6 @@ export default async function SourcesPage({
             </p>
           ) : (
             grouped.map((group) => {
-              if (group.type === "TWITTER_SEARCH") {
-                return (
-                  <section
-                    key={group.type}
-                    className="rounded-xl border border-dashed border-border bg-background/35 p-5 md:p-6"
-                  >
-                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                      <div>
-                        <h2 className="text-lg font-medium text-foreground">
-                          {formatSourceChannel(group.type)}
-                        </h2>
-                        <p className="mt-1 font-mono text-[11px] leading-relaxed text-muted-foreground">
-                          {formatSourceChannelDetail(group.type)}
-                        </p>
-                      </div>
-                      <span className="w-fit rounded-full border border-dashed border-border px-3 py-1 font-mono text-[10px] tracking-widest text-muted-foreground uppercase">
-                        Paused
-                      </span>
-                    </div>
-                  </section>
-                );
-              }
-
               return (
                 <section key={group.type} className="flex flex-col gap-4">
                   <header className="flex flex-col justify-between gap-2 border-b border-border pb-3 sm:flex-row sm:items-end">

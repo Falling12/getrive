@@ -26,7 +26,6 @@ export interface SourceSuggestionView {
   name: string;
   reasoning: string;
   priority: number;
-  selectable: boolean;
 }
 
 export type OnboardingState =
@@ -203,7 +202,6 @@ async function selectPositioningStep(
       name: s.name,
       reasoning: s.reasoning,
       priority: suggestions.find((suggestion) => suggestion.name === s.name)?.priority ?? 3,
-      selectable: s.type !== "TWITTER_SEARCH",
     })),
   };
 }
@@ -302,9 +300,6 @@ export async function confirmSourcesAction(
       where: {
         productId: product.id,
         id: { in: selectedIds },
-        // Twitter/X is shown as setup-dependent until API feasibility is
-        // confirmed. Even if a client tampers with the form, don't select it.
-        type: { not: "TWITTER_SEARCH" },
       },
       data: { selected: true },
     }),

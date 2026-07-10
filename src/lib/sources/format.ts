@@ -9,9 +9,6 @@ export function formatSourceLabel(type: SourceType, name: string): string {
       return `r/${name}`;
     case "HACKERNEWS":
       return "Hacker News";
-    case "TWITTER_SEARCH":
-      if (name === "Twitter/X") return "Twitter/X search";
-      return `Twitter search: ${name}`;
   }
 }
 
@@ -21,8 +18,6 @@ export function formatSourceChannel(type: SourceType): string {
       return "Reddit";
     case "HACKERNEWS":
       return "Hacker News";
-    case "TWITTER_SEARCH":
-      return "Twitter/X";
   }
 }
 
@@ -32,14 +27,12 @@ export function formatSourceChannelDetail(type: SourceType): string {
       return "Community-specific listening with karma and self-promo constraints.";
     case "HACKERNEWS":
       return "One public feed, no access gate, high technical density.";
-    case "TWITTER_SEARCH":
-      return "Search-based monitoring, pending API access and cost confirmation.";
   }
 }
 
-// Reddit's "u/username" convention doesn't apply on Hacker News (or, once
-// built, Twitter) — this is the one place that prefix gets added, so a
-// Signal/SignalCard doesn't need to know per-source author conventions.
+// Reddit's "u/username" convention doesn't apply on Hacker News — this is
+// the one place that prefix gets added, so a Signal/SignalCard doesn't need
+// to know per-source author conventions.
 export function formatAuthorLabel(type: SourceType, author: string): string {
   return type === "REDDIT_SUBREDDIT" ? `u/${author}` : author;
 }
@@ -51,7 +44,5 @@ export function formatViewOnLabel(type: SourceType): string {
       return "View on Reddit";
     case "HACKERNEWS":
       return "View on Hacker News";
-    case "TWITTER_SEARCH":
-      return "View on Twitter";
   }
 }

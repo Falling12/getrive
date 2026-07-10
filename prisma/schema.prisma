@@ -191,7 +191,6 @@ model Positioning {
 enum SourceType {
   REDDIT_SUBREDDIT
   HACKERNEWS
-  TWITTER_SEARCH
 }
 
 // Generalizes what was Reddit-only "MonitoredSubreddit" into any ingestion
@@ -199,8 +198,8 @@ enum SourceType {
 // that selection is what "monitoring" means for now. `name` still holds the
 // literal community name for reddit_subreddit (e.g. "SaaS"); for hackernews
 // it's a short display label since HN isn't subdivided into communities.
-// `config` carries type-specific settings — unused for reddit_subreddit and
-// hackernews today, reserved for twitter_search's search query later.
+// `config` carries type-specific settings — unused for both source types
+// today, kept for a future ingestion channel's settings.
 // Karma fields (karmaStatus/karmaThreshold/selfPromoNotes/currentKarma) only
 // mean something for reddit_subreddit — Hacker News has no comparable
 // self-promo gate, so hackernews sources are created with karmaStatus

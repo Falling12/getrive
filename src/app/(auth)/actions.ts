@@ -28,10 +28,24 @@ const LOGIN_RATE_LIMIT = { max: 5, windowMinutes: 15 };
 const PASSWORD_RESET_RATE_LIMIT = { max: 3, windowMinutes: 15 };
 const RESEND_VERIFICATION_RATE_LIMIT = { max: 3, windowMinutes: 15 };
 
-function safeCallbackUrl(formData: FormData) {
+// signupAction defaults to /onboarding (a fresh account has no project yet,
+// so that's the only useful destination). loginAction and Google both
+// default to /projects instead — it self-redirects to /onboarding for an
+// account with no completed project, and straight into the dashboard for
+// one that has one (see projects/page.tsx), so it's the right landing spot
+// for a returning founder without loginAction needing to know which.
+function safeCallbackUrl(formData: FormData, fallback: string) {
   const value = formData.get("callbackUrl");
   // Only allow same-origin relative paths to avoid open-redirects via a crafted callbackUrl.
-  return typeof value === "string" && value.startsWith("/") ? value : "/onboarding";
+  return typeof value === "string" && value.startsWith("/") ? value : fallback;
+}
+
+// signIn("google", ...) redirects to Google's consent screen itself (via a
+// thrown NEXT_REDIRECT), so unlike loginAction there's no error branch to
+// handle here — an actual OAuth failure lands back on /login?error=... via
+// the pages.signIn config in auth.ts.
+export async function signInWithGoogleAction(formData: FormData) {
+  await signIn("google", { redirectTo: safeCallbackUrl(formData, "/projects") });
 }
 
 export async function loginAction(_prevState: string | undefined, formData: FormData) {
@@ -52,7 +66,7 @@ export async function loginAction(_prevState: string | undefined, formData: Form
     await signIn("credentials", {
       email: parsed.data.email,
       password: parsed.data.password,
-      redirectTo: safeCallbackUrl(formData),
+      redirectTo: safeCallbackUrl(formData, "/projects"),
     });
   } catch (error) {
     if (error instanceof AuthError) {
@@ -98,7 +112,7 @@ export async function signupAction(_prevState: string | undefined, formData: For
     await signIn("credentials", {
       email: parsed.data.email,
       password: parsed.data.password,
-      redirectTo: safeCallbackUrl(formData),
+      redirectTo: safeCallbackUrl(formData, "/onboarding"),
     });
   } catch (error) {
     if (error instanceof AuthError) {

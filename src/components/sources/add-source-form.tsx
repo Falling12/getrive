@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useTransition } from "react";
-import { AtSign, LockKeyhole, MessageCircle, RadioTower, Search } from "lucide-react";
+import { MessageCircle, RadioTower, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { addRedditSourceAction, enableHackerNewsAction } from "@/app/(app)/projects/[projectId]/sources/actions";
 
@@ -113,29 +113,6 @@ export function AddSourceForm({
             {redditState.success && <p className="font-mono text-xs text-accent">Source added.</p>}
           </div>
         </form>
-
-        <div className="grid gap-4 bg-secondary/5 p-5 md:grid-cols-[minmax(0,1fr)_auto] md:items-center md:p-6">
-          <div className="flex min-w-0 items-start gap-3">
-            <span className="flex size-9 shrink-0 items-center justify-center rounded border border-dashed border-border text-muted-foreground">
-              <AtSign className="size-4" />
-            </span>
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <h3 className="text-sm font-medium text-foreground">Twitter/X search</h3>
-                <span className="rounded-sm border border-dashed border-border px-1.5 py-0.5 font-mono text-[9px] tracking-widest text-muted-foreground uppercase">
-                  Paused
-                </span>
-              </div>
-              <p className="mt-1 max-w-[58ch] font-mono text-[11px] leading-relaxed text-muted-foreground">
-                Planned, but intentionally paused until API access and cost are confirmed.
-              </p>
-            </div>
-          </div>
-          <div className="flex w-fit items-center gap-2 rounded-md border border-dashed border-border px-3 py-2 font-mono text-[10px] tracking-widest text-muted-foreground uppercase">
-            <LockKeyhole className="size-3.5" />
-            Setup required
-          </div>
-        </div>
       </div>
     </section>
   );
