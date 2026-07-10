@@ -1,0 +1,393 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// --- Auth (NextAuth / Auth.js Prisma adapter models) ---
+// Credentials-only for now, but kept in the standard adapter shape so an
+// OAuth provider (e.g. "Sign in with Google") can be added later without a
+// schema migration.
+
+model User {
+  id                 String    @id @default(cuid())
+  name               String?
+  email              String    @unique
+  emailVerified      DateTime?
+  image              String?
+  passwordHash       String?
+  notifyNewSignal    Boolean   @default(true)
+  notifyWeeklyDigest Boolean   @default(true)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  accounts Account[]
+  sessions Session[]
+  products Product[]
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+// Serves both email verification and password reset: the identifier is
+// prefixed ("verify:<email>" / "reset:<email>") so a lookup by token alone
+// can still tell the two purposes apart.
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// DB-backed sliding-window rate limiter (login attempts, password reset
+// requests, verification resends). Works across multiple serverless
+// instances since Postgres is the single source of truth already.
+model RateLimitAttempt {
+  id        String   @id @default(cuid())
+  key       String
+  createdAt DateTime @default(now())
+
+  @@index([key, createdAt])
+  @@map("rate_limit_attempts")
+}
+
+// --- Getrive domain models ---
+
+enum KarmaStatus {
+  READY
+  WATCH
+  BLOCKED
+}
+
+// A founder's product/pitch, captured during onboarding. One per account for the MVP.
+model Product {
+  id                  String    @id @default(cuid())
+  userId              String
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name                String
+  description         String
+  targetCustomer      String?
+  currentSignupCount  Int       @default(0)
+  // A short, qualitative statement of what the founder is going for (e.g.
+  // "get to my first 100 real users") — not a numeric target.
+  signupGoal          String?
+  // Signal Scoring gate: posts scoring at or above this (0-1) become a
+  // visible Signal. Configurable per founder later in Settings.
+  relevanceThreshold  Float     @default(0.7)
+  // Base URL that tracked links (Users/attribution page, Signal Detail's
+  // copy-to-clipboard link) append UTM parameters to.
+  websiteUrl          String?
+  // Reddit connection status shown in Settings. Reddit closed self-serve
+  // OAuth app registration for new developers (confirmed directly — see
+  // src/lib/reddit/fetch-posts.ts), so this can't be wired to a real OAuth
+  // flow right now; these fields exist so the UI can honestly show
+  // "not connected" rather than faking a working integration.
+  redditUsername      String?
+  redditConnectedAt   DateTime?
+  // Set when a manual "Check for new posts" run starts, cleared when it
+  // ends (success, error, or client disconnect) — lets a page refresh
+  // mid-poll still show "checking" instead of silently reverting to idle,
+  // and stops a second concurrent poll for the same project. Treated as
+  // stale after POLL_STALE_MINUTES (see lib/reddit/poll.ts) in case a
+  // crashed run left it stuck set.
+  activePollStartedAt DateTime?
+  // Soft-delete: archived projects drop out of the project switcher/picker
+  // and onboarding-redirect logic, but their data (signals, subreddits,
+  // tracked links) is kept intact and the project's own pages stay
+  // reachable by direct URL. There's no hard delete yet — archive is the
+  // only "get this out of my way" mechanism for now.
+  archivedAt          DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  sources             Source[]
+  trackedLinks        TrackedLink[]
+  signups             Signup[]
+  positioning         Positioning?
+  leads               Lead[]
+
+  @@index([userId])
+  @@map("products")
+}
+
+// Generated once at onboarding (before channel discovery — the selected ICP
+// sharpens that prompt), regeneratable any time from the per-project
+// Positioning page. Candidates are stored as JSON since they're AI output
+// the founder picks from, not independently-queried rows; the selected*
+// fields are denormalized flat columns (not just an index into the JSON)
+// so every other consumer (Signal Scoring, Outreach later) can read them
+// without knowing the candidate-array shape.
+model Positioning {
+  id                   String   @id @default(cuid())
+  productId            String   @unique
+  product              Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  // string[]
+  statementCandidates  Json
+  selectedStatement    String?
+  // { name: string; reasoning: string; audienceLanguage: string[] }[]
+  icpCandidates        Json
+  selectedIcpName      String?
+  selectedIcpReasoning String?
+  // string[]
+  selectedIcpLanguage  Json?
+  // AI's own pick from the current candidate batch — drives the default
+  // selection + "Recommended" badge in the UI. Persisted (not just returned
+  // in-memory from the generation call) so the badge survives a page
+  // reload between generating and actually selecting. Null before the
+  // first generation; regenerating overwrites both.
+  recommendedStatementIndex Int?
+  recommendedIcpIndex       Int?
+  // Snapshot of Product.description/targetCustomer at the moment candidates
+  // were last generated from them — compared against the live Product
+  // fields to detect when a founder has edited the description in Settings
+  // without regenerating Positioning, so consumers (reply/outreach/signal
+  // scoring prompts) can flag that the selected statement/ICP may be stale.
+  sourceDescription     String?
+  sourceTargetCustomer  String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@map("positionings")
+}
+
+enum SourceType {
+  REDDIT_SUBREDDIT
+  HACKERNEWS
+  TWITTER_SEARCH
+}
+
+// Generalizes what was Reddit-only "MonitoredSubreddit" into any ingestion
+// channel. Founders check a box at onboarding/Sources to flip `selected` on;
+// that selection is what "monitoring" means for now. `name` still holds the
+// literal community name for reddit_subreddit (e.g. "SaaS"); for hackernews
+// it's a short display label since HN isn't subdivided into communities.
+// `config` carries type-specific settings — unused for reddit_subreddit and
+// hackernews today, reserved for twitter_search's search query later.
+// Karma fields (karmaStatus/karmaThreshold/selfPromoNotes/currentKarma) only
+// mean something for reddit_subreddit — Hacker News has no comparable
+// self-promo gate, so hackernews sources are created with karmaStatus
+// already READY and the Sources page hides the karma UI for them.
+model Source {
+  id                   String      @id @default(cuid())
+  productId            String
+  product              Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  type                 SourceType  @default(REDDIT_SUBREDDIT)
+  name                 String
+  reasoning            String
+  rank                 Int
+  selected             Boolean     @default(false)
+  config               Json?
+  // Oldest-first polling order — Reddit's unauthenticated RSS access is
+  // rate-limited to roughly one request per minute per IP, globally across
+  // every monitored subreddit in the app, so each cron run can only take a
+  // small batch. This is how it round-robins fairly across founders/sources.
+  // Updated on every attempt, success or failure — see lastSuccessfulPollAt
+  // for "is ingestion actually working" instead of just "did we try".
+  lastPolledAt         DateTime?
+  lastSuccessfulPollAt DateTime?
+  // Incremented on each failed fetch, reset to 0 on success — surfaced on
+  // the Sources page and Dashboard once it crosses a threshold, so a
+  // silently-broken fetch doesn't just look like "a quiet source" with
+  // signals mysteriously drying up.
+  consecutiveFailures  Int         @default(0)
+  // Karma tracking (Sources page, reddit_subreddit only) — starts at WATCH,
+  // manually overridable ("mark ready"); threshold/notes are the founder's
+  // own research, not derived from anything automatic.
+  karmaStatus          KarmaStatus @default(WATCH)
+  karmaThreshold       Int?
+  selfPromoNotes       String?
+  // Manually updated by the founder (no Reddit API access to read it for
+  // real — see the redditUsername comment on Product).
+  currentKarma         Int         @default(0)
+  createdAt            DateTime    @default(now())
+  updatedAt            DateTime    @updatedAt
+
+  scoredPosts ScoredPost[]
+  signals     Signal[]
+
+  @@unique([productId, name])
+  @@index([productId])
+  @@map("sources")
+}
+
+// Every post/item the poller has already scored, pass or fail — pure
+// dedup/cost-avoidance so the same post is never sent to the AI twice across
+// polling cycles. Signal Scoring is the highest-volume AI call in the
+// product, so skipping already-seen posts matters. title/permalink are kept
+// (even for posts that don't pass) so the Sources page's karma-builder
+// section can surface real, genuine unrelated threads worth commenting on.
+// `externalId` is whatever ID the source system uses (a Reddit post ID, an
+// HN item ID, ...) — scoped per-source, not globally unique.
+model ScoredPost {
+  id             String   @id @default(cuid())
+  sourceId       String
+  source         Source   @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  externalId     String
+  title          String?
+  permalink      String?
+  relevanceScore Float
+  passed         Boolean
+  scoredAt       DateTime @default(now())
+
+  @@unique([sourceId, externalId])
+  @@map("scored_posts")
+}
+
+// A post/item that passed Signal Scoring — this is what the founder
+// actually sees. Raw posts that don't pass never become a Signal at all.
+model Signal {
+  id              String   @id @default(cuid())
+  sourceId        String
+  source          Source   @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  externalId      String
+  title           String
+  body            String
+  permalink       String
+  author          String
+  relevanceScore  Float
+  relevanceReason String
+  postedAt        DateTime
+  // Reply Generation AI output (Signal Detail) — regenerating overwrites both.
+  replyDraft      String?
+  replyToneNote   String?
+  replied         Boolean   @default(false)
+  repliedPostUrl  String?
+  repliedAt       DateTime?
+  dismissed       Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+
+  trackedLinks TrackedLink[]
+
+  @@unique([sourceId, externalId])
+  @@index([sourceId])
+  @@map("signals")
+}
+
+// A UTM-tagged link. Created either from Signal Detail (tied to the signal
+// whose reply it's inserted into), from Outreach (tied to the lead it was
+// drafted for), or standalone from the Users page's tracked-link generator
+// (both signalId and leadId null). clickCount is real, automatic tracking
+// (via the /r/[id] redirect route); a Signup itself still has to be
+// manually confirmed since Getrive has no visibility into the founder's own
+// product's signup database.
+model TrackedLink {
+  id          String   @id @default(cuid())
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  signalId    String?
+  signal      Signal?  @relation(fields: [signalId], references: [id], onDelete: SetNull)
+  leadId      String?
+  lead        Lead?    @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  label       String
+  utmSource   String   @default("reddit")
+  utmMedium   String   @default("comment")
+  utmCampaign String?
+  clickCount  Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  signups Signup[]
+
+  @@index([productId])
+  @@map("tracked_links")
+}
+
+enum OutreachStatus {
+  DRAFT
+  SENT
+  RESPONDED
+  NO_RESPONSE
+}
+
+// A founder-pasted lead for direct, manual outreach — deliberately lightweight:
+// no lead sourcing/import, just a name and whatever context the founder
+// already has (found via Twitter search, a Reddit profile, wherever). `handle`
+// is optional freeform text (a username/handle) used only for the loose
+// known-lead dedup check (see lib/services/lead-dedup.service.ts) — it isn't
+// validated against any specific platform's format since a lead could come
+// from anywhere. Same draft/copy/mark-done shape as Signal's reply flow:
+// Getrive drafts, the founder copies and sends themselves, then logs what
+// happened. status starts at DRAFT (message may not exist yet, or exists but
+// isn't sent), moves to SENT when the founder confirms they sent it, and
+// RESPONDED/NO_RESPONSE are the founder's own follow-up log entries.
+model Lead {
+  id            String         @id @default(cuid())
+  productId     String
+  product       Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
+  name          String
+  handle        String?
+  context       String
+  draftMessage  String?
+  draftToneNote String?
+  status        OutreachStatus @default(DRAFT)
+  sentAt        DateTime?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  trackedLinks TrackedLink[]
+
+  @@index([productId])
+  @@map("leads")
+}
+
+enum SignupSource {
+  MANUAL
+  AUTOMATIC
+}
+
+// A signup the founder has logged. Attributed ("Getrive-assisted") when tied
+// to a TrackedLink; otherwise a manual/untracked entry kept for completeness.
+// AUTOMATIC ones arrive via the tracking snippet (see /api/track/signup) —
+// visitorToken is the client-generated token that snippet reports, unique so
+// the same browser session can never be double-counted.
+model Signup {
+  id            String       @id @default(cuid())
+  productId     String
+  product       Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
+  trackedLinkId String?
+  trackedLink   TrackedLink? @relation(fields: [trackedLinkId], references: [id], onDelete: SetNull)
+  source        SignupSource @default(MANUAL)
+  visitorToken  String?      @unique
+  note          String?
+  createdAt     DateTime     @default(now())
+
+  @@index([productId])
+  @@map("signups")
+}

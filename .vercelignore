@@ -1,0 +1,9 @@
+# vercel deploy (no git repo here, so it doesn't reliably fall back to
+# .gitignore) uploads the working directory as-is — keep local-only secrets
+# and generated output out of that upload. Real env vars live in
+# `vercel env` instead; src/generated/prisma is rebuilt by the postinstall
+# `prisma generate` script.
+.env
+.env.local
+src/generated/prisma
+.aidesigner

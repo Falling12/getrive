@@ -1,0 +1,116 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "design-system-color",
+        "value": "#6be0a4",
+        "reason": "Landing-page-only brighter accent (--accent-glow), explicitly requested by user after iterating on the AIDesigner design — deliberate deviation from the muted --accent used in the rest of the product",
+        "createdAt": "2026-07-09T20:05:40.374Z"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "rgba(107, 224, 164, 0.1)",
+        "reason": "Alpha/lighter variant of --accent-glow (#6be0a4), the landing-page-only brighter accent explicitly requested by the user",
+        "createdAt": "2026-07-09T20:15:01.033Z"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "rgba(107, 224, 164, 0.3)",
+        "reason": "Alpha/lighter variant of --accent-glow (#6be0a4), the landing-page-only brighter accent explicitly requested by the user",
+        "createdAt": "2026-07-09T20:15:02.700Z"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "rgba(107, 224, 164, 0.5)",
+        "reason": "Alpha/lighter variant of --accent-glow (#6be0a4), the landing-page-only brighter accent explicitly requested by the user",
+        "createdAt": "2026-07-09T20:15:04.529Z"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "rgba(107, 224, 164, 0.6)",
+        "reason": "Alpha/lighter variant of --accent-glow (#6be0a4), the landing-page-only brighter accent explicitly requested by the user",
+        "createdAt": "2026-07-09T20:15:06.289Z"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "rgba(107, 224, 164, 0.8)",
+        "reason": "Alpha/lighter variant of --accent-glow (#6be0a4), the landing-page-only brighter accent explicitly requested by the user",
+        "createdAt": "2026-07-09T20:15:08.215Z"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "rgba(107, 224, 164, 0)",
+        "reason": "Alpha/lighter variant of --accent-glow (#6be0a4), the landing-page-only brighter accent explicitly requested by the user",
+        "createdAt": "2026-07-09T20:15:09.795Z"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "rgba(107,224,164,0.1)",
+        "reason": "Alpha/lighter variant of --accent-glow (#6be0a4), the landing-page-only brighter accent explicitly requested by the user",
+        "createdAt": "2026-07-09T20:15:11.685Z"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "rgba(107,224,164,0.2)",
+        "reason": "Alpha/lighter variant of --accent-glow (#6be0a4), the landing-page-only brighter accent explicitly requested by the user",
+        "createdAt": "2026-07-09T20:15:13.734Z"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "rgba(107,224,164,0.3)",
+        "reason": "Alpha/lighter variant of --accent-glow (#6be0a4), the landing-page-only brighter accent explicitly requested by the user",
+        "createdAt": "2026-07-09T20:15:15.575Z"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "rgba(107,224,164,0.4)",
+        "reason": "Alpha/lighter variant of --accent-glow (#6be0a4), the landing-page-only brighter accent explicitly requested by the user",
+        "createdAt": "2026-07-09T20:15:17.415Z"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "rgba(107,224,164,0.5)",
+        "reason": "Alpha/lighter variant of --accent-glow (#6be0a4), the landing-page-only brighter accent explicitly requested by the user",
+        "createdAt": "2026-07-09T20:15:19.516Z"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "rgba(107,224,164,0.6)",
+        "reason": "Alpha/lighter variant of --accent-glow (#6be0a4), the landing-page-only brighter accent explicitly requested by the user",
+        "createdAt": "2026-07-09T20:15:21.329Z"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "#a7f3d0",
+        "reason": "Alpha/lighter variant of --accent-glow (#6be0a4), the landing-page-only brighter accent explicitly requested by the user",
+        "createdAt": "2026-07-09T20:15:22.996Z"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "#ff4500",
+        "reason": "Reddit's real brand color, used only for the Reddit icon in Feature Highlights — represents the external platform, not a UI accent",
+        "createdAt": "2026-07-09T20:15:24.742Z"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "#ff6600",
+        "reason": "Hacker News's real brand color, used only for the HN icon in Feature Highlights — represents the external platform, not a UI accent",
+        "createdAt": "2026-07-09T20:15:26.613Z"
+      },
+      {
+        "rule": "bounce-easing",
+        "value": "var(--landing-spring)",
+        "reason": "Landing-page-only spring easing, explicitly requested by the user across several rounds of iteration asking for more energy/bounce on this specific page",
+        "createdAt": "2026-07-09T20:15:45.440Z"
+      },
+      {
+        "rule": "bounce-easing",
+        "value": "cubic-bezier(0.175, 0.885, 0.32, 1.275)",
+        "reason": "The literal value behind --landing-spring, same reasoning — user-confirmed landing-page-only exception",
+        "createdAt": "2026-07-09T20:15:47.206Z"
+      }
+    ]
+  }
+}

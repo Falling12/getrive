@@ -1,0 +1,606 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-heading: var(--font-sans);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root {
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --radius: 0.625rem;
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
+}
+
+/* Getrive's one dark/technical brand kit, scoped to a wrapper class rather
+   than :root/.dark so shadcn primitives render this direction wherever it's
+   applied without forking components. Every section reuses these exact
+   tokens (that's the point of a brand kit) — only the page-level layout and
+   composition differ per surface. */
+.theme-getrive {
+  --background: #0a1211;
+  --foreground: #eae7e0;
+  --card: #0a1211;
+  --card-foreground: #eae7e0;
+  --popover: #0a1211;
+  --popover-foreground: #eae7e0;
+  --primary: #eae7e0;
+  --primary-foreground: #0a1211;
+  --secondary: #2a413a;
+  --secondary-foreground: #eae7e0;
+  --muted: #2a413a;
+  --muted-foreground: #c4c4c4;
+  --accent: #4a6a5e;
+  --accent-foreground: #eae7e0;
+  --destructive: #c4544a;
+  --border: #2a413a;
+  --input: #2a413a;
+  --ring: #4a6a5e;
+  --radius: 0.535rem;
+  --font-sans: var(--font-brand-sans);
+  --font-mono: var(--font-brand-mono);
+  /* Brighter accent, landing page only — the marketing surface deliberately
+     runs hotter/more saturated than the muted --accent used everywhere else
+     in the product (confirmed direction after iterating on the AIDesigner
+     landing artifact). Not used by any dashboard/app surface. */
+  --accent-glow: #6be0a4;
+  /* Landing page only — a deliberate spring/overshoot easing (the >1 last
+     param bounces slightly past its end state) used throughout the landing
+     page's card reveals, badge pops, and button interactions. The rest of
+     the product's motion never overshoots (see auth-enter's plain
+     cubic-bezier(...,1)) — this is a confirmed, repeated exception for the
+     marketing surface specifically, after several rounds of the user asking
+     for more energy/bounce/excitement on this one page. */
+  --landing-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+/* Auth motion + background primitives — ported 1:1 from the AIDesigner
+   artifact (topographic contour field, spring-in card entrance, drift,
+   pulse, button shimmer). Prefixed to avoid clashing with other sections. */
+@keyframes auth-drift {
+  0% {
+    transform: translate(0, 0);
+  }
+  100% {
+    transform: translate(-5%, -5%);
+  }
+}
+@keyframes auth-enter {
+  0% {
+    opacity: 0;
+    transform: translateY(20px) scale(0.98);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@keyframes auth-fade-in {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+@keyframes auth-pulse-slow {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+/* Subtle line swap for live status text (e.g. the poll progress ticker) —
+   a plain fade, no slide, so rapid-fire updates don't feel jumpy. */
+@keyframes status-fade {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+@keyframes auth-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.auth-topo {
+  background-image: url("data:image/svg+xml,%3Csvg width='800' height='800' viewBox='0 0 800 800' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M-38.5 285.5C-10.8 285.5 13.5 281.3 35 277.5C56.5 273.7 75.2 270.3 87 270.3C98.8 270.3 103.7 273.7 106.8 277.5C109.9 281.3 111.1 285.5 111.1 285.5C111.1 285.5 112.3 289.7 115.4 293.5C118.5 297.3 123.4 300.7 135.2 300.7C147 300.7 165.7 297.3 187.2 293.5C208.7 289.7 233 285.5 260.7 285.5C288.4 285.5 312.7 281.3 334.2 277.5C355.7 273.7 374.4 270.3 386.2 270.3C398 270.3 402.9 273.7 406 277.5C409.1 281.3 410.3 285.5 410.3 285.5C410.3 285.5 411.5 289.7 414.6 293.5C417.7 297.3 422.6 300.7 434.4 300.7C446.2 300.7 464.9 297.3 486.4 293.5C507.9 289.7 532.2 285.5 559.9 285.5C587.6 285.5 611.9 281.3 633.4 277.5C654.9 273.7 673.6 270.3 685.4 270.3C697.2 270.3 702.1 273.7 705.2 277.5C708.3 281.3 709.5 285.5 709.5 285.5C709.5 285.5 710.7 289.7 713.8 293.5C716.9 297.3 721.8 300.7 733.6 300.7C745.4 300.7 764.1 297.3 785.6 293.5C807.1 289.7 831.4 285.5 859.1 285.5' stroke='%232A413A' stroke-width='1' fill='none' stroke-opacity='0.15'/%3E%3Cpath d='M-38.5 245.5C-10.8 245.5 13.5 241.3 35 237.5C56.5 233.7 75.2 230.3 87 230.3C98.8 230.3 103.7 233.7 106.8 237.5C109.9 241.3 111.1 245.5 111.1 245.5C111.1 245.5 112.3 249.7 115.4 253.5C118.5 257.3 123.4 260.7 135.2 260.7C147 260.7 165.7 257.3 187.2 253.5C208.7 249.7 233 245.5 260.7 245.5C288.4 245.5 312.7 241.3 334.2 237.5C355.7 233.7 374.4 230.3 386.2 230.3C398 230.3 402.9 233.7 406 237.5C409.1 241.3 410.3 245.5 410.3 245.5C410.3 245.5 411.5 249.7 414.6 253.5C417.7 257.3 422.6 260.7 434.4 260.7C446.2 260.7 464.9 257.3 486.4 253.5C507.9 249.7 532.2 245.5 559.9 245.5C587.6 245.5 611.9 241.3 633.4 237.5C654.9 233.7 673.6 230.3 685.4 230.3C697.2 230.3 702.1 233.7 705.2 237.5C708.3 241.3 709.5 245.5 709.5 245.5C709.5 245.5 710.7 249.7 713.8 253.5C716.9 257.3 721.8 260.7 733.6 260.7C745.4 260.7 764.1 257.3 785.6 253.5C807.1 249.7 831.4 245.5 859.1 245.5' stroke='%232A413A' stroke-width='1' fill='none' stroke-opacity='0.15'/%3E%3Cpath d='M-38.5 205.5C-10.8 205.5 13.5 201.3 35 197.5C56.5 193.7 75.2 190.3 87 190.3C98.8 190.3 103.7 193.7 106.8 197.5C109.9 201.3 111.1 205.5 111.1 205.5C111.1 205.5 112.3 209.7 115.4 213.5C118.5 217.3 123.4 220.7 135.2 220.7C147 220.7 165.7 217.3 187.2 213.5C208.7 209.7 233 205.5 260.7 205.5C288.4 205.5 312.7 201.3 334.2 197.5C355.7 193.7 374.4 190.3 386.2 190.3C398 190.3 402.9 193.7 406 197.5C409.1 201.3 410.3 205.5 410.3 205.5C410.3 205.5 411.5 209.7 414.6 213.5C417.7 217.3 422.6 220.7 434.4 220.7C446.2 220.7 464.9 217.3 486.4 213.5C507.9 209.7 532.2 205.5 559.9 205.5C587.6 205.5 611.9 201.3 633.4 197.5C654.9 193.7 673.6 190.3 685.4 190.3C697.2 190.3 702.1 193.7 705.2 197.5C708.3 201.3 709.5 205.5 709.5 205.5C709.5 205.5 710.7 209.7 713.8 213.5C716.9 217.3 721.8 220.7 733.6 220.7C745.4 220.7 764.1 217.3 785.6 213.5C807.1 209.7 831.4 205.5 859.1 205.5' stroke='%232A413A' stroke-width='1' fill='none' stroke-opacity='0.15'/%3E%3C/svg%3E");
+  background-size: 800px;
+  mask-image: radial-gradient(circle at center, black 0%, transparent 80%);
+  -webkit-mask-image: radial-gradient(circle at center, black 0%, transparent 80%);
+}
+
+.theme-getrive input:-webkit-autofill,
+.theme-getrive input:-webkit-autofill:hover,
+.theme-getrive input:-webkit-autofill:focus,
+.theme-getrive input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 30px var(--background) inset !important;
+  -webkit-text-fill-color: var(--foreground) !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+/* Onboarding-only motion — staggered row entrance for the subreddit results
+   list, and the scanning highlight in the "analyzing" terminal card. */
+@keyframes onboarding-stagger-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes onboarding-scan-line {
+  0% {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(400px);
+    opacity: 0;
+  }
+}
+
+/* Landing page only — a hard on/off blink for the reply-draft typewriter
+   caret. Tailwind's built-in animate-pulse eases between opacity 1 and 0.5,
+   which reads as a soft breathing glow rather than a terminal cursor; this
+   is a crisp step-end toggle instead, matching how a real text cursor blinks. */
+@keyframes landing-cursor-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+/* Landing page — scroll-triggered section entrance, driven by the Reveal
+   component's IntersectionObserver (not a page-load animation like the
+   auth-enter family above). Every post-hero section uses this so scrolling
+   down feels like the same "instrument" continuously coming alive, not a
+   lively hero followed by a static page. */
+.landing-reveal {
+  opacity: 0;
+  transform: translateY(30px) scale(0.98);
+  transition:
+    opacity 0.8s var(--landing-spring),
+    transform 0.8s var(--landing-spring);
+}
+.landing-reveal.landing-reveal-visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+@keyframes landing-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+@keyframes landing-flow-dot {
+  0% {
+    left: 0%;
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    left: 100%;
+    opacity: 0;
+  }
+}
+@keyframes landing-conveyor {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 24px 24px;
+  }
+}
+@keyframes landing-radial-drift {
+  0% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(-50px, 30px) scale(1.1);
+  }
+  100% {
+    transform: translate(30px, -50px) scale(0.9);
+  }
+}
+@keyframes landing-alert-glow {
+  0%,
+  100% {
+    box-shadow:
+      inset 0 0 0 1px rgba(196, 84, 74, 0.2),
+      0 0 15px rgba(196, 84, 74, 0.05);
+  }
+  50% {
+    box-shadow:
+      inset 0 0 0 1px rgba(196, 84, 74, 0.6),
+      0 0 30px rgba(196, 84, 74, 0.2);
+  }
+}
+/* Trust section's "Auto-Reply Systems" toggle — snaps to the disabled
+   position with a red flash the first time it scrolls into view, so the
+   claim "this is physically disabled" reads as a real mechanical event
+   rather than static copy. */
+@keyframes landing-toggle-flash {
+  0%,
+  100% {
+    box-shadow: inset 0 0 0 2px var(--border);
+  }
+  50% {
+    box-shadow: inset 0 0 0 2px var(--destructive);
+    background-color: rgba(196, 84, 74, 0.2);
+  }
+}
+@keyframes landing-badge-pop {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 rgba(107, 224, 164, 0);
+  }
+  50% {
+    transform: scale(1.2);
+    box-shadow: 0 0 20px rgba(107, 224, 164, 0.5);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@keyframes landing-price-flash {
+  0% {
+    box-shadow: 0 0 0 rgba(107, 224, 164, 0);
+    border-color: rgba(74, 106, 94, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 60px rgba(107, 224, 164, 0.3);
+    border-color: rgba(107, 224, 164, 0.8);
+  }
+  100% {
+    box-shadow: 0 0 50px rgba(107, 224, 164, 0.1);
+    border-color: rgba(107, 224, 164, 0.3);
+  }
+}
+@keyframes landing-flow-line {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
+@keyframes landing-status-blink {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.3;
+    transform: scale(0.85);
+  }
+}
+/* Bigger/brighter variant of onboarding-scan-line for the hero demo's
+   taller viewport and the hotter landing accent color. */
+@keyframes landing-scan-sweep {
+  0% {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(500px);
+    opacity: 0;
+  }
+}
+@keyframes landing-ripple-burst {
+  0% {
+    box-shadow: 0 0 0 0 rgba(107, 224, 164, 0.6);
+  }
+  70% {
+    box-shadow: 0 0 0 15px rgba(107, 224, 164, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(107, 224, 164, 0);
+  }
+}
+
+/* Landing page — utility classes applying the keyframes above. */
+.landing-alert-pulse {
+  animation: landing-alert-glow 3s ease-in-out infinite;
+}
+.landing-flow-dot {
+  animation: landing-flow-dot 3s linear infinite;
+}
+.landing-conveyor {
+  animation: landing-conveyor 6s linear infinite;
+}
+.landing-radial-drift {
+  animation: landing-radial-drift 20s ease-in-out infinite alternate;
+}
+.landing-flow-line {
+  background-image: linear-gradient(90deg, var(--border) 0%, var(--accent-glow) 50%, var(--border) 100%);
+  background-size: 200% 100%;
+  animation: landing-flow-line 3s linear infinite;
+}
+.landing-status-blink {
+  animation: landing-status-blink 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+.landing-ripple-hover {
+  position: relative;
+}
+.landing-ripple-hover::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  z-index: -1;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+.landing-ripple-hover:hover::before {
+  opacity: 1;
+  animation: landing-ripple-burst 1.5s infinite;
+}
+/* Diagonal light-sweep on hover — the landing page's default button
+   treatment (Nav, Hero, the demo's Approve/Edit buttons). Distinct from
+   landing-ripple-hover above, which is reserved for the Final CTA only. */
+.landing-btn-glow {
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
+  transition: all 0.3s var(--landing-spring);
+}
+.landing-btn-glow::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transform: skewX(-20deg);
+  z-index: -1;
+  transition: 0.5s;
+}
+.landing-btn-glow:hover::after {
+  left: 150%;
+}
+
+/* Landing page — shared card treatment (How It Works nodes, Feature
+   Highlights bento tiles, Social Proof cards, Problem section cards). Ports
+   the artifact's .panel/.panel-interactive/.panel-lift trio exactly rather
+   than the ad-hoc per-component hover styles this had before. */
+.landing-panel {
+  background-color: rgba(10, 18, 17, 0.7);
+  backdrop-filter: blur(12px);
+  box-shadow: inset 0 0 0 1px var(--border);
+  border-radius: 0.535rem;
+  transition:
+    transform 0.4s var(--landing-spring),
+    box-shadow 0.4s var(--landing-spring),
+    background-color 0.4s ease;
+}
+/* Interactive variant — adds the inner radial-glow wash that fades in on
+   hover, on top of the shared lift+ring+bg-shift below. Used for cards that
+   read as "instrument nodes" (How It Works, Feature Highlights).
+   Deliberately no overflow:hidden here (unlike the artifact's version) —
+   How It Works' numbered badge floats half above its card, which
+   overflow:hidden would clip; border-radius:inherit on ::before keeps the
+   glow wash respecting rounded corners without needing to clip the card. */
+.landing-panel-interactive {
+  position: relative;
+}
+.landing-panel-interactive::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(circle at center, rgba(107, 224, 164, 0.1) 0%, transparent 70%);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  pointer-events: none;
+}
+.landing-panel-interactive:hover::before {
+  opacity: 1;
+}
+.landing-panel-interactive:hover,
+.landing-panel-lift:hover {
+  box-shadow:
+    inset 0 0 0 1px var(--accent-glow),
+    0 10px 30px -10px rgba(107, 224, 164, 0.1);
+  background-color: rgba(14, 26, 24, 0.95);
+  transform: translateY(-6px);
+}
+
+/* Trust section toggle — snaps into the disabled position + red flash the
+   first time its Reveal wrapper becomes visible. */
+.landing-toggle-thumb {
+  transform: translateX(0);
+  transition:
+    transform 0.4s var(--landing-spring),
+    background-color 0.2s,
+    box-shadow 0.2s;
+}
+.landing-reveal-visible .landing-toggle-thumb {
+  transform: translateX(-1.5rem);
+  background-color: var(--destructive);
+  box-shadow: 0 0 10px var(--destructive);
+  transition-delay: 500ms;
+}
+.landing-reveal-visible .landing-toggle-track {
+  animation: landing-toggle-flash 0.5s ease 500ms;
+}
+/* How-it-works numbered badges — pop once their card reveals. */
+.landing-node-badge {
+  transition:
+    transform 0.3s var(--landing-spring),
+    box-shadow 0.3s ease;
+}
+.landing-reveal-visible .landing-node-badge {
+  animation: landing-badge-pop 0.6s var(--landing-spring);
+}
+/* Pricing card — glow flash + corner brackets draw in on reveal. */
+.landing-price-pulse.landing-reveal-visible {
+  animation: landing-price-flash 1s ease-out 300ms forwards;
+}
+.landing-bracket {
+  position: absolute;
+  border-color: var(--accent-glow);
+  transition: all 0.6s var(--landing-spring);
+  width: 0;
+  height: 0;
+  opacity: 0;
+}
+.landing-reveal-visible .landing-bracket {
+  width: 1.5rem;
+  height: 1.5rem;
+  opacity: 1;
+  transition-delay: 500ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-reveal {
+    transition-duration: 0.01ms !important;
+    transform: none;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+}

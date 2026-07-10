@@ -1,0 +1,6 @@
+{
+  "crons": [
+    { "path": "/api/cron/poll-signals", "schedule": "0 13 * * *" },
+    { "path": "/api/cron/weekly-digest", "schedule": "0 13 * * 1" }
+  ]
+}

@@ -1,0 +1,90 @@
+// Usage caps — the free tier is currently the only tier, and Signal Scoring
+// (an AI call per new Reddit post) is the highest-volume, least-supervised
+// cost in the product. These exist to bound real financial exposure before
+// real founders are using this unsupervised, not to nudge toward a paid
+// plan (there isn't one yet).
+
+// True only for local `next dev` — Next.js sets NODE_ENV=production for both
+// `next build`/production deploys and Vercel preview deploys, so this never
+// accidentally disables caps anywhere but a developer's own machine. Used to
+// bypass the usage caps below during local testing, where "how many sources
+// can I monitor" isn't a real cost/abuse concern the way it is once real
+// founders are using this unsupervised. Deliberately does NOT gate the auth
+// rate limits in (auth)/actions.ts — those guard against brute force, not cost.
+export const isLocalDev = process.env.NODE_ENV !== "production";
+
+// Standing, non-resetting cap on completed projects per account (a project
+// counts once it has at least one selected: true source — see
+// countActiveProjects in lib/account-limits.ts, same definition
+// projects/page.tsx already uses for "is this a real project"). Checked at
+// two points in onboarding/actions.ts: up front in startOnboardingStep
+// (fail before spending an AI call on positioning/source-discovery for a
+// project that can't be completed anyway) and again in confirmSourcesAction
+// (the actual moment a project becomes "completed", closing the gap where
+// two onboarding attempts started in parallel could otherwise both pass the
+// early check). Freed only by archiving an existing project, never by time.
+export const MAX_PROJECTS_PER_ACCOUNT = 1;
+
+// Enforced on manual "add a source" (src/app/(app)/projects/[projectId]/sources/actions.ts),
+// counting all source types combined (Reddit + Hacker News + future
+// Twitter/X) within that one project.
+export const MAX_MONITORED_SOURCES = 5;
+
+// Account-wide companion to MAX_MONITORED_SOURCES, the same way
+// DAILY_SCORING_CAP_PER_ACCOUNT backstops DAILY_SCORING_CAP_PER_PROJECT: the
+// per-project cap alone does nothing to stop one account multiplying its
+// total monitored-source count (and therefore scoring volume) by creating
+// more projects. Summed across every project the account owns, checked
+// everywhere a source flips to selected: true — manual add (sources/actions.ts)
+// and onboarding's confirm-sources step (onboarding/actions.ts). This is a
+// lifetime/standing cap, not a rolling window like the daily scoring caps
+// below — it does not reset on any schedule, only by the founder
+// un-monitoring an existing source to free a slot.
+export const MAX_MONITORED_SOURCES_PER_ACCOUNT = 8;
+
+// Enforced in /api/poll-stream — separate from the existing per-project
+// activePollStartedAt lock, which only stops *overlapping* polls, not rapid
+// back-to-back ones once each finishes.
+export const MANUAL_POLL_RATE_LIMIT = { max: 3, windowMinutes: 15 };
+
+// Soft cap on Signal Scoring calls per project per day (lib/reddit/poll.ts),
+// covering all source types combined. Hitting this pauses scoring for that
+// project until the window rolls over; already-fetched-but-unscored posts
+// are simply re-attempted on a later poll (ScoredPost dedup only records
+// posts actually scored).
+export const DAILY_SCORING_CAP_PER_PROJECT = 100;
+
+// Soft cap on Signal Scoring calls per ACCOUNT per day, summed across every
+// project that account owns (lib/reddit/poll.ts) — closes the gap where the
+// per-project cap above does nothing to stop one account from multiplying
+// its total AI spend by creating more projects. Deliberately more than
+// DAILY_SCORING_CAP_PER_PROJECT so 1-2 genuinely active projects on the same
+// account aren't throttled by each other on a busy day, but still bounds
+// the account's total blast radius regardless of how many projects exist.
+export const DAILY_SCORING_CAP_PER_ACCOUNT = 200;
+
+// Enforced on manual "add a lead" (src/app/(app)/projects/[projectId]/outreach/actions.ts).
+// Mirrors MAX_MONITORED_SOURCES's per-project/per-account pair: Outreach
+// leads are hand-entered, but each draft/regenerate is still an Anthropic
+// call, so an unbounded lead list is an unbounded AI-spend surface the same
+// way an unbounded source list is.
+export const MAX_OUTREACH_LEADS_PER_PROJECT = 5;
+
+// Account-wide companion to MAX_OUTREACH_LEADS_PER_PROJECT, summed across
+// every project the account owns. Standing/non-resetting, same as
+// MAX_MONITORED_SOURCES_PER_ACCOUNT. With MAX_PROJECTS_PER_ACCOUNT at 1 this
+// can't currently be reached before the per-project cap already applies,
+// but it's here so raising the project cap later doesn't silently reopen
+// the multiply-by-projects gap the way it would for sources without this.
+// NOTE: unlike sources (which can be "un-monitored") or projects (which can
+// be archived), there is currently no way to remove a Lead once created —
+// hitting this cap is permanent for that project. Flagged to the user
+// rather than adding delete-lead as unrequested scope.
+export const MAX_OUTREACH_LEADS_PER_ACCOUNT = 8;
+
+// After this many consecutive failed fetch attempts for one source, surface
+// it as "ingestion failing" (Sources page + Dashboard) rather than letting
+// it look like a quiet source with no new posts. An alert-sensitivity
+// threshold, not a cost/abuse cap, so it isn't scaled down with the caps
+// above.
+export const CONSECUTIVE_FAILURE_ALERT_THRESHOLD = 3;

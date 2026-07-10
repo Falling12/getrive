@@ -1,0 +1,218 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-07-08T12:00:00.000Z",
+  "title": "Design System: Earshot",
+  "extensions": {
+    "colorMeta": {
+      "void-teal": {
+        "role": "neutral",
+        "displayName": "Void Teal",
+        "canonical": "oklch(0.08 0.01 165)",
+        "tonalRamp": [
+          "oklch(0.08 0.01 165)",
+          "oklch(0.17 0.015 165)",
+          "oklch(0.26 0.02 165)",
+          "oklch(0.36 0.025 165)",
+          "oklch(0.47 0.03 165)",
+          "oklch(0.60 0.025 165)",
+          "oklch(0.75 0.02 165)",
+          "oklch(0.92 0.01 165)"
+        ]
+      },
+      "signal-white": {
+        "role": "primary",
+        "displayName": "Signal White",
+        "canonical": "oklch(0.92 0.015 85)",
+        "tonalRamp": [
+          "oklch(0.20 0.01 85)",
+          "oklch(0.33 0.012 85)",
+          "oklch(0.46 0.014 85)",
+          "oklch(0.58 0.015 85)",
+          "oklch(0.70 0.016 85)",
+          "oklch(0.81 0.017 85)",
+          "oklch(0.88 0.016 85)",
+          "oklch(0.95 0.012 85)"
+        ]
+      },
+      "moss-panel": {
+        "role": "neutral",
+        "displayName": "Moss Panel",
+        "canonical": "oklch(0.28 0.03 155)",
+        "tonalRamp": [
+          "oklch(0.14 0.02 155)",
+          "oklch(0.22 0.025 155)",
+          "oklch(0.28 0.03 155)",
+          "oklch(0.37 0.032 155)",
+          "oklch(0.47 0.03 155)",
+          "oklch(0.59 0.025 155)",
+          "oklch(0.74 0.018 155)",
+          "oklch(0.90 0.01 155)"
+        ]
+      },
+      "field-sage": {
+        "role": "secondary",
+        "displayName": "Field Sage",
+        "canonical": "oklch(0.45 0.05 165)",
+        "tonalRamp": [
+          "oklch(0.18 0.03 165)",
+          "oklch(0.27 0.04 165)",
+          "oklch(0.36 0.045 165)",
+          "oklch(0.45 0.05 165)",
+          "oklch(0.55 0.048 165)",
+          "oklch(0.65 0.04 165)",
+          "oklch(0.78 0.03 165)",
+          "oklch(0.91 0.015 165)"
+        ]
+      },
+      "clay-alert": {
+        "role": "tertiary",
+        "displayName": "Clay Alert",
+        "canonical": "oklch(0.55 0.12 25)",
+        "tonalRamp": [
+          "oklch(0.22 0.07 25)",
+          "oklch(0.32 0.09 25)",
+          "oklch(0.42 0.105 25)",
+          "oklch(0.55 0.12 25)",
+          "oklch(0.64 0.115 25)",
+          "oklch(0.73 0.09 25)",
+          "oklch(0.83 0.06 25)",
+          "oklch(0.93 0.03 25)"
+        ]
+      },
+      "quiet-gray": {
+        "role": "neutral",
+        "displayName": "Quiet Gray",
+        "canonical": "oklch(0.78 0 0)",
+        "tonalRamp": [
+          "oklch(0.20 0 0)",
+          "oklch(0.33 0 0)",
+          "oklch(0.46 0 0)",
+          "oklch(0.58 0 0)",
+          "oklch(0.70 0 0)",
+          "oklch(0.78 0 0)",
+          "oklch(0.87 0 0)",
+          "oklch(0.95 0 0)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "The single headline metric on the Dashboard. Used exactly once per product." },
+      "headline": { "displayName": "Headline", "purpose": "Onboarding step titles." },
+      "title": { "displayName": "Title", "purpose": "Page-level headers across the app shell." },
+      "body": { "displayName": "Body", "purpose": "Descriptions, signal bodies, reasoning text; prose caps at 65-75ch." },
+      "label": { "displayName": "Mono Label", "purpose": "Every micro-label: phase indicators, stat captions, field labels, status badges." }
+    },
+    "shadows": [
+      { "name": "ring-rest", "value": "inset 0 0 0 1px var(--border)", "purpose": "Default container edge — flat surface, no drop shadow." },
+      { "name": "ring-selected", "value": "inset 0 0 0 1px var(--accent)", "purpose": "Hover/selected state for the same containers — ring brightens to Field Sage." },
+      { "name": "ambient-float", "value": "0 4px 24px -8px rgba(0,0,0,0.2)", "purpose": "Reserved for standalone floating list cards (Subreddit cards only), paired with a 4px backdrop blur." }
+    ],
+    "motion": [
+      { "name": "ease-out-expo", "value": "cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "Card/step entrance easing (onboarding stagger, auth card spring-in)." },
+      { "name": "drift-60s", "value": "60s linear infinite", "purpose": "Slow background-texture drift on the Topographic Field." },
+      { "name": "pulse-slow-2s", "value": "2s ease-in-out infinite", "purpose": "The 'actively listening' pulsing accent dot used across nav, phase tracker, and status indicators." }
+    ],
+    "breakpoints": [
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Inverted-fill high-emphasis action, one per screen.",
+      "html": "<button class=\"ds-btn-primary\">Confirm positioning</button>",
+      "css": ".ds-btn-primary { background: var(--foreground, #eae7e0); color: var(--background, #0a1211); height: 32px; padding: 0 10px; border-radius: 0.535rem; border: none; font-family: var(--font-brand-sans, Outfit, sans-serif); font-size: 0.875rem; font-weight: 500; cursor: pointer; transition: opacity 0.15s ease-out; } .ds-btn-primary:hover { opacity: 0.8; } .ds-btn-primary:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(74,106,94,0.5); } .ds-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }"
+    },
+    {
+      "name": "Outline Button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "Secondary action — transparent fill, hairline border.",
+      "html": "<button class=\"ds-btn-outline\">Regenerate options</button>",
+      "css": ".ds-btn-outline { background: transparent; color: var(--foreground, #eae7e0); border: 1px solid var(--border, #2a413a); height: 32px; padding: 0 10px; border-radius: 0.535rem; font-family: var(--font-brand-sans, Outfit, sans-serif); font-size: 0.875rem; font-weight: 500; cursor: pointer; transition: background-color 0.15s ease-out; } .ds-btn-outline:hover { background: rgba(42,65,58,0.4); } .ds-btn-outline:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(74,106,94,0.5); }"
+    },
+    {
+      "name": "Destructive Button",
+      "kind": "button",
+      "refersTo": "button-destructive",
+      "description": "Soft tinted-wash destructive action — never a solid alert fill.",
+      "html": "<button class=\"ds-btn-destructive\">Archive project</button>",
+      "css": ".ds-btn-destructive { background: rgba(196,84,74,0.1); color: #c4544a; border: none; height: 32px; padding: 0 10px; border-radius: 0.535rem; font-family: var(--font-brand-sans, Outfit, sans-serif); font-size: 0.875rem; font-weight: 500; cursor: pointer; transition: background-color 0.15s ease-out; } .ds-btn-destructive:hover { background: rgba(196,84,74,0.2); }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Bordered field — used in denser forms outside onboarding's underline style.",
+      "html": "<input class=\"ds-input\" type=\"text\" placeholder=\"https://acme.com\" />",
+      "css": ".ds-input { height: 32px; width: 100%; background: transparent; color: var(--foreground, #eae7e0); border: 1px solid var(--border, #2a413a); border-radius: 0.535rem; padding: 4px 10px; font-family: var(--font-brand-sans, Outfit, sans-serif); font-size: 0.875rem; } .ds-input::placeholder { color: var(--muted-foreground, #c4c4c4); } .ds-input:focus-visible { outline: none; border-color: var(--accent, #4a6a5e); box-shadow: 0 0 0 3px rgba(74,106,94,0.5); }"
+    },
+    {
+      "name": "Panel Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "The default grouped-content container: flat, edge-defined by a ring, no drop shadow.",
+      "html": "<div class=\"ds-card\"><h3 class=\"ds-card-title\">Product details</h3><p class=\"ds-card-body\">Core configuration for signal targeting.</p></div>",
+      "css": ".ds-card { background: var(--background, #0a1211); border-radius: 0.749rem; padding: 24px; box-shadow: inset 0 0 0 1px var(--border, #2a413a); transition: box-shadow 0.3s ease-out; } .ds-card:hover { box-shadow: inset 0 0 0 1px var(--accent, #4a6a5e); } .ds-card-title { font-family: var(--font-brand-sans, Outfit, sans-serif); font-size: 1.125rem; font-weight: 500; color: var(--foreground, #eae7e0); margin: 0 0 4px; } .ds-card-body { font-family: var(--font-brand-mono, 'Source Code Pro', monospace); font-size: 0.6875rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted-foreground, #c4c4c4); margin: 0; }"
+    },
+    {
+      "name": "Switch Toggle",
+      "kind": "input",
+      "refersTo": "switch",
+      "description": "Notification/preference toggle.",
+      "html": "<button class=\"ds-switch\" role=\"switch\" aria-checked=\"true\"><span class=\"ds-switch-thumb\"></span></button>",
+      "css": ".ds-switch { width: 32px; height: 18.4px; border-radius: 9999px; background: var(--foreground, #eae7e0); border: none; padding: 2px; cursor: pointer; position: relative; transition: background-color 0.15s ease-out; } .ds-switch[aria-checked=\"false\"] { background: var(--input, #2a413a); } .ds-switch-thumb { display: block; width: 14.4px; height: 14.4px; border-radius: 9999px; background: var(--background, #0a1211); transform: translateX(calc(100% - 2px)); transition: transform 0.15s ease-out; } .ds-switch[aria-checked=\"false\"] .ds-switch-thumb { transform: translateX(0); background: var(--foreground, #eae7e0); }"
+    },
+    {
+      "name": "Mono Label",
+      "kind": "custom",
+      "refersTo": "label-mono",
+      "description": "The system's signature micro-label device — used for every field label, stat caption, phase indicator, and status badge. Functional, never a decorative section eyebrow.",
+      "html": "<span class=\"ds-mono-label\">Phase 02 &mdash; Positioning</span>",
+      "css": ".ds-mono-label { font-family: var(--font-brand-mono, 'Source Code Pro', monospace); font-size: 0.625rem; font-weight: 500; letter-spacing: 0.15em; text-transform: uppercase; color: var(--accent, #4a6a5e); }"
+    },
+    {
+      "name": "Phase Tracker",
+      "kind": "custom",
+      "refersTo": "phase-tracker",
+      "description": "Vertical stepper for multi-step flows (onboarding today; This Week / Outreach candidates later). A thin rule with a Field-Sage fill grown to the active step, a pulsing dot per active phase, mono-label captions.",
+      "html": "<ul class=\"ds-phase-tracker\"><li class=\"ds-phase is-done\"><span class=\"ds-phase-dot\"></span><div><span class=\"ds-mono-label\">Phase 01</span><span class=\"ds-phase-title\">Establish context</span></div></li><li class=\"ds-phase is-active\"><span class=\"ds-phase-dot\"></span><div><span class=\"ds-mono-label\">Phase 02</span><span class=\"ds-phase-title\">Positioning</span></div></li><li class=\"ds-phase\"><span class=\"ds-phase-dot\"></span><div><span class=\"ds-mono-label\">Phase 03</span><span class=\"ds-phase-title\">Node calibration</span></div></li></ul>",
+      "css": ".ds-phase-tracker { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 40px; position: relative; } .ds-phase { display: flex; align-items: flex-start; gap: 20px; } .ds-phase-dot { width: 8px; height: 8px; border-radius: 9999px; background: var(--border, #2a413a); margin-top: 4px; flex-shrink: 0; } .ds-phase.is-done .ds-phase-dot, .ds-phase.is-active .ds-phase-dot { background: var(--accent, #4a6a5e); } .ds-phase.is-active .ds-phase-dot { animation: ds-pulse 2s ease-in-out infinite; } @keyframes ds-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(74,106,94,0.4); } 50% { box-shadow: 0 0 0 6px rgba(74,106,94,0); } } .ds-phase-title { display: block; font-family: var(--font-brand-sans, Outfit, sans-serif); font-size: 1rem; font-weight: 500; color: var(--foreground, #eae7e0); margin-top: 4px; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Listening Node",
+    "overview": "Earshot's interface doesn't perform \"AI tool\" — it performs *instrument*. Every surface reads like a quiet, always-on receiver: a near-black deep-teal field, a single warm-white signal, one muted sage accent that only lights up for what matters right now. The vocabulary is already load-bearing in the app's own copy — \"listening node,\" \"phase,\" \"calibration,\" \"signal\" — and the visual system exists to make that vocabulary feel earned rather than decorative. This is not a SaaS dashboard wearing sci-fi skin; it's a precision instrument a stressed, time-constrained founder can trust to be watching carefully so they don't have to. The system explicitly rejects the generic SaaS-cream dashboard, any playful or cutesy startup register, and stodgy navy-and-gray enterprise blandness. Earshot is dark, quiet, and precise — never loud, never cute, never beige.",
+    "keyCharacteristics": [
+      "Near-black deep-teal field with exactly one warm-white ink and one muted-sage accent — nothing else competes for attention.",
+      "Flat surfaces, edge-defined by a hairline inset ring rather than drop-shadow elevation.",
+      "A single recurring typographic device — the tiny tracked-out monospace uppercase label — does the work five different UI patterns would otherwise need.",
+      "Motion is diagnostic, not decorative: pulses, scan-lines, and phase-progress fills all read as \"the system is actively listening,\" never as flourish."
+    ],
+    "rules": [
+      { "name": "The One Accent Rule", "body": "Field Sage is the only saturated color in the system. If a screen needs a second visual emphasis, reach for weight or size on Signal White before reaching for a second hue.", "section": "colors" },
+      { "name": "The Soft Alert Rule", "body": "Destructive/error states are a tinted wash of Clay Alert (background at 10-20% opacity, full-opacity text) — never a solid red fill. Alarm is legible, not loud.", "section": "colors" },
+      { "name": "The Mono Label Rule", "body": "Any text under 12px is Source Code Pro, uppercase, and tracked at 0.15em, full stop. This is the system's single most-repeated device. It is a functional labeling convention, not a decorative marketing eyebrow.", "section": "typography" },
+      { "name": "The One-Family Rule", "body": "Outfit carries every weight from body copy to the 11rem hero number. No second display face. Contrast comes from scale and the mono-label voice, not a second serif or humanist pairing.", "section": "typography" },
+      { "name": "The Ring-Not-Shadow Rule", "body": "Default elevation is a 1px inset border-ring, not a drop shadow. If a new panel needs to signal 'this is a container,' reach for the ring first; a floating shadow is the deliberate exception for standalone list cards, not the norm.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do keep Field Sage as the only saturated color on any given screen — it marks the one active/selected/emphasized thing, nothing else.",
+      "Do use the 1px inset ring (Ring-rest → Ring-selected) as the default way to define a container's edge; reach for a drop shadow only for a standalone floating list card.",
+      "Do set any label, caption, or status text under 12px in Source Code Pro, uppercase, 0.15em tracking — this is the system's signature device.",
+      "Do use the Soft Alert treatment (tinted wash, not solid fill) for every destructive/error state.",
+      "Do reuse the Phase Tracker pattern for any new multi-step flow rather than inventing a second stepper."
+    ],
+    "donts": [
+      "Don't introduce a second accent hue. If a screen feels like it needs more color, that's a hierarchy problem to solve with weight/size/space, not a new hue.",
+      "Don't ship the generic SaaS-cream dashboard look — warm off-white surfaces, identical icon-heading-text card grids, or a gradient hero-metric block. This system is dark, quiet, and precise by explicit design decision, not by default.",
+      "Don't use the tiny mono-uppercase label as a decorative per-section marketing eyebrow (\"ABOUT / PROCESS / PRICING\" above every block). Its job here is functional labeling; reintroducing it as landing-page scaffolding is a different, banned pattern.",
+      "Don't use a solid, full-opacity Clay Alert fill for any destructive button or banner — always the tinted wash.",
+      "Don't add mascots, illustration, or exclamation-heavy copy anywhere in the product; the tone is a capable, calm instrument, not a consumer toy.",
+      "Don't reach for a corporate navy-and-gray enterprise treatment when a new B2B-feeling surface is added — stay inside the Void Teal / Signal White / Field Sage palette."
+    ]
+  }
+}
