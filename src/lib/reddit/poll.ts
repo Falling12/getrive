@@ -7,7 +7,7 @@ import {
   DAILY_SCORING_CAP_PER_PROJECT,
   DAILY_SCORING_CAP_PER_ACCOUNT,
   CONSECUTIVE_FAILURE_ALERT_THRESHOLD,
-  isLocalDev,
+  isExemptFromLimits,
 } from "@/lib/limits";
 import { notifySignalCreated } from "@/lib/services/notification.service";
 import { describeSelectedIcp } from "@/lib/services/positioning.service";
@@ -263,7 +263,10 @@ export async function pollAllSources(options?: {
         if (alreadyScored) continue;
 
         const scoredToday = await scoredTodayFor(source.product.id);
-        if (!isLocalDev && scoredToday >= DAILY_SCORING_CAP_PER_PROJECT) {
+        if (
+          !isExemptFromLimits(source.product.user.email) &&
+          scoredToday >= DAILY_SCORING_CAP_PER_PROJECT
+        ) {
           console.warn(
             `[poll] daily Signal Scoring cap (${DAILY_SCORING_CAP_PER_PROJECT}) reached for product ${source.product.id} — pausing scoring for its sources until tomorrow`
           );
@@ -272,7 +275,10 @@ export async function pollAllSources(options?: {
         }
 
         const scoredTodayAccount = await scoredTodayForAccount(source.product.userId);
-        if (!isLocalDev && scoredTodayAccount >= DAILY_SCORING_CAP_PER_ACCOUNT) {
+        if (
+          !isExemptFromLimits(source.product.user.email) &&
+          scoredTodayAccount >= DAILY_SCORING_CAP_PER_ACCOUNT
+        ) {
           console.warn(
             `[poll] daily Signal Scoring cap (${DAILY_SCORING_CAP_PER_ACCOUNT}) reached for account ${source.product.userId} — pausing scoring for all its projects until tomorrow`
           );

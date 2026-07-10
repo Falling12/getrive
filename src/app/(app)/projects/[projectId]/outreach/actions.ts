@@ -7,7 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { generateOutreachDraft } from "@/lib/ai/outreach-draft";
 import { findKnownLeadMatches } from "@/lib/services/lead-dedup.service";
 import { describeSelectedIcp } from "@/lib/services/positioning.service";
-import { isLocalDev, MAX_OUTREACH_LEADS_PER_PROJECT, MAX_OUTREACH_LEADS_PER_ACCOUNT } from "@/lib/limits";
+import { isExemptFromLimits, MAX_OUTREACH_LEADS_PER_PROJECT, MAX_OUTREACH_LEADS_PER_ACCOUNT } from "@/lib/limits";
 import { countAccountOutreachLeads } from "@/lib/account-limits";
 
 async function loadOwnedLead(leadId: string, userId: string) {
@@ -41,14 +41,14 @@ export async function addLeadAction(
   if (!context) return { error: "Add a note on where you found them and why they're a fit." };
 
   const projectLeadCount = await prisma.lead.count({ where: { productId: product.id } });
-  if (!isLocalDev && projectLeadCount >= MAX_OUTREACH_LEADS_PER_PROJECT) {
+  if (!isExemptFromLimits(session.user.email) && projectLeadCount >= MAX_OUTREACH_LEADS_PER_PROJECT) {
     return {
       error: `You've reached the ${MAX_OUTREACH_LEADS_PER_PROJECT}-lead limit for this project.`,
     };
   }
 
   const accountLeadCount = await countAccountOutreachLeads(session.user.id);
-  if (!isLocalDev && accountLeadCount >= MAX_OUTREACH_LEADS_PER_ACCOUNT) {
+  if (!isExemptFromLimits(session.user.email) && accountLeadCount >= MAX_OUTREACH_LEADS_PER_ACCOUNT) {
     return {
       error: `You've reached the ${MAX_OUTREACH_LEADS_PER_ACCOUNT}-lead limit across your account.`,
     };

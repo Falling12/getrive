@@ -2,7 +2,7 @@ import { requireSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { pollAllSources, POLL_STALE_MINUTES, type PollProgressEvent } from "@/lib/reddit/poll";
 import { checkRateLimit, RateLimitError } from "@/lib/rate-limit";
-import { isLocalDev, MANUAL_POLL_RATE_LIMIT } from "@/lib/limits";
+import { isExemptFromLimits, MANUAL_POLL_RATE_LIMIT } from "@/lib/limits";
 
 // Reddit's rate limit forces spacing between subreddits in a batch (see
 // lib/reddit/poll.ts) — a few minutes of wall-clock time per run.
@@ -29,7 +29,7 @@ export async function GET(request: Request) {
   // Separate from the login rate limiter — this is about bounding how much
   // of the shared Reddit rate limit and Signal Scoring's AI cost one
   // project's impatient clicking can consume, not about auth abuse.
-  if (!isLocalDev) {
+  if (!isExemptFromLimits(session.user.email)) {
     try {
       await checkRateLimit(`poll:${projectId}`, MANUAL_POLL_RATE_LIMIT);
     } catch (error) {

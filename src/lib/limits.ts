@@ -13,6 +13,25 @@
 // rate limits in (auth)/actions.ts — those guard against brute force, not cost.
 export const isLocalDev = process.env.NODE_ENV !== "production";
 
+// Emails permanently exempt from every usage cap below — currently just the
+// founder's own account, for uncapped dogfooding/testing directly against
+// production. Not exposed anywhere in the UI; checked server-side only, via
+// isExemptFromLimits() below.
+const UNLIMITED_ACCOUNT_EMAILS = new Set(["senkcsani@gmail.com"]);
+
+function isUnlimitedAccount(email?: string | null): boolean {
+  return !!email && UNLIMITED_ACCOUNT_EMAILS.has(email.toLowerCase());
+}
+
+// The one bypass check every cap site below should use (in place of a bare
+// isLocalDev), so local dev and an exempted account only ever need adding
+// in this one place. Deliberately not used to gate the auth rate limits in
+// (auth)/actions.ts — those guard against brute force, not cost, and apply
+// before a session/email even exists.
+export function isExemptFromLimits(email?: string | null): boolean {
+  return isLocalDev || isUnlimitedAccount(email);
+}
+
 // Standing, non-resetting cap on completed projects per account (a project
 // counts once it has at least one selected: true source — see
 // countActiveProjects in lib/account-limits.ts, same definition

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import * as Sentry from "@sentry/nextjs";
 import { requireSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
-import { isLocalDev, MAX_MONITORED_SOURCES, MAX_MONITORED_SOURCES_PER_ACCOUNT } from "@/lib/limits";
+import { isExemptFromLimits, MAX_MONITORED_SOURCES, MAX_MONITORED_SOURCES_PER_ACCOUNT } from "@/lib/limits";
 import { countAccountMonitoredSources } from "@/lib/account-limits";
 import { discoverSources } from "@/lib/ai/source-discovery";
 import { describeSelectedIcp } from "@/lib/services/positioning.service";
@@ -120,14 +120,14 @@ export async function addRedditSourceAction(
   const monitoredCount = await prisma.source.count({
     where: { productId: product.id, selected: true },
   });
-  if (!isLocalDev && monitoredCount >= MAX_MONITORED_SOURCES) {
+  if (!isExemptFromLimits(session.user.email) && monitoredCount >= MAX_MONITORED_SOURCES) {
     return {
       error: `You've reached the ${MAX_MONITORED_SOURCES}-source limit for this project. Stop monitoring one before adding another.`,
     };
   }
 
   const accountMonitoredCount = await countAccountMonitoredSources(session.user.id);
-  if (!isLocalDev && accountMonitoredCount >= MAX_MONITORED_SOURCES_PER_ACCOUNT) {
+  if (!isExemptFromLimits(session.user.email) && accountMonitoredCount >= MAX_MONITORED_SOURCES_PER_ACCOUNT) {
     return {
       error: `You've reached the ${MAX_MONITORED_SOURCES_PER_ACCOUNT}-source limit across your account. Stop monitoring one somewhere before adding another.`,
     };
@@ -243,14 +243,14 @@ export async function addDiscoveredSourceAction(
   const monitoredCount = await prisma.source.count({
     where: { productId: product.id, selected: true },
   });
-  if (!isLocalDev && monitoredCount >= MAX_MONITORED_SOURCES) {
+  if (!isExemptFromLimits(session.user.email) && monitoredCount >= MAX_MONITORED_SOURCES) {
     return {
       error: `You've reached the ${MAX_MONITORED_SOURCES}-source limit for this project. Stop monitoring one before adding another.`,
     };
   }
 
   const accountMonitoredCount = await countAccountMonitoredSources(session.user.id);
-  if (!isLocalDev && accountMonitoredCount >= MAX_MONITORED_SOURCES_PER_ACCOUNT) {
+  if (!isExemptFromLimits(session.user.email) && accountMonitoredCount >= MAX_MONITORED_SOURCES_PER_ACCOUNT) {
     return {
       error: `You've reached the ${MAX_MONITORED_SOURCES_PER_ACCOUNT}-source limit across your account. Stop monitoring one somewhere before adding another.`,
     };
@@ -302,14 +302,14 @@ export async function enableHackerNewsAction(projectId: string): Promise<AddSour
   const monitoredCount = await prisma.source.count({
     where: { productId: product.id, selected: true },
   });
-  if (!isLocalDev && monitoredCount >= MAX_MONITORED_SOURCES) {
+  if (!isExemptFromLimits(session.user.email) && monitoredCount >= MAX_MONITORED_SOURCES) {
     return {
       error: `You've reached the ${MAX_MONITORED_SOURCES}-source limit for this project. Stop monitoring one before adding another.`,
     };
   }
 
   const accountMonitoredCount = await countAccountMonitoredSources(session.user.id);
-  if (!isLocalDev && accountMonitoredCount >= MAX_MONITORED_SOURCES_PER_ACCOUNT) {
+  if (!isExemptFromLimits(session.user.email) && accountMonitoredCount >= MAX_MONITORED_SOURCES_PER_ACCOUNT) {
     return {
       error: `You've reached the ${MAX_MONITORED_SOURCES_PER_ACCOUNT}-source limit across your account. Stop monitoring one somewhere before adding another.`,
     };

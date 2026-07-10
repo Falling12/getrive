@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { requireSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { onboardingSchema } from "@/lib/validation/onboarding";
-import { isLocalDev, MAX_PROJECTS_PER_ACCOUNT, MAX_MONITORED_SOURCES_PER_ACCOUNT } from "@/lib/limits";
+import { isExemptFromLimits, MAX_PROJECTS_PER_ACCOUNT, MAX_MONITORED_SOURCES_PER_ACCOUNT } from "@/lib/limits";
 import { countActiveProjects, countAccountMonitoredSources } from "@/lib/account-limits";
 import { discoverSources } from "@/lib/ai/source-discovery";
 import { extractProductFromPageText } from "@/lib/ai/product-prefill";
@@ -68,7 +68,7 @@ async function startOnboardingStep(formData: FormData): Promise<OnboardingState>
   // projects (archived or still-mid-onboarding drafts don't count), so
   // archiving an existing project always frees a slot.
   const activeProjects = await countActiveProjects(session.user.id);
-  if (!isLocalDev && activeProjects >= MAX_PROJECTS_PER_ACCOUNT) {
+  if (!isExemptFromLimits(session.user.email) && activeProjects >= MAX_PROJECTS_PER_ACCOUNT) {
     return {
       step: "form",
       error: `You've reached the ${MAX_PROJECTS_PER_ACCOUNT}-project limit for your account. Archive an existing project before starting another.`,
@@ -268,7 +268,7 @@ export async function confirmSourcesAction(
   // started in another tab before the first one finished would slip past
   // that earlier check without this.
   const activeProjects = await countActiveProjects(session.user.id);
-  if (!isLocalDev && activeProjects >= MAX_PROJECTS_PER_ACCOUNT) {
+  if (!isExemptFromLimits(session.user.email) && activeProjects >= MAX_PROJECTS_PER_ACCOUNT) {
     return {
       error: `You've reached the ${MAX_PROJECTS_PER_ACCOUNT}-project limit for your account. Archive an existing project before completing this one.`,
     };
@@ -281,7 +281,10 @@ export async function confirmSourcesAction(
   // "add a source" (sources/actions.ts) — onboarding a new project is just
   // another way to cross it.
   const accountMonitoredCount = await countAccountMonitoredSources(session.user.id);
-  if (!isLocalDev && accountMonitoredCount + selectedIds.length > MAX_MONITORED_SOURCES_PER_ACCOUNT) {
+  if (
+    !isExemptFromLimits(session.user.email) &&
+    accountMonitoredCount + selectedIds.length > MAX_MONITORED_SOURCES_PER_ACCOUNT
+  ) {
     const remaining = Math.max(0, MAX_MONITORED_SOURCES_PER_ACCOUNT - accountMonitoredCount);
     return {
       error:
