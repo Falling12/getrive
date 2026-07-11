@@ -5,6 +5,7 @@ import "./globals.css";
 import { SITE_URL, SITE_NAME, SITE_TITLE, SITE_DESCRIPTION } from "@/lib/seo";
 import { isLocalDev } from "@/lib/limits";
 import { captureSnippetBody } from "@/lib/tracking-snippet";
+import { PostHogProvider } from "@/components/analytics/posthog-provider";
 
 const geistSans = Geist({
   variable: "--font-sans",
@@ -79,6 +80,7 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
+        <PostHogProvider />
         {children}
         {/* Getrive dogfoods its own signup-attribution feature (Option B —
             see project settings) on getrive itself: this is the capture half,

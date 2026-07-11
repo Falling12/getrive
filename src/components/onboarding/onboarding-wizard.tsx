@@ -1,7 +1,8 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useRef } from "react";
 import { onboardingAction, type OnboardingState } from "@/app/onboarding/actions";
+import { track } from "@/lib/analytics/posthog-client";
 import { OnboardingBackdrop } from "@/components/onboarding/onboarding-backdrop";
 import { OnboardingSidebar } from "@/components/onboarding/onboarding-sidebar";
 import { AuthMark } from "@/components/auth/auth-mark";
@@ -17,6 +18,16 @@ export function OnboardingWizard() {
   );
   const activeStep =
     state.step === "select" ? "calibration" : state.step === "positioning" ? "positioning" : "context";
+
+  // Fires once per real step transition — not on the initial "form" render,
+  // which is just the wizard loading, not a completed step.
+  const previousStep = useRef(state.step);
+  useEffect(() => {
+    if (state.step !== previousStep.current && !isPending) {
+      track("onboarding_step_completed", { step: state.step });
+      previousStep.current = state.step;
+    }
+  }, [state.step, isPending]);
 
   return (
     <div className="relative flex h-[100dvh] w-full">

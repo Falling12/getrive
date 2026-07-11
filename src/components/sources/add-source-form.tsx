@@ -1,9 +1,10 @@
 "use client";
 
-import { useActionState, useTransition } from "react";
+import { useActionState, useEffect, useRef, useTransition } from "react";
 import { MessageCircle, RadioTower, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { addRedditSourceAction, enableHackerNewsAction } from "@/app/(app)/projects/[projectId]/sources/actions";
+import { track } from "@/lib/analytics/posthog-client";
 
 export function AddSourceForm({
   projectId,
@@ -21,6 +22,18 @@ export function AddSourceForm({
     async () => enableHackerNewsAction(projectId),
     {}
   );
+
+  useEffect(() => {
+    if (redditState.success) track("source_added", { type: "reddit" });
+  }, [redditState.success]);
+
+  const wasHackerNewsEnabled = useRef(hasHackerNews);
+  useEffect(() => {
+    if (hasHackerNews && !wasHackerNewsEnabled.current) {
+      track("source_added", { type: "hackernews" });
+    }
+    wasHackerNewsEnabled.current = hasHackerNews;
+  }, [hasHackerNews]);
 
   return (
     <section className="overflow-hidden rounded-xl border border-border bg-background">

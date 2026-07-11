@@ -1,6 +1,9 @@
+"use client";
+
 import Link from "next/link";
 import { Reveal } from "@/components/landing/reveal";
 import { Button } from "@/components/ui/button";
+import { track } from "@/lib/analytics/posthog-client";
 
 export function FinalCta() {
   return (
@@ -30,6 +33,7 @@ export function FinalCta() {
         <Button
           render={<Link href="/signup" />}
           nativeButton={false}
+          onClick={() => track("cta_clicked", { cta_id: "final_cta" })}
           className="landing-ripple-hover h-auto animate-[pulse-fast_2s_infinite] rounded-lg px-12 py-6 font-mono text-sm font-bold tracking-[0.2em] uppercase transition-all"
           style={{
             backgroundColor: "var(--accent-glow)",

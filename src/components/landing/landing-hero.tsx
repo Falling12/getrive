@@ -1,7 +1,10 @@
+"use client";
+
 import Link from "next/link";
 import { ArrowDownRight, Crosshair } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { InterceptDemo } from "@/components/landing/intercept-demo";
+import { track } from "@/lib/analytics/posthog-client";
 
 export function LandingHero() {
   return (
@@ -48,6 +51,7 @@ export function LandingHero() {
           <Button
             render={<Link href="/signup" />}
             nativeButton={false}
+            onClick={() => track("cta_clicked", { cta_id: "hero" })}
             className="landing-btn-glow h-auto rounded-lg px-8 py-4 font-mono text-xs font-semibold tracking-widest uppercase transition-transform active:translate-y-px"
             style={{
               backgroundColor: "var(--accent-glow)",

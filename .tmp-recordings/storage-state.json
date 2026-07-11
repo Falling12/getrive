@@ -1,0 +1,25 @@
+{
+  "cookies": [
+    {
+      "name": "authjs.callback-url",
+      "value": "http%3A%2F%2Flocalhost%3A3000%2Fprojects",
+      "domain": "localhost",
+      "path": "/",
+      "expires": -1,
+      "httpOnly": true,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "authjs.session-token",
+      "value": "eyJhbGciOiJkaXIiLCJlbmMiOiJBMjU2Q0JDLUhTNTEyIiwia2lkIjoiT0tXZ29aRjE5R3ppVFlIakpzVGx5WFpSaDVYejZiMVdIeUJuLTdTOENHTnBHRi1qdnB6VG1TT3RMUHBFQUlLU3gyc3p4d1J4Z284TUtKcjZIRUlzWVEifQ..BKpxqIySI-H7xFnIoXVjDg.SME2cM1SGqR7Fs0y-ONTSXd6b9FxhhmjU2ZT8dK53e7fLg9plsg_X8xQtTENVD3nahrovH-dnrWrbJygyONcGj7yMyhBDQGbfSQKEPwgQ-k7AqZlokWxZqQs4MYVFfXWs6Gru2anYA4t8SeHbktYd5NS48MgbelSEvoqwZGeWRNFofVUj2NQzH3I9sBUBOLodUak8qTZfdN9JZLkB3-7mA_nUebOvj5KWWgFrOrqCQjON2YC58pVT8DZVTS3Yypy.VgNqyc8XNdT2og0SDnCoPhNCycptNTNVCSWvej1znMM",
+      "domain": "localhost",
+      "path": "/",
+      "expires": 1786378736.542498,
+      "httpOnly": true,
+      "secure": false,
+      "sameSite": "Lax"
+    }
+  ],
+  "origins": []
+}

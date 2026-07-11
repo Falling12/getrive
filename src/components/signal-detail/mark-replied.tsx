@@ -1,14 +1,19 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { markAsRepliedAction } from "@/app/(app)/projects/[projectId]/signals/[id]/actions";
+import { track } from "@/lib/analytics/posthog-client";
 
 export function MarkReplied({ projectId, signalId }: { projectId: string; signalId: string }) {
   const [expanded, setExpanded] = useState(false);
   const boundAction = markAsRepliedAction.bind(null, projectId, signalId);
   const [state, formAction, isPending] = useActionState(boundAction, {});
+
+  useEffect(() => {
+    if (state.success) track("signal_marked_replied", { signal_id: signalId });
+  }, [state.success, signalId]);
 
   if (state.success) {
     return (

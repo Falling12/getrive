@@ -11,6 +11,7 @@ import { SocialProof } from "@/components/landing/social-proof";
 import { PricingSection } from "@/components/landing/pricing-section";
 import { FinalCta } from "@/components/landing/final-cta";
 import { LandingFooter } from "@/components/landing/landing-footer";
+import { LandingAnalytics } from "@/components/analytics/landing-analytics";
 
 // The public marketing surface — reuses the exact same .theme-getrive brand
 // kit and fonts as the auth/onboarding flow (see (auth)/layout.tsx), plus a
@@ -21,6 +22,7 @@ export function LandingPage() {
     <div
       className={`${brandSans.variable} ${brandMono.variable} theme-getrive relative min-h-[100dvh] overflow-x-hidden bg-background font-sans text-foreground`}
     >
+      <LandingAnalytics />
       <AuthBackdrop />
       <AmbientGlow />
       <LandingNav />

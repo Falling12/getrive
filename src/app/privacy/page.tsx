@@ -63,6 +63,18 @@ export default function PrivacyPage() {
         doesn&apos;t control their retention practices beyond what their API terms specify.
       </p>
 
+      <h2>Product analytics</h2>
+      <p>
+        Getrive uses <strong>PostHog</strong> (hosted on PostHog&apos;s EU Cloud, based in the EU) to
+        understand how the product is actually used — page views, clicks, scroll depth, and session
+        recordings of your browsing and in-app activity, across both the public site and the
+        logged-in product. This is how we find what&apos;s confusing or broken, rather than guessing.
+        Session recordings automatically mask password fields, and we additionally mask outreach lead
+        names, handles, and notes you enter under Outreach. We never send PostHog your email,
+        password, or full name as event data — only your internal account id and category-level
+        properties (e.g. which button you clicked, which onboarding step you completed).
+      </p>
+
       <h2>Website tracking (optional, your choice)</h2>
       <p>
         If you choose to use Getrive&apos;s attribution tools on your own website, one of two things

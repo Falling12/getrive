@@ -1,11 +1,12 @@
 "use client";
 
-import { useActionState, useState, type FormEvent } from "react";
+import { useActionState, useEffect, useState, type FormEvent } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { signupAction } from "@/app/(auth)/actions";
 import { AuthField } from "@/components/auth/auth-field";
 import { AuthSubmitButton } from "@/components/auth/auth-submit-button";
 import { HONEYPOT_FIELD, TIMING_FIELD } from "@/lib/bot-protection";
+import { track } from "@/lib/analytics/posthog-client";
 
 export function SignupForm({ callbackUrl }: { callbackUrl?: string }) {
   const [error, formAction, isPending] = useActionState(signupAction, undefined);
@@ -20,11 +21,19 @@ export function SignupForm({ callbackUrl }: { callbackUrl?: string }) {
   const passwordsMismatch =
     confirmTouched && confirmPassword.length > 0 && password !== confirmPassword;
 
+  useEffect(() => {
+    track("signup_started");
+  }, []);
+
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     setConfirmTouched(true);
     if (password !== confirmPassword) {
       event.preventDefault();
+      return;
     }
+    // Fired on submission attempt, not success — email_verified later in the
+    // funnel is what confirms the account actually went through.
+    track("signup_submitted");
   }
 
   return (

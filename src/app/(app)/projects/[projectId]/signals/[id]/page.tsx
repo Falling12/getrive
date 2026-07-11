@@ -9,6 +9,7 @@ import { formatRelativeTime } from "@/lib/format";
 import { formatSourceLabel, formatAuthorLabel, formatViewOnLabel } from "@/lib/sources/format";
 import { ReplyDraftSection } from "@/components/signal-detail/reply-draft-section";
 import { ReplyDraftSkeleton } from "@/components/signal-detail/reply-draft-skeleton";
+import { EventOnMount } from "@/components/analytics/event-on-mount";
 
 export const metadata: Metadata = { title: "Signal — Getrive" };
 
@@ -28,6 +29,7 @@ export default async function SignalDetailPage({
 
   return (
     <div className="flex w-full flex-col items-center pt-16 pb-16 md:pt-0">
+      <EventOnMount event="first_signal_viewed" properties={{ signal_id: signal.id }} />
       <div className="flex w-full max-w-[800px] flex-col gap-6 px-4 pt-8 md:px-8 md:pt-12">
         <Link
           href={`/projects/${projectId}/signals`}

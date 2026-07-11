@@ -30,9 +30,9 @@ export function LeadCard({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <h3 className="text-[15px] font-medium text-foreground">{lead.name}</h3>
+            <h3 className="ph-mask text-[15px] font-medium text-foreground">{lead.name}</h3>
             {lead.handle && (
-              <span className="flex items-center gap-1 font-mono text-[11px] text-muted-foreground">
+              <span className="ph-mask flex items-center gap-1 font-mono text-[11px] text-muted-foreground">
                 <AtSign className="size-3" />
                 {lead.handle.replace(/^[@/]+/, "")}
               </span>
@@ -41,7 +41,7 @@ export function LeadCard({
               {formatRelativeTime(lead.createdAt)}
             </span>
           </div>
-          <p className="mt-1.5 max-w-[68ch] text-[13px] leading-relaxed text-muted-foreground/80">
+          <p className="ph-mask mt-1.5 max-w-[68ch] text-[13px] leading-relaxed text-muted-foreground/80">
             {lead.context}
           </p>
         </div>

@@ -1,12 +1,17 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
 import { UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { addLeadAction } from "@/app/(app)/projects/[projectId]/outreach/actions";
+import { track } from "@/lib/analytics/posthog-client";
 
 export function AddLeadForm({ projectId }: { projectId: string }) {
   const [state, formAction, isPending] = useActionState(addLeadAction.bind(null, projectId), {});
+
+  useEffect(() => {
+    if (state.success) track("outreach_lead_added");
+  }, [state.success]);
 
   return (
     <section className="overflow-hidden rounded-xl border border-border bg-background">
@@ -38,7 +43,7 @@ export function AddLeadForm({ projectId }: { projectId: string }) {
               required
               placeholder="Jordan Lee"
               autoComplete="off"
-              className="rounded-md border border-border bg-secondary/10 px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground/50 focus:border-accent"
+              className="ph-mask rounded-md border border-border bg-secondary/10 px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground/50 focus:border-accent"
             />
           </div>
           <div className="flex flex-col gap-1.5">
@@ -49,7 +54,7 @@ export function AddLeadForm({ projectId }: { projectId: string }) {
               name="handle"
               placeholder="@jordanlee"
               autoComplete="off"
-              className="rounded-md border border-border bg-secondary/10 px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground/50 focus:border-accent"
+              className="ph-mask rounded-md border border-border bg-secondary/10 px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground/50 focus:border-accent"
             />
           </div>
         </div>
@@ -63,7 +68,7 @@ export function AddLeadForm({ projectId }: { projectId: string }) {
             required
             rows={3}
             placeholder="Found them asking about [problem] in r/saas — building a small internal tool for their team, seems to hit the exact pain point Getrive solves."
-            className="resize-y rounded-md border border-border bg-secondary/10 px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground/50 focus:border-accent"
+            className="ph-mask resize-y rounded-md border border-border bg-secondary/10 px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground/50 focus:border-accent"
           />
         </div>
 

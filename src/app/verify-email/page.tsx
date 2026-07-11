@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { AuthBackdrop } from "@/components/auth/auth-backdrop";
 import { AuthMark } from "@/components/auth/auth-mark";
 import { brandSans, brandMono } from "@/lib/fonts";
+import { EventOnMount } from "@/components/analytics/event-on-mount";
 
 export const metadata: Metadata = {
   title: "Verify email — Getrive",
@@ -40,6 +41,7 @@ export default async function VerifyEmailPage({
           <CardContent className="flex flex-col items-center gap-4 px-8 py-10 text-center sm:px-10">
             {result.success ? (
               <>
+                <EventOnMount event="email_verified" />
                 <CheckCircle2 className="size-10 text-accent" />
                 <h1 className="font-sans text-xl font-medium tracking-wide text-foreground">
                   Email confirmed

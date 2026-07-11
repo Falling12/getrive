@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { RefreshCw, Copy, Check, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { regenerateReplyAction } from "@/app/(app)/projects/[projectId]/signals/[id]/actions";
+import { track } from "@/lib/analytics/posthog-client";
 
 export function ReplyEditor({
   projectId,
@@ -46,6 +47,7 @@ export function ReplyEditor({
     const textToCopy = trackedUrl ? `${reply}\n\n${trackedUrl}` : reply;
     await navigator.clipboard.writeText(textToCopy);
     window.open(postUrl, "_blank", "noopener,noreferrer");
+    track("signal_reply_copied", { signal_id: signalId });
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }
