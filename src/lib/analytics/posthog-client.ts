@@ -46,7 +46,7 @@ export function initPostHog() {
   if (initialized || !isPostHogConfigured() || !isTrackingEnvironment() || typeof window === "undefined") return;
 
   posthog.init(process.env.NEXT_PUBLIC_POSTHOG_KEY as string, {
-    api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://eu.i.posthog.com",
+    api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://t.getrive.app",
     ui_host: "https://eu.posthog.com",
     // "always" (not "identified_only") so anonymous pre-signup browsing
     // (landing page, scroll depth, CTA clicks) gets full profiles too —
