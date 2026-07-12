@@ -108,7 +108,6 @@ export interface DigestProjectSummary {
   outreachUrl: string;
   unrepliedSignals: DigestSignalItem[];
   unrepliedSignalsTotal: number;
-  justReadySources: string[];
   unsentOutreach: DigestOutreachItem[];
   unsentOutreachTotal: number;
 }
@@ -140,15 +139,6 @@ function projectRow(p: DigestProjectSummary): string {
         <p style="margin:0;font-size:12px;font-weight:700;letter-spacing:0.04em;color:${MUTED};text-transform:uppercase;">Unreplied signals</p>
         ${p.unrepliedSignals.map(signalRow).join("")}
         ${more}
-      </div>
-    `);
-  }
-
-  if (p.justReadySources.length > 0) {
-    sections.push(`
-      <div style="margin-top:16px;">
-        <p style="margin:0;font-size:12px;font-weight:700;letter-spacing:0.04em;color:${MUTED};text-transform:uppercase;">Just unlocked</p>
-        <p style="margin:6px 0 0;font-size:14px;color:${INK};">${p.justReadySources.join(", ")} — you can post there now.</p>
       </div>
     `);
   }

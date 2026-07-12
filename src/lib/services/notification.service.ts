@@ -98,7 +98,6 @@ export async function sendWeeklyDigests(): Promise<{ usersNotified: number }> {
           usersAcquired,
           unrepliedSignals,
           unrepliedSignalsTotal,
-          justReadySources,
           unsentOutreach,
           unsentOutreachTotal,
         ] = await Promise.all([
@@ -129,19 +128,6 @@ export async function sendWeeklyDigests(): Promise<{ usersNotified: number }> {
             take: DIGEST_LIST_CAP,
           }),
           prisma.signal.count({ where: unrepliedSignalsWhere }),
-          // HN sources are created already-READY (no gate to "unlock"), so
-          // they're excluded here — same reasoning as the Dashboard's own
-          // readySources query.
-          prisma.source.findMany({
-            where: {
-              productId: product.id,
-              selected: true,
-              type: "REDDIT_SUBREDDIT",
-              karmaStatus: "READY",
-              updatedAt: { gte: oneWeekAgo },
-            },
-            select: { name: true, type: true },
-          }),
           prisma.lead.findMany({
             where: unsentOutreachWhere,
             orderBy: { createdAt: "desc" },
@@ -166,7 +152,6 @@ export async function sendWeeklyDigests(): Promise<{ usersNotified: number }> {
             url: `${appUrl}/projects/${product.id}/signals/${signal.id}`,
           })),
           unrepliedSignalsTotal,
-          justReadySources: justReadySources.map((s) => formatSourceLabel(s.type, s.name)),
           unsentOutreach: unsentOutreach.map((lead) => ({ name: lead.name })),
           unsentOutreachTotal,
         };
@@ -181,7 +166,6 @@ export async function sendWeeklyDigests(): Promise<{ usersNotified: number }> {
         p.repliesSent > 0 ||
         p.usersAcquired > 0 ||
         p.unrepliedSignalsTotal > 0 ||
-        p.justReadySources.length > 0 ||
         p.unsentOutreachTotal > 0
     );
     if (!hasActivity) continue;

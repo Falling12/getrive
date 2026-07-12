@@ -44,6 +44,7 @@ export function AppSidebar({
             <Link
               key={segment}
               href={href}
+              data-tour={segment === "signals" || segment === "sources" ? `nav-${segment}` : undefined}
               className={cn(
                 "relative flex items-center justify-between rounded px-3 py-2.5 text-sm font-medium transition-colors",
                 isActive

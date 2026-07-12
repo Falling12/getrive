@@ -88,7 +88,7 @@ export default async function SignalsPage({
           />
         </div>
 
-        <section className="flex flex-col gap-4">
+        <section data-tour="signal-list" className="flex flex-col gap-4">
           {signals.length === 0 ? (
             <p className="py-16 text-center font-mono text-xs tracking-widest text-muted-foreground uppercase">
               No signals yet — listening for new posts.

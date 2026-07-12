@@ -8,7 +8,7 @@ import { isExemptFromLimits, MAX_MONITORED_SOURCES, MAX_MONITORED_SOURCES_PER_AC
 import { countAccountMonitoredSources } from "@/lib/account-limits";
 import { discoverSources } from "@/lib/ai/source-discovery";
 import { describeSelectedIcp } from "@/lib/services/positioning.service";
-import type { KarmaStatus, SourceType } from "@/generated/prisma/client";
+import type { SourceType } from "@/generated/prisma/client";
 
 const SUBREDDIT_NAME_PATTERN = /^[A-Za-z0-9_]{3,21}$/;
 const HACKERNEWS_SOURCE_NAME = "Hacker News";
@@ -17,22 +17,6 @@ async function assertOwned(sourceId: string, userId: string) {
   await prisma.source.findFirstOrThrow({
     where: { id: sourceId, product: { userId } },
   });
-}
-
-export async function updateKarmaStatusAction(
-  projectId: string,
-  sourceId: string,
-  status: KarmaStatus
-) {
-  const session = await requireSession();
-  await assertOwned(sourceId, session.user.id);
-
-  await prisma.source.update({
-    where: { id: sourceId },
-    data: { karmaStatus: status },
-  });
-
-  revalidatePath(`/projects/${projectId}/sources`);
 }
 
 // Soft "remove" — stops polling/scoring and frees a slot under

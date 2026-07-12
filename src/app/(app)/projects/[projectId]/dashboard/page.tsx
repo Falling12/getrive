@@ -29,7 +29,6 @@ export default async function DashboardPage({
     signalsThisWeek,
     repliesSent,
     karmaAgg,
-    readySources,
     agingSignals,
     failingSources,
   ] = await Promise.all([
@@ -43,19 +42,6 @@ export default async function DashboardPage({
     prisma.source.aggregate({
       where: { productId: product.id, selected: true },
       _sum: { currentKarma: true },
-    }),
-    // Hacker News sources are created already-READY (no karma gate to
-    // "unlock" in the first place — see the Source model's comment), so
-    // they're excluded here rather than showing a meaningless "unlock" nudge
-    // for something that was never gated.
-    prisma.source.findMany({
-      where: {
-        productId: product.id,
-        selected: true,
-        type: "REDDIT_SUBREDDIT",
-        karmaStatus: "READY",
-      },
-      select: { name: true, type: true },
     }),
     prisma.signal.findMany({
       where: {
@@ -85,7 +71,7 @@ export default async function DashboardPage({
   return (
     <div className="flex w-full flex-col items-center pt-16 pb-16 md:pt-0">
       <div className="flex w-full max-w-5xl flex-col px-6 pt-12 md:px-12 md:pt-20 lg:pt-24">
-        <section className="relative flex w-full flex-col border-b-2 border-border pb-16 md:pb-24">
+        <section data-tour="metric" className="relative flex w-full flex-col border-b-2 border-border pb-16 md:pb-24">
           <div className="pointer-events-none absolute top-0 right-0 size-32 rounded-full bg-accent/10 blur-[80px]" />
 
           <h2 className="mb-6 flex items-center gap-3 font-mono text-[11px] tracking-[0.2em] text-muted-foreground uppercase md:mb-8">
@@ -128,7 +114,7 @@ export default async function DashboardPage({
           </div>
         </section>
 
-        <section className="mt-12 grid w-full grid-cols-1 gap-4 md:mt-16 md:grid-cols-3">
+        <section data-tour="stats" className="mt-12 grid w-full grid-cols-1 gap-4 md:mt-16 md:grid-cols-3">
           <StatTile icon={Radar} label="Signals caught this week" value={signalsThisWeek} />
           <StatTile icon={MessageSquareText} label="Replies sent" value={repliesSent} />
           <StatTile icon={TrendingUp} label="Karma tracked" value={karmaAgg._sum.currentKarma ?? 0} />
@@ -136,7 +122,6 @@ export default async function DashboardPage({
 
         <NeedsAttention
           projectId={projectId}
-          readySources={readySources.map((s) => ({ name: formatSourceLabel(s.type, s.name) }))}
           agingSignals={agingSignals}
           failingSources={failingSources.map((s) => ({
             name: formatSourceLabel(s.type, s.name),

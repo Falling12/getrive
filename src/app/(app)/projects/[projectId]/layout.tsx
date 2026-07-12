@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { AppSidebar } from "@/components/app-shell/app-sidebar";
 import { MobileTopBar } from "@/components/app-shell/mobile-top-bar";
 import { MobileBottomNav } from "@/components/app-shell/mobile-bottom-nav";
+import { ProductTour } from "@/components/tour/product-tour";
 
 export default async function ProjectLayout({
   children,
@@ -41,6 +42,7 @@ export default async function ProjectLayout({
 
   return (
     <>
+      <ProductTour />
       <AppSidebar
         projectId={projectId}
         projectName={project.name}

@@ -24,7 +24,7 @@ export function formatSourceChannel(type: SourceType): string {
 export function formatSourceChannelDetail(type: SourceType): string {
   switch (type) {
     case "REDDIT_SUBREDDIT":
-      return "Community-specific listening with karma and self-promo constraints.";
+      return "Community-specific listening — mind each subreddit's self-promo rules when you reply.";
     case "HACKERNEWS":
       return "One public feed, no access gate, high technical density.";
   }

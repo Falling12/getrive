@@ -200,10 +200,12 @@ enum SourceType {
 // it's a short display label since HN isn't subdivided into communities.
 // `config` carries type-specific settings — unused for both source types
 // today, kept for a future ingestion channel's settings.
-// Karma fields (karmaStatus/karmaThreshold/selfPromoNotes/currentKarma) only
-// mean something for reddit_subreddit — Hacker News has no comparable
-// self-promo gate, so hackernews sources are created with karmaStatus
-// already READY and the Sources page hides the karma UI for them.
+// Karma fields (karmaThreshold/selfPromoNotes/currentKarma) only mean
+// something for reddit_subreddit — Hacker News has no comparable self-promo
+// gate, so the Sources page hides the karma UI for it. `karmaStatus` is no
+// longer read or written by any UI (the manual "mark ready" gate was
+// removed — every source is fetched automatically regardless of karma) —
+// the column stays for now to avoid a migration, but nothing surfaces it.
 model Source {
   id                   String      @id @default(cuid())
   productId            String
@@ -227,9 +229,8 @@ model Source {
   // silently-broken fetch doesn't just look like "a quiet source" with
   // signals mysteriously drying up.
   consecutiveFailures  Int         @default(0)
-  // Karma tracking (Sources page, reddit_subreddit only) — starts at WATCH,
-  // manually overridable ("mark ready"); threshold/notes are the founder's
-  // own research, not derived from anything automatic.
+  // Unused by the UI now (see the model comment above) — kept only so
+  // existing rows don't need a migration.
   karmaStatus          KarmaStatus @default(WATCH)
   karmaThreshold       Int?
   selfPromoNotes       String?

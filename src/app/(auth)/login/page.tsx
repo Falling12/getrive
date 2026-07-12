@@ -20,7 +20,7 @@ export default async function LoginPage({
       <AuthCard title="Sign in" subtitle="Access your Getrive account">
         {isGoogleAuthConfigured() && (
           <>
-            <GoogleSignInButton callbackUrl={callbackUrl} />
+            <GoogleSignInButton callbackUrl={callbackUrl} page="login" />
             <AuthDivider />
           </>
         )}

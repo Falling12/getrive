@@ -308,5 +308,8 @@ export async function confirmSourcesAction(
     }),
   ]);
 
-  redirect(`/projects/${product.id}/dashboard`);
+  // `?tour=1` triggers the one-time dashboard walkthrough (DashboardTour) —
+  // only true on this exact redirect, never on a normal later visit to the
+  // dashboard, since the page strips the param on mount.
+  redirect(`/projects/${product.id}/dashboard?tour=1`);
 }

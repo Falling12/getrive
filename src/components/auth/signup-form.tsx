@@ -32,8 +32,10 @@ export function SignupForm({ callbackUrl }: { callbackUrl?: string }) {
       return;
     }
     // Fired on submission attempt, not success — email_verified later in the
-    // funnel is what confirms the account actually went through.
-    track("signup_submitted");
+    // funnel is what confirms the account actually went through. `method`
+    // distinguishes this from the Google button's own signup_submitted (see
+    // google-signin-button.tsx), so both paths still roll up into one funnel step.
+    track("signup_submitted", { method: "email" });
   }
 
   return (

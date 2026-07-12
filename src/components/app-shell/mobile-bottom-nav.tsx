@@ -27,6 +27,7 @@ export function MobileBottomNav({
           <Link
             key={segment}
             href={href}
+            data-tour={segment === "signals" || segment === "sources" ? `nav-${segment}` : undefined}
             className={cn(
               "relative flex flex-col items-center justify-center gap-1",
               isActive ? "text-accent" : "text-muted-foreground"

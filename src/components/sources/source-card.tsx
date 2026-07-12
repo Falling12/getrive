@@ -1,36 +1,27 @@
 "use client";
 
 import { useActionState, useTransition } from "react";
-import { ArrowUpRight, Shield, Users, ScrollText, TrendingUp, AlertTriangle } from "lucide-react";
-import type { KarmaStatus, SourceType } from "@/generated/prisma/client";
+import { ArrowUpRight, Shield, Users, ScrollText, AlertTriangle } from "lucide-react";
+import type { SourceType } from "@/generated/prisma/client";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { KarmaStatusBadge } from "@/components/sources/karma-status-badge";
 import { formatRelativeTime } from "@/lib/format";
 import { formatSourceLabel } from "@/lib/sources/format";
 import { CONSECUTIVE_FAILURE_ALERT_THRESHOLD } from "@/lib/limits";
 import {
   unmonitorSourceAction,
-  updateKarmaStatusAction,
   updateSourceDetailsAction,
 } from "@/app/(app)/projects/[projectId]/sources/actions";
-
-export interface KarmaBuilderPost {
-  title: string;
-  permalink: string;
-}
 
 export function SourceCard({
   projectId,
   id,
   type,
   name,
-  status,
   karmaThreshold,
   currentKarma,
   selfPromoNotes,
   usersAcquired,
-  karmaBuilders,
   lastSuccessfulPollAt,
   consecutiveFailures,
 }: {
@@ -38,12 +29,10 @@ export function SourceCard({
   id: string;
   type: SourceType;
   name: string;
-  status: KarmaStatus;
   karmaThreshold: number | null;
   currentKarma: number;
   selfPromoNotes: string | null;
   usersAcquired: number;
-  karmaBuilders: KarmaBuilderPost[];
   lastSuccessfulPollAt: Date | null;
   consecutiveFailures: number;
 }) {
@@ -77,13 +66,9 @@ export function SourceCard({
               </a>
             )}
           </div>
-          {isReddit ? (
-            <KarmaStatusBadge status={status} />
-          ) : (
-            <span className="rounded-full border border-accent/30 bg-accent/10 px-2.5 py-1 font-mono text-[10px] tracking-widest text-accent uppercase">
-              Ready
-            </span>
-          )}
+          <span className="rounded-full border border-accent/30 bg-accent/10 px-2.5 py-1 font-mono text-[10px] tracking-widest text-accent uppercase">
+            Active
+          </span>
         </div>
         <span className="font-mono text-[10px] text-muted-foreground/70">
           Last successful poll:{" "}
@@ -153,37 +138,12 @@ export function SourceCard({
           {!isReddit && (
             <div className="col-span-1 flex flex-col justify-center gap-1 bg-background p-5 md:col-span-3 md:px-6">
               <p className="font-mono text-[11px] leading-relaxed text-muted-foreground">
-                This channel has no per-community karma status to maintain — Getrive treats it as
-                ready when monitoring is enabled.
+                This channel has no per-community karma constraints — Getrive fetches it
+                automatically as soon as monitoring is enabled.
               </p>
             </div>
           )}
         </div>
-
-        {karmaBuilders.length > 0 && (
-          <div className="flex flex-col gap-3 border-t border-border/60 bg-secondary/5 p-5 md:px-6">
-            <div className="mb-1 flex items-center gap-2">
-              <TrendingUp className="size-3.5 text-muted-foreground" />
-              <span className="font-mono text-[11px] font-semibold tracking-widest text-muted-foreground uppercase">
-                Karma builders
-              </span>
-            </div>
-            <div className="flex flex-col gap-2">
-              {karmaBuilders.map((post) => (
-                <a
-                  key={post.permalink}
-                  href={post.permalink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group flex items-center justify-between rounded border border-border/60 bg-background p-3 transition-colors hover:border-accent/50 hover:bg-secondary/10"
-                >
-                  <span className="mr-4 truncate text-sm text-foreground/90">{post.title}</span>
-                  <ArrowUpRight className="size-4 shrink-0 text-muted-foreground transition-colors group-hover:text-accent" />
-                </a>
-              ))}
-            </div>
-          </div>
-        )}
 
         <div className="flex items-center justify-end gap-3 border-t border-border/60 bg-secondary/5 p-4">
           {state.error && <p className="mr-auto text-sm text-destructive">{state.error}</p>}
@@ -197,17 +157,6 @@ export function SourceCard({
           >
             Stop monitoring
           </Button>
-          {isReddit && status !== "READY" && (
-            <Button
-              type="button"
-              variant="outline"
-              disabled={isPending}
-              onClick={() => startTransition(() => updateKarmaStatusAction(projectId, id, "READY"))}
-              className="rounded-md font-mono text-[11px] tracking-wider uppercase"
-            >
-              Mark ready (override)
-            </Button>
-          )}
           {isReddit && (
             <Button
               type="submit"

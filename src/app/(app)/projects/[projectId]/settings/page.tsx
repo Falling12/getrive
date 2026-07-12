@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { AlertTriangle, Download, ShieldCheck } from "lucide-react";
+import { AlertTriangle, Compass, Download, ShieldCheck } from "lucide-react";
 import { requireSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { appUrl } from "@/lib/config";
@@ -153,6 +153,24 @@ export default async function SettingsPage({
                 reportSnippet={buildReportSnippet(appUrl)}
               />
             </div>
+          </div>
+        </SettingsSection>
+
+        <SettingsSection title="Product tour" subtitle="Get re-oriented">
+          <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+            <p className="max-w-md font-mono text-[11px] leading-relaxed text-muted-foreground">
+              Walk back through the dashboard, signals, and sources — the same guided tour you saw
+              right after onboarding.
+            </p>
+            <Button
+              variant="outline"
+              className="shrink-0 gap-2 rounded-md"
+              render={<Link href={`/projects/${projectId}/dashboard?tour=1`} />}
+              nativeButton={false}
+            >
+              <Compass className="size-4" />
+              Retake tour
+            </Button>
           </div>
         </SettingsSection>
 

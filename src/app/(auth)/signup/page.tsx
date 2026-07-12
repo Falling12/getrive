@@ -20,7 +20,7 @@ export default async function SignupPage({
       <AuthCard title="Create your account" subtitle="Start listening for your first users">
         {isGoogleAuthConfigured() && (
           <>
-            <GoogleSignInButton callbackUrl={callbackUrl} />
+            <GoogleSignInButton callbackUrl={callbackUrl} page="signup" />
             <AuthDivider />
           </>
         )}

@@ -30,23 +30,6 @@ export default async function SourcesPage({
 
   const { bySource } = await getSignupsBySource(product.id);
 
-  const karmaBuildersBySource = new Map<string, { title: string; permalink: string }[]>();
-  for (const src of sources) {
-    if (src.type !== "REDDIT_SUBREDDIT" || src.karmaStatus === "READY") continue;
-    const posts = await prisma.scoredPost.findMany({
-      where: { sourceId: src.id, passed: false, title: { not: null } },
-      orderBy: { scoredAt: "desc" },
-      take: 3,
-    });
-
-    karmaBuildersBySource.set(
-      src.id,
-      posts
-        .filter((p) => p.title && p.permalink)
-        .map((p) => ({ title: p.title as string, permalink: p.permalink as string }))
-    );
-  }
-
   const hasHackerNews = sources.some((s) => s.type === "HACKERNEWS");
   const grouped = CHANNEL_ORDER.map((type) => ({
     type,
@@ -59,16 +42,18 @@ export default async function SourcesPage({
         <header>
           <h1 className="text-2xl font-medium tracking-wide text-foreground">Sources</h1>
           <p className="mt-1 max-w-[68ch] font-mono text-xs leading-relaxed text-muted-foreground">
-            Manage the channel mix Getrive listens on. Hacker News is broad and immediate,
-            Reddit is community-specific and gated by karma.
+            Manage the channel mix Getrive listens on. Every source here is fetched
+            automatically — Hacker News is broad and immediate, Reddit is community-specific.
           </p>
         </header>
 
         <AiDiscoveryPanel projectId={projectId} />
 
-        <AddSourceForm projectId={projectId} hasHackerNews={hasHackerNews} />
+        <div data-tour="add-source">
+          <AddSourceForm projectId={projectId} hasHackerNews={hasHackerNews} />
+        </div>
 
-        <section className="flex flex-col gap-6">
+        <section data-tour="source-list" className="flex flex-col gap-6">
           {sources.length === 0 ? (
             <p className="py-16 text-center font-mono text-xs tracking-widest text-muted-foreground uppercase">
               No active sources yet.
@@ -99,12 +84,10 @@ export default async function SourcesPage({
                         id={src.id}
                         type={src.type}
                         name={src.name}
-                        status={src.karmaStatus}
                         karmaThreshold={src.karmaThreshold}
                         currentKarma={src.currentKarma}
                         selfPromoNotes={src.selfPromoNotes}
                         usersAcquired={bySource.get(src.name)?.count ?? 0}
-                        karmaBuilders={karmaBuildersBySource.get(src.id) ?? []}
                         lastSuccessfulPollAt={src.lastSuccessfulPollAt}
                         consecutiveFailures={src.consecutiveFailures}
                       />
