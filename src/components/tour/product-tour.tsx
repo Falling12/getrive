@@ -92,13 +92,18 @@ const POPOVER_GAP = 14;
 // combined with a taller-than-expected popover was landing off the top of
 // the viewport.
 const POPOVER_EST_HEIGHT = 260;
-// Once we're actually on the right page (isPending has resolved — see
-// below), the target should already be in the committed DOM; this only
-// covers the trailing layout-settle frame. Genuinely-missing targets (e.g. a
-// nav step whose sidebar is `hidden` at the current viewport) still get
-// caught and skipped after this short budget — it's not covering
-// navigation/compile time anymore, so it can stay small.
-const MAX_MEASURE_RETRIES = 20;
+// isPending (from the useTransition wrapping router.push below) resolving
+// does NOT mean the target is in the committed DOM — every step's segment
+// now has its own loading.tsx (route-level Suspense boundary), and per
+// Next.js's own docs, a transition is considered complete once that
+// fallback UI is committed, with real content streaming in after. That gap
+// is a couple frames on a fast local Postgres connection but can be a real
+// network+query round-trip in production, so measure() below waits on a
+// MutationObserver (reacts the instant the real content actually lands)
+// with this as a generous upper bound before concluding the target is
+// genuinely absent for this viewport (e.g. a nav step whose sidebar is
+// `hidden` at the current viewport) and moving on.
+const MAX_MEASURE_WAIT_MS = 8000;
 
 // Elements with `display:none` (Tailwind `hidden`) always have a null
 // offsetParent, so this filters out e.g. the desktop sidebar's copy of a
@@ -120,7 +125,6 @@ export function ProductTour() {
   const [active, setActive] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);
   const [rect, setRect] = useState<Rect | null>(null);
-  const retriesRef = useRef(0);
 
   // This component lives in the project layout and persists across
   // dashboard/signals/sources navigation, so it only mounts once per project
@@ -140,11 +144,11 @@ export function ProductTour() {
   const projectMatch = pathname.match(/^\/projects\/([^/]+)/);
   const projectId = projectMatch?.[1] ?? null;
 
-  // Holds the latest `measure` so its own requestAnimationFrame retry can
-  // call back into it without referencing the useCallback result before it's
-  // declared (measure recreates on every stepIndex change; the ref always
-  // points at the current one).
-  const measureRef = useRef<(scrollTo: boolean) => void>(() => {});
+  // Holds the teardown for an in-flight "wait for target" watch (see
+  // measure below), so a new measure() call — from advancing/going back a
+  // step, or a resize/scroll re-measure — always tears down any previous
+  // MutationObserver/timeout instead of leaking or racing it.
+  const pendingWatchRef = useRef<(() => void) | null>(null);
 
   // `scrollTo` is true only for the initial measure right after arriving at
   // a step, never for the resize/scroll listeners below — calling
@@ -153,28 +157,42 @@ export function ProductTour() {
   // fighting the animation and occasionally settling on a wildly wrong
   // position (e.g. the popover ending up off the top of the viewport).
   const measure = useCallback((scrollTo: boolean) => {
-    const el = queryVisible(STEPS[stepIndex].target);
-    if (el) {
-      retriesRef.current = 0;
+    pendingWatchRef.current?.();
+    pendingWatchRef.current = null;
+
+    const tryFind = () => {
+      const el = queryVisible(STEPS[stepIndex].target);
+      if (!el) return false;
       const r = el.getBoundingClientRect();
       setRect({ top: r.top, left: r.left, width: r.width, height: r.height });
       if (scrollTo) el.scrollIntoView({ behavior: "smooth", block: "center" });
-      return;
+      return true;
+    };
+
+    if (tryFind()) return;
+
+    // Not found yet — either the target's content is still streaming in
+    // behind the destination route's loading.tsx fallback (real production
+    // latency, not just a layout-settle frame — see the MAX_MEASURE_WAIT_MS
+    // comment above), or this is a nav-step target genuinely hidden at the
+    // current viewport. The observer reacts the instant streamed content
+    // actually lands instead of guessing how long that takes; the timeout
+    // is only the fallback for the "genuinely hidden" case.
+    const observer = new MutationObserver(() => {
+      if (tryFind()) cleanup();
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+    const timeoutId = setTimeout(() => {
+      cleanup();
+      setStepIndex((current) => (current < STEPS.length - 1 ? current + 1 : current));
+    }, MAX_MEASURE_WAIT_MS);
+    function cleanup() {
+      observer.disconnect();
+      clearTimeout(timeoutId);
+      pendingWatchRef.current = null;
     }
-    // Not found yet — either the target page is still rendering after a
-    // navigation, or (for nav-step targets) this viewport hides it. Retry a
-    // bounded number of times before concluding it's the latter and moving on.
-    if (retriesRef.current < MAX_MEASURE_RETRIES) {
-      retriesRef.current += 1;
-      requestAnimationFrame(() => measureRef.current(scrollTo));
-      return;
-    }
-    retriesRef.current = 0;
-    setStepIndex((current) => (current < STEPS.length - 1 ? current + 1 : current));
+    pendingWatchRef.current = cleanup;
   }, [stepIndex]);
-  useEffect(() => {
-    measureRef.current = measure;
-  }, [measure]);
 
   // Navigate to the step's segment first when it differs from the current
   // page, then measure once we're actually there. Runs for every step
@@ -191,22 +209,32 @@ export function ProductTour() {
   // page had even rendered, which looked like the tour popover vanishing
   // right after clicking "Next" into Signals.
   useEffect(() => {
-    if (!active || !projectId) return;
+    if (!active || !projectId) {
+      // Covers both "tour not running yet" and "user hit Skip mid-wait" —
+      // either way, an in-flight MutationObserver from a previous measure()
+      // call has nothing left to report to and should stop watching.
+      pendingWatchRef.current?.();
+      return;
+    }
     const targetPath = `/projects/${projectId}/${STEPS[stepIndex].segment}`;
     if (pathname !== targetPath) {
       startNavigation(() => router.push(targetPath, { scroll: false }));
       return;
     }
     if (isNavigating) return;
-    retriesRef.current = 0;
-    // measure() sets state from getBoundingClientRect(), which only exists
-    // once the target is committed to the DOM — this is React's own
-    // documented valid use of an effect (there's no way to read live layout
-    // during render), so the lint rule's general "avoid setState in
-    // effects" heuristic doesn't apply here.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+    // measure() reads getBoundingClientRect(), which only exists once the
+    // target is committed to the DOM — there's no way to read live layout
+    // during render, so this has to happen from an effect.
     measure(true);
   }, [active, stepIndex, pathname, projectId, router, measure, isNavigating]);
+
+  // Unmount safety net — the effect above already tears down a pending
+  // watch when the tour becomes inactive, but this covers the component
+  // unmounting outright (e.g. navigating away from every /projects/[id]/*
+  // route) while a MutationObserver is still attached.
+  useEffect(() => {
+    return () => pendingWatchRef.current?.();
+  }, []);
 
   useEffect(() => {
     if (!active) return;
