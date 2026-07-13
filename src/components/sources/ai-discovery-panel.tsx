@@ -9,26 +9,27 @@ import {
   type DiscoveredSourceView,
 } from "@/app/(app)/projects/[projectId]/sources/actions";
 import { formatSourceLabel } from "@/lib/sources/format";
+import {
+  useDiscoveryState,
+  setDiscoveryState,
+  getDiscoveryState,
+} from "@/lib/sources/discovery-store";
 
 function suggestionKey(s: { type: string; name: string }) {
   return `${s.type}:${s.name}`;
 }
 
 export function AiDiscoveryPanel({ projectId }: { projectId: string }) {
-  const [isDiscovering, startDiscovering] = useTransition();
-  const [suggestions, setSuggestions] = useState<DiscoveredSourceView[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [addedKeys, setAddedKeys] = useState<Set<string>>(new Set());
+  const { status, suggestions, error, addedKeys } = useDiscoveryState(projectId);
+  const isDiscovering = status === "loading";
 
   function runDiscovery() {
-    setError(null);
-    startDiscovering(async () => {
-      const result = await discoverNewSourcesAction(projectId);
+    setDiscoveryState(projectId, { status: "loading", error: null });
+    discoverNewSourcesAction(projectId).then((result) => {
       if (result.status === "error") {
-        setError(result.error);
-        setSuggestions(null);
+        setDiscoveryState(projectId, { status: "error", error: result.error, suggestions: null });
       } else if (result.status === "results") {
-        setSuggestions(result.suggestions);
+        setDiscoveryState(projectId, { status: "results", suggestions: result.suggestions, error: null });
       }
     });
   }
@@ -85,9 +86,11 @@ export function AiDiscoveryPanel({ projectId }: { projectId: string }) {
               projectId={projectId}
               suggestion={suggestion}
               added={addedKeys.has(suggestionKey(suggestion))}
-              onAdded={() =>
-                setAddedKeys((prev) => new Set(prev).add(suggestionKey(suggestion)))
-              }
+              onAdded={() => {
+                const next = new Set(getDiscoveryState(projectId).addedKeys);
+                next.add(suggestionKey(suggestion));
+                setDiscoveryState(projectId, { addedKeys: next });
+              }}
             />
           ))}
         </div>
