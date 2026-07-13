@@ -23,6 +23,9 @@ export function LandingNav() {
           <a href="#pricing" className="transition-colors hover:text-[var(--accent-glow)]">
             Pricing
           </a>
+          <a href="#faq" className="transition-colors hover:text-[var(--accent-glow)]">
+            FAQ
+          </a>
         </nav>
 
         <div className="flex items-center gap-3">

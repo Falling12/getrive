@@ -9,6 +9,7 @@ import { TrustSection } from "@/components/landing/trust-section";
 import { FeatureHighlights } from "@/components/landing/feature-highlights";
 import { SocialProof } from "@/components/landing/social-proof";
 import { PricingSection } from "@/components/landing/pricing-section";
+import { FaqSection } from "@/components/landing/faq-section";
 import { FinalCta } from "@/components/landing/final-cta";
 import { LandingFooter } from "@/components/landing/landing-footer";
 import { LandingAnalytics } from "@/components/analytics/landing-analytics";
@@ -33,6 +34,7 @@ export function LandingPage() {
       <FeatureHighlights />
       <SocialProof />
       <PricingSection />
+      <FaqSection />
       <FinalCta />
       <LandingFooter />
     </div>

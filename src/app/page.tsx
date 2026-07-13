@@ -1,5 +1,6 @@
 import { LandingPage } from "@/components/landing/landing-page";
 import { SITE_URL, SITE_NAME, SITE_DESCRIPTION_LONG } from "@/lib/seo";
+import { FAQS } from "@/lib/faq";
 
 // No page-level metadata export here — this route's title/description are
 // identical to the root layout's defaults (see layout.tsx), so it inherits
@@ -43,6 +44,25 @@ const jsonLd = {
         availability: "https://schema.org/InStock",
         category: "SaaS",
       },
+    },
+    // Sourced from the same FAQS array FaqSection renders (see lib/faq.ts)
+    // so this never drifts from what's actually visible on the page —
+    // structured data is expected to reflect real page content, not just
+    // live in a hidden script tag. This is also the single highest-leverage
+    // schema type for AI answer engines citing a direct answer to a common
+    // question ("is Getrive free", "does it post automatically") instead of
+    // having to summarize prose.
+    {
+      "@type": "FAQPage",
+      "@id": `${SITE_URL}/#faq`,
+      mainEntity: FAQS.map((faq) => ({
+        "@type": "Question",
+        name: faq.question,
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: faq.answer,
+        },
+      })),
     },
   ],
 };
