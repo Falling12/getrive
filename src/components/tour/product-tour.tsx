@@ -123,7 +123,15 @@ export function ProductTour() {
   const [isNavigating, startNavigation] = useTransition();
 
   const [active, setActive] = useState(false);
+  // stepIndex is the requested/target step — it advances the instant Next
+  // is clicked and drives which target measure() goes looking for.
+  // displayStepIndex is what the popover actually renders (title,
+  // description, "Step N of M", the dot progress) — it only catches up
+  // once that target is genuinely found and rect is set for it, so the
+  // popover can't show step 5's copy while still highlighting step 4's
+  // element (or nothing at all) during the wait.
   const [stepIndex, setStepIndex] = useState(0);
+  const [displayStepIndex, setDisplayStepIndex] = useState(0);
   const [rect, setRect] = useState<Rect | null>(null);
 
   // This component lives in the project layout and persists across
@@ -138,6 +146,13 @@ export function ProductTour() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setActive(true);
     setStepIndex(0);
+    // Also reset displayStepIndex/rect, not just stepIndex — "Retake tour"
+    // (Settings) can fire this on an already-mounted instance sitting at
+    // whatever step a previous run ended on. Without this, the popover
+    // would flash that stale step's title/highlight for a moment before
+    // measure() catches up to the real step 0 target.
+    setDisplayStepIndex(0);
+    setRect(null);
     router.replace(pathname, { scroll: false });
   }, [searchParams, pathname, router]);
 
@@ -165,6 +180,11 @@ export function ProductTour() {
       if (!el) return false;
       const r = el.getBoundingClientRect();
       setRect({ top: r.top, left: r.left, width: r.width, height: r.height });
+      // Only now — target genuinely found and positioned — does the
+      // popover's own content catch up to this step. Until this fires, the
+      // popover keeps showing the previous step's title/highlight, so
+      // nothing ever visibly jumps to new copy before its target exists.
+      setDisplayStepIndex(stepIndex);
       if (scrollTo) el.scrollIntoView({ behavior: "smooth", block: "center" });
       return true;
     };
@@ -259,9 +279,12 @@ export function ProductTour() {
   // comment below).
   const portalTarget = document.querySelector(".theme-getrive") ?? document.body;
 
-  const step = STEPS[stepIndex];
-  const isFirst = stepIndex === 0;
-  const isLast = stepIndex === STEPS.length - 1;
+  // Everything below renders off displayStepIndex, not stepIndex — see the
+  // state declarations above for why.
+  const step = STEPS[displayStepIndex];
+  const isFirst = displayStepIndex === 0;
+  const isLast = displayStepIndex === STEPS.length - 1;
+  const isSettled = stepIndex === displayStepIndex;
   const finish = () => setActive(false);
 
   const highlightStyle: CSSProperties = {
@@ -315,7 +338,7 @@ export function ProductTour() {
               {STEPS.map((s, i) => (
                 <span
                   key={`${s.segment}-${s.target}`}
-                  className={cn("size-1.5 rounded-full transition-colors", i === stepIndex ? "bg-accent" : "bg-border")}
+                  className={cn("size-1.5 rounded-full transition-colors", i === displayStepIndex ? "bg-accent" : "bg-border")}
                 />
               ))}
             </div>
@@ -331,7 +354,7 @@ export function ProductTour() {
 
           <div className="flex flex-col gap-1.5">
             <span className="font-mono text-[10px] font-medium tracking-widest text-accent uppercase">
-              Step {stepIndex + 1} of {STEPS.length}
+              Step {displayStepIndex + 1} of {STEPS.length}
             </span>
             <h4 className="text-base font-medium text-foreground">{step.title}</h4>
             <p className="text-sm leading-relaxed text-muted-foreground">{step.description}</p>
@@ -341,8 +364,9 @@ export function ProductTour() {
             {!isFirst ? (
               <button
                 type="button"
-                onClick={() => setStepIndex((i) => i - 1)}
-                className="font-mono text-[11px] tracking-wider text-muted-foreground uppercase transition-colors hover:text-foreground"
+                disabled={!isSettled}
+                onClick={() => setStepIndex(displayStepIndex - 1)}
+                className="font-mono text-[11px] tracking-wider text-muted-foreground uppercase transition-colors hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
               >
                 Back
               </button>
@@ -350,7 +374,8 @@ export function ProductTour() {
               <span />
             )}
             <Button
-              onClick={() => (isLast ? finish() : setStepIndex((i) => i + 1))}
+              disabled={!isSettled}
+              onClick={() => (isLast ? finish() : setStepIndex(displayStepIndex + 1))}
               className="gap-1.5 rounded-md font-mono text-[11px] tracking-wider uppercase"
             >
               {isLast ? "Done" : "Next"}

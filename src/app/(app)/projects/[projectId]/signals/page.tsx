@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import type { Prisma } from "@/generated/prisma/client";
 import { requireSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
@@ -6,6 +7,7 @@ import { truncate } from "@/lib/format";
 import { formatSourceLabel } from "@/lib/sources/format";
 import { SignalFilterBar } from "@/components/signals/signal-filter-bar";
 import { SignalCard } from "@/components/signals/signal-card";
+import { SignalGroup } from "@/components/signals/signal-group";
 import { PollNowButton } from "@/components/signals/poll-now-button";
 import { POLL_STALE_MINUTES } from "@/lib/reddit/poll";
 
@@ -22,6 +24,25 @@ const STATUS_WHERE: Record<string, Prisma.SignalWhereInput> = {
   dismissed: { dismissed: true },
 };
 
+// "all" isn't a key in STATUS_WHERE (it maps to no filter at all), so
+// validating a cookie value against STATUS_WHERE's keys alone would reject
+// a legitimately-remembered "all". This is every value SignalFilterBar's
+// STATUS_OPTIONS can produce.
+const VALID_STATUSES = new Set(["all", "not-replied", "replied", "dismissed"]);
+
+// Written by proxy.ts whenever a request carries an explicit `status`
+// param — read here only as the fallback for when the URL carries none
+// at all (see the comment on that cookie write for why "all" has to be
+// written explicitly by the filter pills for this to work correctly).
+const SIGNALS_STATUS_COOKIE = "signals-status";
+
+// Deliberately higher than the 50-per-status take below — when grouping
+// all three statuses together under "All", each group is bucketed out of
+// this single fetch rather than queried separately, so it needs enough
+// headroom that a status with a lot of history doesn't crowd out the
+// others before bucketing happens.
+const ALL_STATUSES_TAKE = 150;
+
 export default async function SignalsPage({
   params,
   searchParams,
@@ -31,7 +52,14 @@ export default async function SignalsPage({
 }) {
   const session = await requireSession();
   const { projectId } = await params;
-  const { source, status = "all" } = await searchParams;
+  const { source, status: statusParam } = await searchParams;
+  // No status in the URL at all (a bare nav-link click, not a filter pill)
+  // — fall back to whatever was last explicitly chosen, so the founder
+  // doesn't have to re-select "Not replied" on every visit. An explicit
+  // `?status=all` from clicking the "All" pill is left alone here, not
+  // treated as "no preference" — see signal-filter-bar.tsx.
+  const cookieStatus = (await cookies()).get(SIGNALS_STATUS_COOKIE)?.value;
+  const status = statusParam ?? (cookieStatus && VALID_STATUSES.has(cookieStatus) ? cookieStatus : "all");
 
   const product = await prisma.product.findFirstOrThrow({
     where: { id: projectId, userId: session.user.id },
@@ -57,8 +85,36 @@ export default async function SignalsPage({
     },
     include: { source: true },
     orderBy: [{ relevanceScore: "desc" }, { postedAt: "desc" }],
-    take: 50,
+    take: status === "all" ? ALL_STATUSES_TAKE : 50,
   });
+
+  function toCardProps(signal: (typeof signals)[number]) {
+    return {
+      id: signal.id,
+      sourceLabel: formatSourceLabel(signal.source.type, signal.source.name),
+      title: signal.title,
+      snippet: truncate(signal.body, 200),
+      permalink: signal.permalink,
+      relevanceScore: signal.relevanceScore,
+      relevanceReason: signal.relevanceReason,
+      postedAt: signal.postedAt,
+      replied: signal.replied,
+      dismissed: signal.dismissed,
+    };
+  }
+
+  // Only meaningful for "all" — a single status filter is already one
+  // group. Bucketed from the one fetch above (already sorted by relevance
+  // then recency) rather than three separate queries, so ordering within
+  // each bucket is preserved for free.
+  const groups =
+    status === "all"
+      ? {
+          notReplied: signals.filter((s) => !s.replied && !s.dismissed),
+          replied: signals.filter((s) => s.replied && !s.dismissed),
+          dismissed: signals.filter((s) => s.dismissed),
+        }
+      : null;
 
   return (
     <div className="flex w-full flex-col items-center pt-16 pb-12 md:pt-0">
@@ -88,30 +144,35 @@ export default async function SignalsPage({
           />
         </div>
 
-        <section data-tour="signal-list" className="flex flex-col gap-4">
+        <section data-tour="signal-list" className="flex flex-col gap-6">
           {signals.length === 0 ? (
             <p className="py-16 text-center font-mono text-xs tracking-widest text-muted-foreground uppercase">
               No signals yet — listening for new posts.
             </p>
+          ) : groups ? (
+            <>
+              <SignalGroup label="Not replied" count={groups.notReplied.length} defaultOpen>
+                {groups.notReplied.map((signal) => (
+                  <SignalCard key={signal.id} projectId={projectId} signal={toCardProps(signal)} />
+                ))}
+              </SignalGroup>
+              <SignalGroup label="Replied" count={groups.replied.length} defaultOpen={false}>
+                {groups.replied.map((signal) => (
+                  <SignalCard key={signal.id} projectId={projectId} signal={toCardProps(signal)} />
+                ))}
+              </SignalGroup>
+              <SignalGroup label="Dismissed" count={groups.dismissed.length} defaultOpen={false}>
+                {groups.dismissed.map((signal) => (
+                  <SignalCard key={signal.id} projectId={projectId} signal={toCardProps(signal)} />
+                ))}
+              </SignalGroup>
+            </>
           ) : (
-            signals.map((signal) => (
-              <SignalCard
-                key={signal.id}
-                projectId={projectId}
-                signal={{
-                  id: signal.id,
-                  sourceLabel: formatSourceLabel(signal.source.type, signal.source.name),
-                  title: signal.title,
-                  snippet: truncate(signal.body, 200),
-                  permalink: signal.permalink,
-                  relevanceScore: signal.relevanceScore,
-                  relevanceReason: signal.relevanceReason,
-                  postedAt: signal.postedAt,
-                  replied: signal.replied,
-                  dismissed: signal.dismissed,
-                }}
-              />
-            ))
+            <div className="flex flex-col gap-4">
+              {signals.map((signal) => (
+                <SignalCard key={signal.id} projectId={projectId} signal={toCardProps(signal)} />
+              ))}
+            </div>
           )}
 
           {signals.length > 0 && (

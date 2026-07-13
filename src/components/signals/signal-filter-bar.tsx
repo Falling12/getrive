@@ -36,7 +36,13 @@ export function SignalFilterBar({
     const source = overrides.source !== undefined ? overrides.source : activeSource;
     const status = overrides.status !== undefined ? overrides.status : activeStatus;
     if (source) params.set("source", source);
-    if (status && status !== "all") params.set("status", status);
+    // Always explicit, including "all" — proxy.ts remembers whatever status
+    // shows up in the URL as a cookie, and the page falls back to that
+    // cookie only when the URL carries no status at all (a bare nav-link
+    // click, not a filter pill click). If clicking "All" omitted the param
+    // the way it used to, it would be indistinguishable from that bare
+    // link and get silently overridden by a remembered "not-replied".
+    params.set("status", status);
     const qs = params.toString();
     return qs ? `${basePath}?${qs}` : basePath;
   }
