@@ -90,6 +90,7 @@ export default async function SourcesPage({
                         usersAcquired={bySource.get(src.name)?.count ?? 0}
                         lastSuccessfulPollAt={src.lastSuccessfulPollAt}
                         consecutiveFailures={src.consecutiveFailures}
+                        consecutiveEmptyPolls={src.consecutiveEmptyPolls}
                       />
                     ))}
                   </div>

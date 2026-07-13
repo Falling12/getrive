@@ -229,6 +229,12 @@ model Source {
   // silently-broken fetch doesn't just look like "a quiet source" with
   // signals mysteriously drying up.
   consecutiveFailures  Int         @default(0)
+  // Incremented when a fetch succeeds (no throw) but returns zero posts,
+  // reset to 0 the moment a fetch returns at least one post — a healthy
+  // HTTP response carrying nothing is a different failure mode than an
+  // HTTP error, and consecutiveFailures alone can't see it since it only
+  // resets to 0 on any non-throwing fetch, empty or not.
+  consecutiveEmptyPolls Int        @default(0)
   // Unused by the UI now (see the model comment above) — kept only so
   // existing rows don't need a migration.
   karmaStatus          KarmaStatus @default(WATCH)

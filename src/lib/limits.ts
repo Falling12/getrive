@@ -107,3 +107,11 @@ export const MAX_OUTREACH_LEADS_PER_ACCOUNT = 8;
 // threshold, not a cost/abuse cap, so it isn't scaled down with the caps
 // above.
 export const CONSECUTIVE_FAILURE_ALERT_THRESHOLD = 3;
+
+// After this many consecutive polls where the fetch itself succeeded but
+// returned zero posts, surface it distinctly from both "ingestion failing"
+// (an HTTP/throw error) and "a quiet day" (fetched some posts, none scored
+// above threshold) — a healthy response with nothing in it is its own
+// failure mode (wrong endpoint, empty-by-construction query, upstream
+// serving nothing) and deserves its own alert rather than looking silent.
+export const CONSECUTIVE_EMPTY_POLL_ALERT_THRESHOLD = 2;

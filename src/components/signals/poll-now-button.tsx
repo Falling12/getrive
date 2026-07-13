@@ -51,6 +51,11 @@ function lineFor(event: PollProgressEvent): { line: string; isSignal: boolean } 
         line: `${event.sourceName} has failed ${event.consecutiveFailures}x in a row`,
         isSignal: false,
       };
+    case "ingestion-empty":
+      return {
+        line: `${event.sourceName} fetched OK but found 0 posts ${event.consecutiveEmptyPolls}x in a row`,
+        isSignal: false,
+      };
   }
 }
 

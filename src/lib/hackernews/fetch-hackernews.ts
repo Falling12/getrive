@@ -9,11 +9,24 @@ import { stripHtmlToText } from "@/lib/html-text";
 // is a larger scope not attempted here.
 const HN_API_BASE = "https://hacker-news.firebaseio.com/v0";
 
-// How many of the newest story IDs to actually fetch details for per poll —
-// bounds cost/latency; this is a shared feed (see poll.ts's hnCache), not
-// something that needs to cover the entire firehose every single run since
-// the cron rotates through frequently.
-const STORIES_TO_CHECK = 60;
+// Ask HN and Show HN specifically, not the general /newstories.json
+// firehose — confirmed empirically that the general firehose (mostly
+// infra/programming/science links) topped out at a 0.3 relevance score
+// against Getrive's 0.7 threshold across 393 scored posts over 3 days.
+// Ask HN and Show HN are people directly asking the community for help or
+// launching something and inviting feedback/discussion — categorically
+// closer to the "person describing a need" signal this product is trying
+// to catch than the firehose is.
+const STORY_LISTS = ["askstories", "showstories"] as const;
+
+// How many of the newest IDs to fetch details for, per list — bounds
+// cost/latency; this is a shared feed (see poll.ts's hnCache), not
+// something that needs to cover the entire history every single run since
+// the cron rotates through frequently. Applied per list rather than to a
+// combined/merged id array, since Ask HN and Show HN are much lower-volume
+// than the old firehose was — merging first would let whichever list's ids
+// happened to sort first crowd out the other after slicing.
+const STORIES_TO_CHECK_PER_LIST = 60;
 
 interface HnItem {
   id: number;
@@ -37,17 +50,27 @@ export interface RawHackerNewsPost {
 }
 
 export async function fetchNewHackerNewsStories(): Promise<RawHackerNewsPost[]> {
-  const idsResponse = await fetch(`${HN_API_BASE}/newstories.json`, { cache: "no-store" });
-  if (!idsResponse.ok) {
-    throw new Error(`Hacker News fetch failed: HTTP ${idsResponse.status}`);
-  }
-  const ids = (await idsResponse.json()) as number[];
+  const idLists = await Promise.all(
+    STORY_LISTS.map(async (list) => {
+      const response = await fetch(`${HN_API_BASE}/${list}.json`, { cache: "no-store" });
+      if (!response.ok) {
+        throw new Error(`Hacker News fetch failed: HTTP ${response.status} (${list})`);
+      }
+      return (await response.json()) as number[];
+    })
+  );
+
+  // Deduped in case the same story ever surfaces in both lists — shouldn't
+  // happen given HN's Ask/Show categorization, but cheap to guard against.
+  const ids = Array.from(
+    new Set(idLists.flatMap((list) => list.slice(0, STORIES_TO_CHECK_PER_LIST)))
+  );
 
   // Individual item fetches use allSettled, not all — one dead/removed item
   // ID (HN returns null for some) shouldn't sink the whole batch the way a
   // single bad Reddit post doesn't abort that fetcher either.
   const results = await Promise.allSettled(
-    ids.slice(0, STORIES_TO_CHECK).map(async (id) => {
+    ids.map(async (id) => {
       const response = await fetch(`${HN_API_BASE}/item/${id}.json`, { cache: "no-store" });
       if (!response.ok) return null;
       return (await response.json()) as HnItem | null;

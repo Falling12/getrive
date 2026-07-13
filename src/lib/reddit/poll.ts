@@ -7,6 +7,7 @@ import {
   DAILY_SCORING_CAP_PER_PROJECT,
   DAILY_SCORING_CAP_PER_ACCOUNT,
   CONSECUTIVE_FAILURE_ALERT_THRESHOLD,
+  CONSECUTIVE_EMPTY_POLL_ALERT_THRESHOLD,
   isExemptFromLimits,
 } from "@/lib/limits";
 import { notifySignalCreated } from "@/lib/services/notification.service";
@@ -35,7 +36,8 @@ export type PollProgressEvent =
   | { type: "signal-created"; sourceName: string; title: string }
   | { type: "waiting"; secondsLeft: number; nextSource: string }
   | { type: "daily-cap-reached"; sourceName: string }
-  | { type: "ingestion-failing"; sourceName: string; consecutiveFailures: number };
+  | { type: "ingestion-failing"; sourceName: string; consecutiveFailures: number }
+  | { type: "ingestion-empty"; sourceName: string; consecutiveEmptyPolls: number };
 
 // A manual poll can legitimately run long (3 sources x up to 62s Reddit
 // spacing, plus scoring time per post — 3+ minutes isn't unusual).
@@ -217,10 +219,27 @@ export async function pollAllSources(options?: {
     try {
       posts = await fetchForSource(source, hnCache);
       emit({ type: "source-fetched", name: sourceLabel, postCount: posts.length });
-      await prisma.source.update({
+      const updated = await prisma.source.update({
         where: { id: source.id },
-        data: { lastPolledAt: new Date(), lastSuccessfulPollAt: new Date(), consecutiveFailures: 0 },
+        data: {
+          lastPolledAt: new Date(),
+          lastSuccessfulPollAt: new Date(),
+          consecutiveFailures: 0,
+          consecutiveEmptyPolls: posts.length === 0 ? { increment: 1 } : 0,
+        },
       });
+      if (updated.consecutiveEmptyPolls >= CONSECUTIVE_EMPTY_POLL_ALERT_THRESHOLD) {
+        if (updated.consecutiveEmptyPolls === CONSECUTIVE_EMPTY_POLL_ALERT_THRESHOLD) {
+          console.warn(
+            `[poll] ${source.name} has fetched successfully but returned 0 posts ${updated.consecutiveEmptyPolls} polls in a row — likely a silent no-op (wrong endpoint, empty-by-construction query), not just a quiet source`
+          );
+        }
+        emit({
+          type: "ingestion-empty",
+          sourceName: sourceLabel,
+          consecutiveEmptyPolls: updated.consecutiveEmptyPolls,
+        });
+      }
     } catch (error) {
       console.error(`[poll] failed to fetch ${source.name}`, error);
       Sentry.captureException(error, { tags: { source: source.name, sourceType: source.type } });

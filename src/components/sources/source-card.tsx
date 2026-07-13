@@ -7,7 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { formatRelativeTime } from "@/lib/format";
 import { formatSourceLabel } from "@/lib/sources/format";
-import { CONSECUTIVE_FAILURE_ALERT_THRESHOLD } from "@/lib/limits";
+import {
+  CONSECUTIVE_FAILURE_ALERT_THRESHOLD,
+  CONSECUTIVE_EMPTY_POLL_ALERT_THRESHOLD,
+} from "@/lib/limits";
 import {
   unmonitorSourceAction,
   updateSourceDetailsAction,
@@ -24,6 +27,7 @@ export function SourceCard({
   usersAcquired,
   lastSuccessfulPollAt,
   consecutiveFailures,
+  consecutiveEmptyPolls,
 }: {
   projectId: string;
   id: string;
@@ -35,6 +39,7 @@ export function SourceCard({
   usersAcquired: number;
   lastSuccessfulPollAt: Date | null;
   consecutiveFailures: number;
+  consecutiveEmptyPolls: number;
 }) {
   const isReddit = type === "REDDIT_SUBREDDIT";
   const externalHref =
@@ -44,6 +49,8 @@ export function SourceCard({
         ? "https://news.ycombinator.com/newest"
         : null;
   const isFailing = consecutiveFailures >= CONSECUTIVE_FAILURE_ALERT_THRESHOLD;
+  const isEmptyPolling =
+    !isFailing && consecutiveEmptyPolls >= CONSECUTIVE_EMPTY_POLL_ALERT_THRESHOLD;
   const [, startTransition] = useTransition();
   const boundDetailsAction = updateSourceDetailsAction.bind(null, projectId, id);
   const [state, formAction, isPending] = useActionState(boundDetailsAction, {});
@@ -81,6 +88,15 @@ export function SourceCard({
           <AlertTriangle className="size-4 shrink-0 text-destructive" />
           <p className="font-mono text-xs text-destructive">
             {`Ingestion failing — ${consecutiveFailures} failed fetch attempts in a row. Signals from this source have stopped; this isn't just a quiet day.`}
+          </p>
+        </div>
+      )}
+
+      {isEmptyPolling && (
+        <div className="flex items-center gap-2 border-b border-destructive/30 bg-destructive/10 px-5 py-3 md:px-6">
+          <AlertTriangle className="size-4 shrink-0 text-destructive" />
+          <p className="font-mono text-xs text-destructive">
+            {`Fetching but finding nothing — ${consecutiveEmptyPolls} polls in a row returned 0 posts, not just 0 relevant ones. Likely a silent no-op, not a quiet day.`}
           </p>
         </div>
       )}
