@@ -17,7 +17,7 @@ export const isLocalDev = process.env.NODE_ENV !== "production";
 // founder's own account, for uncapped dogfooding/testing directly against
 // production. Not exposed anywhere in the UI; checked server-side only, via
 // isExemptFromLimits() below.
-const UNLIMITED_ACCOUNT_EMAILS = new Set(["senkcsani@gmail.com"]);
+const UNLIMITED_ACCOUNT_EMAILS = new Set(["senkcsani@gmail.com", "sonic002.96@gmail.com"]);
 
 function isUnlimitedAccount(email?: string | null): boolean {
   return !!email && UNLIMITED_ACCOUNT_EMAILS.has(email.toLowerCase());
