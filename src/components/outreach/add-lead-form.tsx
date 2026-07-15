@@ -1,17 +1,12 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useActionState } from "react";
 import { UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { addLeadAction } from "@/app/(app)/projects/[projectId]/outreach/actions";
-import { track } from "@/lib/analytics/posthog-client";
 
 export function AddLeadForm({ projectId }: { projectId: string }) {
   const [state, formAction, isPending] = useActionState(addLeadAction.bind(null, projectId), {});
-
-  useEffect(() => {
-    if (state.success) track("outreach_lead_added");
-  }, [state.success]);
 
   return (
     <section className="overflow-hidden rounded-xl border border-border bg-background">

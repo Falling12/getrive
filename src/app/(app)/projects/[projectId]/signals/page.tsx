@@ -9,7 +9,14 @@ import { SignalFilterBar } from "@/components/signals/signal-filter-bar";
 import { SignalCard } from "@/components/signals/signal-card";
 import { SignalGroup } from "@/components/signals/signal-group";
 import { PollNowButton } from "@/components/signals/poll-now-button";
+import { ThresholdControl } from "@/components/signals/threshold-control";
+import { BelowThresholdSection } from "@/components/signals/below-threshold-section";
 import { POLL_STALE_MINUTES } from "@/lib/reddit/poll";
+
+// How many below-threshold candidates to actually list in the collapsed
+// section — bounded independent of the (unbounded) count shown in its
+// header, so a source with hundreds of misses doesn't render them all.
+const BELOW_THRESHOLD_DISPLAY_LIMIT = 30;
 
 export const metadata: Metadata = { title: "Signals — Getrive" };
 
@@ -88,6 +95,27 @@ export default async function SignalsPage({
     take: status === "all" ? ALL_STATUSES_TAKE : 50,
   });
 
+  // Scoring transparency: posts that were scored but fell below the
+  // relevance threshold never became a Signal, so they're invisible
+  // everywhere else — this is the only place a founder can see them and
+  // sanity-check whether the threshold is filtering out real candidates.
+  const belowThresholdWhere = {
+    passed: false,
+    source: {
+      productId: product.id,
+      ...(source ? { name: source } : {}),
+    },
+  };
+  const [belowThresholdCount, belowThresholdPosts] = await Promise.all([
+    prisma.scoredPost.count({ where: belowThresholdWhere }),
+    prisma.scoredPost.findMany({
+      where: belowThresholdWhere,
+      include: { source: true },
+      orderBy: { scoredAt: "desc" },
+      take: BELOW_THRESHOLD_DISPLAY_LIMIT,
+    }),
+  ]);
+
   function toCardProps(signal: (typeof signals)[number]) {
     return {
       id: signal.id,
@@ -130,6 +158,10 @@ export default async function SignalsPage({
             </div>
             <PollNowButton projectId={projectId} initialIsActive={isPollActive} />
           </header>
+
+          <div className="border-b border-border/60 p-5 md:px-6">
+            <ThresholdControl projectId={projectId} initialThreshold={product.relevanceThreshold} />
+          </div>
 
           <SignalFilterBar
             projectId={projectId}
@@ -175,15 +207,18 @@ export default async function SignalsPage({
             </div>
           )}
 
-          {signals.length > 0 && (
-            <div className="flex w-full flex-col items-center justify-center gap-2 py-8 opacity-50">
-              <div className="size-1 rounded-full bg-border" />
-              <div className="size-1 rounded-full bg-border" />
-              <span className="mt-2 font-mono text-[10px] tracking-widest text-muted-foreground uppercase">
-                Threshold {product.relevanceThreshold.toFixed(2)}
-              </span>
-            </div>
-          )}
+          <BelowThresholdSection
+            totalCount={belowThresholdCount}
+            items={belowThresholdPosts.map((p) => ({
+              id: p.id,
+              title: p.title,
+              permalink: p.permalink,
+              relevanceScore: p.relevanceScore,
+              scoredAt: p.scoredAt,
+              sourceType: p.source.type,
+              sourceName: p.source.name,
+            }))}
+          />
         </section>
       </div>
     </div>

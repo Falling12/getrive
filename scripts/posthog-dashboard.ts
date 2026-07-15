@@ -37,12 +37,9 @@ const FUNNEL_STEPS = [
   "signup_submitted",
   "email_verified",
   "onboarding_step_completed",
-  "source_added",
   "first_signal_viewed",
   "signal_reply_copied",
   "signal_marked_replied",
-  "outreach_lead_added",
-  "outreach_draft_copied",
 ];
 
 async function main() {
@@ -86,7 +83,7 @@ async function main() {
       series: FUNNEL_STEPS.map((event) => ({ kind: "EventsNode", event })),
       filterTestAccounts: true,
     },
-    "Full chain from homepage_viewed through outreach_draft_copied. The last two steps (outreach_lead_added, outreach_draft_copied) are a separate manual-outreach feature, not every user's path — expect a real drop there, it's not necessarily a problem."
+    "Full chain from homepage_viewed through signal_marked_replied."
   );
 
   await createInsight(

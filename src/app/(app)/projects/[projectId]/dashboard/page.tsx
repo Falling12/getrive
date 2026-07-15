@@ -4,7 +4,10 @@ import { requireSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { StatTile } from "@/components/dashboard/stat-tile";
 import { NeedsAttention } from "@/components/dashboard/needs-attention";
+import { AutoFirstScan } from "@/components/dashboard/auto-first-scan";
+import { ExampleSignalPreview } from "@/components/dashboard/example-signal-preview";
 import { CONSECUTIVE_FAILURE_ALERT_THRESHOLD } from "@/lib/limits";
+import { POLL_STALE_MINUTES } from "@/lib/reddit/poll";
 import { formatSourceLabel } from "@/lib/sources/format";
 import { parseSignupGoalTarget } from "@/lib/signup-goal";
 
@@ -67,10 +70,16 @@ export default async function DashboardPage({
 
   const goalTarget = parseSignupGoalTarget(product.signupGoal);
   const goalShare = goalTarget ? Math.min(100, Math.round((usersAcquired / goalTarget) * 100)) : null;
+  const isPollActive = Boolean(
+    product.activePollStartedAt &&
+      Date.now() - product.activePollStartedAt.getTime() < POLL_STALE_MINUTES * 60_000
+  );
 
   return (
     <div className="flex w-full flex-col items-center pt-16 pb-16 md:pt-0">
       <div className="flex w-full max-w-5xl flex-col px-6 pt-12 md:px-12 md:pt-20 lg:pt-24">
+        <AutoFirstScan projectId={projectId} initialIsActive={isPollActive} />
+
         <section data-tour="metric" className="relative flex w-full flex-col border-b-2 border-border pb-16 md:pb-24">
           <div className="pointer-events-none absolute top-0 right-0 size-32 rounded-full bg-accent/10 blur-[80px]" />
 
@@ -119,6 +128,8 @@ export default async function DashboardPage({
           <StatTile icon={MessageSquareText} label="Replies sent" value={repliesSent} />
           <StatTile icon={TrendingUp} label="Karma tracked" value={karmaAgg._sum.currentKarma ?? 0} />
         </section>
+
+        {usersAcquired === 0 && <ExampleSignalPreview />}
 
         <NeedsAttention
           projectId={projectId}

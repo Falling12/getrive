@@ -310,6 +310,10 @@ export async function confirmSourcesAction(
 
   // `?tour=1` triggers the one-time dashboard walkthrough (DashboardTour) —
   // only true on this exact redirect, never on a normal later visit to the
-  // dashboard, since the page strips the param on mount.
-  redirect(`/projects/${product.id}/dashboard?tour=1`);
+  // dashboard, since the page strips the param on mount. `firstscan=1` is a
+  // separate one-shot signal (see AutoFirstScan) that auto-starts the first
+  // "check for new posts" run — kept distinct from `tour` because Settings'
+  // "Retake tour" link reuses `?tour=1` on its own and must never replay a
+  // live poll.
+  redirect(`/projects/${product.id}/dashboard?tour=1&firstscan=1`);
 }

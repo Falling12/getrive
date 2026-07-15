@@ -4,7 +4,6 @@ import { useState, useTransition } from "react";
 import { RefreshCw, Copy, Check, Info, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { generateOutreachDraftAction } from "@/app/(app)/projects/[projectId]/outreach/actions";
-import { track } from "@/lib/analytics/posthog-client";
 
 export function OutreachDraftEditor({
   projectId,
@@ -42,7 +41,6 @@ export function OutreachDraftEditor({
   async function handleCopy() {
     const textToCopy = trackedUrl ? `${message}\n\n${trackedUrl}` : message;
     await navigator.clipboard.writeText(textToCopy);
-    track("outreach_draft_copied", { lead_id: leadId });
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }
