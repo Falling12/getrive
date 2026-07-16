@@ -38,8 +38,8 @@ export function TrustSection() {
         </h2>
 
         <p className="mx-auto max-w-2xl text-xl leading-relaxed font-light text-muted-foreground md:text-2xl">
-          Getrive is a diagnostic instrument, not an autonomous bot. Automation ruins authenticity — you remain the
-          final human operator, on Reddit, Hacker News, or anywhere else.
+          Getrive drafts, it doesn&apos;t post. Automation ruins authenticity — you decide what goes out, every
+          time, on Reddit, Hacker News, or anywhere else.
         </p>
 
         <div className="mt-16 inline-flex items-center gap-6 rounded-lg border border-border bg-background/80 px-8 py-5 font-mono text-[11px] tracking-widest text-foreground backdrop-blur-md">
@@ -48,7 +48,7 @@ export function TrustSection() {
             <span className="landing-toggle-thumb absolute top-1 right-1 size-4 rounded-full bg-[var(--accent-glow)]" />
           </span>
           <span className="font-bold tracking-[0.2em] text-destructive uppercase drop-shadow-[0_0_4px_rgba(196,84,74,0.6)]">
-            Hardware locked
+            Disabled by design
           </span>
         </div>
       </Reveal>

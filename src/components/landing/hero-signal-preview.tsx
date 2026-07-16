@@ -1,4 +1,4 @@
-import { Send, Target } from "lucide-react";
+import { Send, Gauge } from "lucide-react";
 
 // Mobile hero's "aha" visual — a compact, non-animated recreation of the
 // real Signal Detail flow (post + Getrive's drafted reply), styled with the
@@ -12,7 +12,7 @@ import { Send, Target } from "lucide-react";
 const POST = "I can build the product. But I have no idea where my actual users hang out online, and cold-DMing strangers makes my skin crawl.";
 const HIGHLIGHT = "no idea where my actual users hang out";
 const REPLY =
-  "Same spot when I launched. What worked: finding people already describing this exact problem in public and replying like a person, not a pitch — that's basically what I built Getrive to automate.";
+  "Been there. What actually worked for me: search Reddit/HN for people describing the problem in their own words, and reply with real help before ever mentioning what you're building. Slower than blasting DMs, but every convo actually converts. Happy to share how I structure the searches if useful.";
 
 export function HeroSignalPreview() {
   const highlightIndex = POST.indexOf(HIGHLIGHT);
@@ -50,9 +50,9 @@ export function HeroSignalPreview() {
           className="mt-2.5 flex w-max items-center gap-1.5 rounded px-2 py-1"
           style={{ backgroundColor: "color-mix(in oklch, var(--accent-glow), transparent 88%)" }}
         >
-          <Target fill="currentColor" className="size-3" style={{ color: "var(--accent-glow)" }} />
+          <Gauge className="size-3" style={{ color: "var(--accent-glow)" }} />
           <span className="font-mono text-[9px] font-bold tracking-widest" style={{ color: "var(--accent-glow)" }}>
-            INTENT: HIGH
+            Relevance: 94%
           </span>
         </div>
       </div>

@@ -1,24 +1,25 @@
-import { Terminal } from "lucide-react";
+import { ListChecks, Quote } from "lucide-react";
 import { Reveal } from "@/components/landing/reveal";
+import { TESTIMONIALS } from "@/lib/testimonials";
 
 // Getrive has no paying customers or testimonials yet (early access, per
 // the pricing section below) — these are real capabilities described
 // honestly, not fabricated user quotes with invented MRR numbers.
 const LOGS = [
   {
-    id: "LOG: DOGFOOD_01",
+    id: "Built on itself",
     body: "Getrive finds its own first users the same way — by watching Reddit and Hacker News for founders describing exactly this problem, and drafting a genuine reply.",
-    detail: "Built by a solo founder // used on itself",
+    detail: "Built by a solo founder, used on itself daily.",
   },
   {
-    id: "LOG: REVIEW_LOOP",
+    id: "Review, always",
     body: "Every draft sits in front of you before anything happens — edit it, regenerate it for a different angle, or ignore it. Nothing sends on its own.",
-    detail: "Design principle // \"Nothing posted without you\"",
+    detail: "Design principle: nothing posted without you.",
   },
   {
-    id: "LOG: ATTRIBUTION",
+    id: "Real attribution",
     body: "When a reply does bring someone in, a tracked link connects that signup back to the exact post and channel that produced it — not a guess.",
-    detail: "Users page // real attribution, not vanity stats",
+    detail: "Real attribution, not vanity stats.",
   },
 ];
 
@@ -31,8 +32,8 @@ export function SocialProof() {
             className="mb-6 inline-flex items-center gap-2 font-mono text-[11px] tracking-widest uppercase"
             style={{ color: "var(--accent-glow)" }}
           >
-            <Terminal className="size-4" />
-            Post-action reports
+            <ListChecks className="size-4" />
+            In practice
           </span>
           <h2 className="text-4xl font-semibold tracking-tight text-foreground md:text-5xl">
             Built the way it&apos;s meant to be used.
@@ -62,6 +63,37 @@ export function SocialProof() {
             </Reveal>
           ))}
         </div>
+
+        {TESTIMONIALS.length > 0 && (
+          <div className="mt-8 grid grid-cols-1 gap-8 md:grid-cols-3">
+            {TESTIMONIALS.slice(0, 3).map((testimonial, index) => (
+              <Reveal key={testimonial.name} delayMs={150 * (index + 1)}>
+                <div className="landing-panel flex h-full flex-col gap-6 p-8">
+                  <Quote className="size-5" style={{ color: "var(--accent-glow)" }} />
+                  <p className="flex-1 text-[15px] leading-relaxed font-light text-foreground/90">
+                    &ldquo;{testimonial.quote}&rdquo;
+                  </p>
+                  <div className="font-mono text-[11px] tracking-widest text-muted-foreground uppercase">
+                    {testimonial.link ? (
+                      <a
+                        href={testimonial.link}
+                        target="_blank"
+                        rel="noopener noreferrer nofollow"
+                        className="transition-colors hover:text-[var(--accent-glow)]"
+                      >
+                        {testimonial.name} — {testimonial.role}
+                      </a>
+                    ) : (
+                      <span>
+                        {testimonial.name} — {testimonial.role}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+        )}
       </div>
     </section>
   );

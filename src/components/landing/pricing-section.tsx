@@ -38,8 +38,8 @@ export function PricingSection() {
 
           <h2 className="mb-6 text-4xl font-semibold tracking-tighter text-foreground">Early access</h2>
           <p className="mx-auto mb-10 max-w-md text-lg leading-relaxed font-light text-muted-foreground">
-            Getrive is in early access. There&apos;s one plan — free — while we work directly with founders to get
-            this right.
+            Free while Getrive is in early access — plus a direct line to the founder and a say in what gets built
+            next.
           </p>
 
           <div className="mb-10 inline-block font-mono">
@@ -54,7 +54,7 @@ export function PricingSection() {
                 color: "var(--accent-glow)",
               }}
             >
-              No paid tier yet
+              Free during early access — early users keep preferred pricing later
             </span>
           </div>
 

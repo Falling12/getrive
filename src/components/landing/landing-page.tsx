@@ -5,6 +5,7 @@ import { LandingNav } from "@/components/landing/landing-nav";
 import { LandingHero } from "@/components/landing/landing-hero";
 import { ProblemSection } from "@/components/landing/problem-section";
 import { HowItWorks } from "@/components/landing/how-it-works";
+import { ProductScreenshot } from "@/components/landing/product-screenshot";
 import { TrustSection } from "@/components/landing/trust-section";
 import { FeatureHighlights } from "@/components/landing/feature-highlights";
 import { SocialProof } from "@/components/landing/social-proof";
@@ -30,6 +31,7 @@ export function LandingPage() {
       <LandingHero />
       <ProblemSection />
       <HowItWorks />
+      <ProductScreenshot />
       <TrustSection />
       <FeatureHighlights />
       <SocialProof />

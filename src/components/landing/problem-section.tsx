@@ -1,4 +1,4 @@
-import { Radar, Volume2 } from "lucide-react";
+import { Ear, Volume2 } from "lucide-react";
 import { Reveal } from "@/components/landing/reveal";
 import { Counter } from "@/components/landing/counter";
 
@@ -15,15 +15,15 @@ export function ProblemSection() {
         <Reveal className="mx-auto mb-16 max-w-2xl space-y-5 text-center md:mb-20">
           <span className="inline-flex items-center gap-2 rounded-full bg-destructive/10 px-4 py-1.5 font-mono text-[11px] tracking-widest text-destructive uppercase shadow-[inset_0_0_0_1px_color-mix(in_oklch,var(--destructive),transparent_70%)]">
             <span className="size-1.5 animate-ping rounded-full bg-destructive" />
-            Signal loss
+            The problem
           </span>
           <h2 className="text-4xl font-semibold tracking-tight text-foreground md:text-6xl">
-            The geometry of cold outbound{" "}
-            <span className="text-destructive/80 line-through decoration-2">is dead.</span>
+            Cold outreach is broken.{" "}
+            <span style={{ color: "var(--accent-glow)" }}>Listening isn&apos;t.</span>
           </h2>
           <p className="text-lg leading-relaxed font-light text-muted-foreground">
-            Spamming templates destroys brand equity. Getrive flips the vector: you only reach out where intent has
-            already been said out loud.
+            Spamming templates destroys brand equity. Getrive works differently: you only reach out where someone
+            has already said, out loud, that they have the problem.
           </p>
         </Reveal>
 
@@ -71,10 +71,10 @@ export function ProblemSection() {
                     className="mb-8 flex items-center gap-3 font-mono text-[11px] font-medium tracking-widest uppercase drop-shadow-[0_0_8px_rgba(107,224,164,0.4)]"
                     style={{ color: "var(--accent-glow)" }}
                   >
-                    <Radar className="size-5 [animation:spin_8s_linear_infinite]" />
-                    Interception
+                    <Ear className="size-5" />
+                    Listening
                   </div>
-                  <h3 className="mb-4 text-3xl font-semibold text-foreground">Precision listening</h3>
+                  <h3 className="mb-4 text-3xl font-semibold text-foreground">Listening where it counts</h3>
                   <p className="text-[15px] leading-relaxed font-light text-muted-foreground">
                     Scanning real conversations to find the handful of people who just described the exact problem
                     you solve, today.
@@ -89,7 +89,7 @@ export function ProblemSection() {
                     className="font-bold drop-shadow-[0_0_8px_rgba(107,224,164,0.5)]"
                     style={{ color: "var(--accent-glow)" }}
                   >
-                    High-trust context
+                    Replies in context, where trust already exists
                   </span>
                 </div>
               </div>

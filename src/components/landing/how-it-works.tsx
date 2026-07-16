@@ -32,10 +32,10 @@ export function HowItWorks() {
               className="inline-block rounded-full px-3 py-1 font-mono text-[11px] font-medium tracking-widest uppercase"
               style={{ backgroundColor: "color-mix(in oklch, var(--accent-glow), transparent 90%)", color: "var(--accent-glow)" }}
             >
-              System arc
+              How it works
             </span>
             <h2 className="mt-6 text-4xl font-semibold tracking-tight text-foreground md:text-6xl">
-              How the instrument reads the room.
+              How Getrive finds the conversation.
             </h2>
           </div>
           <p className="max-w-sm text-lg leading-relaxed font-light text-muted-foreground">

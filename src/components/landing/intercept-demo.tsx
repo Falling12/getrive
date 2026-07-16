@@ -16,7 +16,7 @@ interface Scenario {
   sourceName: string;
   post: string;
   highlights: string[];
-  intent: string;
+  relevance: number;
   detail: string;
   reply: string;
 }
@@ -27,27 +27,27 @@ const SCENARIOS: Scenario[] = [
     sourceName: "SaaS",
     post: "I can build the product, that part I'm fine with. But I have no idea where my actual users hang out online, and cold-DMing strangers makes my skin crawl. How is everyone finding their first 10 customers?",
     highlights: ["no idea where my actual users hang out", "cold-DMing strangers makes my skin crawl"],
-    intent: "HIGH",
+    relevance: 94,
     detail: "DISTRIBUTION",
-    reply: "Same spot when I launched — the DMs felt gross and I didn't have a following to post to either. What actually worked: finding people already describing this exact problem in public and just replying like a person, not a pitch. I got tired of doing that search by hand so I built Getrive to surface those posts automatically. No pressure, just figured it's worth mentioning since this is almost word-for-word what it looks for.",
+    reply: "Been there. What actually worked for me: search Reddit/HN for people describing the problem in their own words, and reply with real help before ever mentioning what you're building. Slower than blasting DMs, but every convo actually converts. Happy to share how I structure the searches if useful.",
   },
   {
     sourceType: "HACKERNEWS",
     sourceName: "Ask HN",
     post: "Ask HN: bootstrapped founders — how are you getting your first real customers without an audience, an ad budget, or a sales background?",
     highlights: ["without an audience, an ad budget, or a sales background"],
-    intent: "CRITICAL",
+    relevance: 91,
     detail: "COLD START",
-    reply: "The honest answer for me was: the people who need what you built are already complaining about the problem somewhere public, you just have to actually go find the thread and reply for real. Manually that's a part-time job, so I ended up building Getrive to do the finding part — it watches Reddit and HN for exactly this kind of post and drafts a reply, but you always review and send it yourself.",
+    reply: "The honest answer for me was: the people who need what you built are already complaining about the problem somewhere public, you just have to actually go find the thread and reply for real. I got tired of doing that search by hand, so I built something that watches for exactly this kind of post — but the replying part stays manual, on purpose.",
   },
   {
     sourceType: "REDDIT_SUBREDDIT",
     sourceName: "startups",
     post: "Spent all weekend on a landing page and a Product Hunt launch. Got 40 upvotes, zero signups that actually stuck around. I don't think I even know who my users are supposed to be.",
     highlights: ["zero signups that actually stuck around", "don't think I even know who my users are supposed to be"],
-    intent: "HIGH",
+    relevance: 88,
     detail: "POST-LAUNCH",
-    reply: "A launch day spike that doesn't stick is almost always an audience problem, not a product one — the upvotes aren't the same people who'd actually use it. What helped me was going the other way: find the specific people already describing the problem, in their own words, and start there instead of a big broadcast. That's basically what I built Getrive to do, if it's useful to see how it finds those threads.",
+    reply: "A launch day spike that doesn't stick is almost always an audience problem, not a product one — the upvotes aren't the same people who'd actually use it. What helped me was going the other way: find the specific people already describing the problem, in their own words, and start there instead of a big broadcast. Happy to share what I use to find those threads if it'd help.",
   },
 ];
 
@@ -62,13 +62,13 @@ const HOLD_MS = 7000;
 type Phase = "idle" | "intercepting" | "scanning" | "analyzed" | "drafting" | "typing" | "ready";
 
 const STATUS_LABEL: Record<Phase, string> = {
-  idle: "Awaiting signal…",
-  intercepting: "Intercepting stream…",
-  scanning: "Semantic analysis…",
-  analyzed: "Semantic analysis…",
-  drafting: "Synthesizing draft…",
-  typing: "Synthesizing draft…",
-  ready: "Operator action required",
+  idle: "Waiting for a matching post…",
+  intercepting: "New post found…",
+  scanning: "Checking relevance…",
+  analyzed: "Checking relevance…",
+  drafting: "Drafting a reply…",
+  typing: "Drafting a reply…",
+  ready: "Ready for your review",
 };
 
 export function InterceptDemo() {
@@ -218,7 +218,7 @@ export function InterceptDemo() {
                       color: "var(--accent-glow)",
                     }}
                   >
-                    INTENT: {scenario.intent}
+                    Relevance: {scenario.relevance}%
                   </span>
                   <span className="rounded-lg border border-border/50 bg-background px-3 py-1.5 font-mono text-[10px] text-muted-foreground tracking-widest">
                     {scenario.detail}

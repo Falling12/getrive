@@ -12,11 +12,11 @@ export function FeatureHighlights() {
             className="inline-block rounded-full px-3 py-1 font-mono text-[11px] font-medium tracking-widest uppercase"
             style={{ backgroundColor: "color-mix(in oklch, var(--accent-glow), transparent 90%)", color: "var(--accent-glow)" }}
           >
-            Instrument capabilities
+            Capabilities
           </span>
         </Reveal>
 
-        <div className="grid auto-rows-[280px] grid-cols-1 gap-6 md:grid-cols-3">
+        <div className="grid auto-rows-auto grid-cols-1 gap-6 md:auto-rows-[280px] md:grid-cols-3">
           <Reveal delayMs={150} className="col-span-1 md:col-span-2">
             <div className="landing-panel landing-panel-interactive group flex h-full flex-col justify-between p-10">
               <div>

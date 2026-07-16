@@ -17,9 +17,14 @@ export const FAQS: Faq[] = [
       "Getrive listens across Reddit and Hacker News for people already describing the exact pain point your product solves, then helps you draft an authentic reply. Nothing is posted without you reviewing it first.",
   },
   {
+    question: "Will replying like this get me banned or called out for self-promotion?",
+    answer:
+      "That's the risk we designed around. Every draft is built to lead with genuine help, not a pitch, and you review and edit it before sending from your own account — nothing is ever mass-posted or sent automatically. Getrive respects that most subreddits (rightly) ban naked self-promo: it finds the conversation, but you're the one having it.",
+  },
+  {
     question: "Does Getrive post replies automatically?",
     answer:
-      "No. Getrive is a diagnostic instrument, not an autonomous bot — every draft sits in front of you before anything happens, and you remain the final human operator on Reddit, Hacker News, or anywhere else. Auto-reply systems are disabled by design.",
+      "No. Getrive drafts, it doesn't post — every draft sits in front of you before anything happens, and you remain the final human operator on Reddit, Hacker News, or anywhere else. Auto-reply systems are disabled by design.",
   },
   {
     question: "Which platforms does Getrive monitor?",
@@ -29,7 +34,7 @@ export const FAQS: Faq[] = [
   {
     question: "How does Getrive know which posts are actually relevant?",
     answer:
-      "Every post is read against your product's actual description and positioning, not keyword-matched — only genuine, high-intent matches reach you, scored against a relevance threshold (70% by default).",
+      "Every post is read against your product's actual description and positioning, not keyword-matched — only genuine, high-intent matches reach you, scored against a relevance threshold (70% by default). Only posts that clear that bar land in your queue; the demos on this page show real examples of scores in that range.",
   },
   {
     question: "How much does Getrive cost?",

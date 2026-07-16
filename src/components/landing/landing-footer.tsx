@@ -14,7 +14,7 @@ export function LandingFooter() {
             className="size-1.5 animate-[auth-pulse-slow_3s_ease-in-out_infinite] rounded-full"
             style={{ backgroundColor: "var(--accent-glow)", boxShadow: "0 0 8px var(--accent-glow)" }}
           />
-          Signal node: online
+          Listening now
         </div>
         <div className="flex gap-6 font-mono text-[11px] tracking-widest text-muted-foreground uppercase">
           <Link href="/terms" className="transition-colors hover:text-[var(--accent-glow)]">
