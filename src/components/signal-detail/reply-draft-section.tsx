@@ -81,7 +81,7 @@ export async function ReplyDraftSection({
         trackedUrl={trackedUrl}
         postUrl={signal.permalink}
       />
-      <MarkReplied projectId={projectId} signalId={signal.id} />
+      <MarkReplied projectId={projectId} signalId={signal.id} sourceType={signal.source.type} />
     </section>
   );
 }

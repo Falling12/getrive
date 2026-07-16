@@ -3,10 +3,20 @@
 import { useActionState, useEffect, useState } from "react";
 import { CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import type { SourceType } from "@/generated/prisma/client";
 import { markAsRepliedAction } from "@/app/(app)/projects/[projectId]/signals/[id]/actions";
+import { formatReplyUrlPlaceholder } from "@/lib/sources/format";
 import { track } from "@/lib/analytics/posthog-client";
 
-export function MarkReplied({ projectId, signalId }: { projectId: string; signalId: string }) {
+export function MarkReplied({
+  projectId,
+  signalId,
+  sourceType,
+}: {
+  projectId: string;
+  signalId: string;
+  sourceType: SourceType;
+}) {
   const [expanded, setExpanded] = useState(false);
   const boundAction = markAsRepliedAction.bind(null, projectId, signalId);
   const [state, formAction, isPending] = useActionState(boundAction, {});
@@ -53,7 +63,7 @@ export function MarkReplied({ projectId, signalId }: { projectId: string; signal
           type="url"
           name="postUrl"
           required
-          placeholder="https://reddit.com/r/subreddit/comments/..."
+          placeholder={formatReplyUrlPlaceholder(sourceType)}
           className="flex-1 rounded border border-border bg-background px-4 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground/50 focus:border-accent"
         />
         <Button type="submit" disabled={isPending} className="rounded-md">

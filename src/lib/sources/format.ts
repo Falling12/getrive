@@ -54,3 +54,17 @@ export function formatViewOnLabel(type: SourceType): string {
       return "View on IndieHackers";
   }
 }
+
+// Example URL shape shown as the "mark as replied" input placeholder — each
+// source has its own comment/reply URL convention, so a Reddit-shaped
+// example is actively misleading on Hacker News or IndieHackers.
+export function formatReplyUrlPlaceholder(type: SourceType): string {
+  switch (type) {
+    case "REDDIT_SUBREDDIT":
+      return "https://reddit.com/r/subreddit/comments/...";
+    case "HACKERNEWS":
+      return "https://news.ycombinator.com/item?id=...";
+    case "INDIEHACKERS":
+      return "https://www.indiehackers.com/post/...";
+  }
+}
