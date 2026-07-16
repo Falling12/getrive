@@ -1,9 +1,9 @@
 import * as Sentry from "@sentry/nextjs";
 import { prisma } from "@/lib/prisma";
-import { fetchNewPosts } from "@/lib/reddit/fetch-posts";
+import { fetchNewPostsForSubreddits, MAX_SUBREDDITS_PER_BATCH } from "@/lib/reddit/fetch-posts";
 import { fetchNewHackerNewsStories } from "@/lib/hackernews/fetch-hackernews";
 import { fetchNewIndieHackersPosts } from "@/lib/indiehackers/fetch-indiehackers";
-import { scorePost } from "@/lib/ai/signal-scoring";
+import { scorePosts, MAX_POSTS_PER_SCORING_BATCH } from "@/lib/ai/signal-scoring";
 import {
   DAILY_SCORING_CAP_PER_PROJECT,
   DAILY_SCORING_CAP_PER_ACCOUNT,
@@ -35,42 +35,35 @@ export type PollProgressEvent =
   | { type: "source-error"; name: string; message: string }
   | { type: "post-scored"; sourceName: string; title: string; score: number; passed: boolean }
   | { type: "signal-created"; sourceName: string; title: string }
-  | { type: "waiting"; secondsLeft: number; nextSource: string }
   | { type: "daily-cap-reached"; sourceName: string }
   | { type: "ingestion-failing"; sourceName: string; consecutiveFailures: number }
   | { type: "ingestion-empty"; sourceName: string; consecutiveEmptyPolls: number };
 
-// A manual poll can legitimately run long (3 sources x up to 62s Reddit
-// spacing, plus scoring time per post — 3+ minutes isn't unusual).
-// Product.activePollStartedAt is treated as stale past this, so a crashed
-// run can't leave the button permanently disabled.
+// A manual poll can legitimately run long (many sources, plus scoring time
+// per post). Product.activePollStartedAt is treated as stale past this, so
+// a crashed run can't leave the button permanently disabled.
 export const POLL_STALE_MINUTES = 20;
 
-function sleep(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-// Reddit's unauthenticated RSS access is rate-limited to roughly one request
-// per ~60 seconds, GLOBALLY per IP — confirmed empirically (x-ratelimit-remaining
-// hits 0 after a single request, resetting ~54-60s later), not per-subreddit.
-// This constraint is Reddit-specific; Hacker News's public API has no such
-// limit for reasonable use, so the spacing below only applies between
-// Reddit fetches (see hasFetchedReddit), not before/after Hacker News ones.
-const REQUEST_SPACING_MS = 62_000;
-const WAIT_TICK_MS = 1_000;
-const MAX_SOURCES_PER_RUN = 3;
-// Only relevant to the unscoped, cron-triggered batch (no options.userId) —
-// caps how many of one account's sources a single run can select, so an
-// account with many sources (or a burst of brand-new ones, all tied for
-// "never polled") can't fill the whole batch and shut every other account
-// out of that run. A scoped manual poll of one project has no cross-account
-// fairness question to enforce, so it's exempt (see isScopedToOneAccount).
-const MAX_SOURCES_PER_ACCOUNT_PER_RUN = 1;
-// How many staleness-ordered candidates to pull before applying that
-// per-account cap — wide enough that the cap above has room to actually
-// pick sources from several different accounts, not just re-discover the
-// same single dominant account past the first MAX_SOURCES_PER_RUN rows.
-const CANDIDATE_POOL_SIZE = 60;
+// Hacker News and IndieHackers sources cost one shared, cached fetch (see
+// caches.hn/caches.ih below) plus per-post Signal Scoring, already bounded by
+// the daily scoring caps in lib/limits.ts — there's no external rate limit
+// on either, so a run sweeps every due source of these types rather than
+// throttling to a handful per run.
+const MAX_NON_REDDIT_SOURCES_PER_RUN = 100;
+// Reddit sources are also fetched as one shared, batched request per run
+// (see caches.reddit below and MAX_SUBREDDITS_PER_BATCH in fetch-posts.ts) —
+// Reddit's global per-IP rate limit applies per *request*, not per
+// subreddit, so combining every due subreddit into a single request removes
+// the scarcity that used to force a tiny per-run cap here. Matches the
+// batch size so `take` never selects more subreddits than one request can
+// actually combine.
+const MAX_REDDIT_SOURCES_PER_RUN = MAX_SUBREDDITS_PER_BATCH;
+// Soft ceiling on total run time, kept under `maxDuration` (300s on the
+// cron route) so a run that's about to be hard-killed exits early after its
+// current source instead, returning a real (partial) summary. Sources it
+// didn't reach are simply still the stalest candidates next run, since
+// lastPolledAt is only updated for sources actually attempted.
+const RUN_TIME_BUDGET_MS = 270_000;
 
 interface RawSourcePost {
   id: string;
@@ -82,23 +75,31 @@ interface RawSourcePost {
 }
 
 // Hacker News and IndieHackers are each one shared feed, not a per-project
-// target — `hnCache`/`ihCache` let every source of that type encountered in
-// a single run reuse one upstream fetch instead of hitting the feed once
-// per project that monitors it.
+// target — `caches.hn`/`caches.ih` let every source of that type encountered
+// in a single run reuse one upstream fetch instead of hitting the feed once
+// per project that monitors it. `caches.reddit` is the same idea applied to
+// every Reddit source in the run at once: one combined-subreddit request
+// (see fetchNewPostsForSubreddits), sliced back apart per source below.
 async function fetchForSource(
   source: { type: SourceType; name: string },
-  hnCache: { promise?: Promise<RawSourcePost[]> },
-  ihCache: { promise?: Promise<RawSourcePost[]> }
+  caches: {
+    reddit: { promise?: Promise<Map<string, RawSourcePost[]>> };
+    hn: { promise?: Promise<RawSourcePost[]> };
+    ih: { promise?: Promise<RawSourcePost[]> };
+  },
+  redditSubredditNames: string[]
 ): Promise<RawSourcePost[]> {
   if (source.type === "HACKERNEWS") {
-    hnCache.promise ??= fetchNewHackerNewsStories();
-    return hnCache.promise;
+    caches.hn.promise ??= fetchNewHackerNewsStories();
+    return caches.hn.promise;
   }
   if (source.type === "INDIEHACKERS") {
-    ihCache.promise ??= fetchNewIndieHackersPosts();
-    return ihCache.promise;
+    caches.ih.promise ??= fetchNewIndieHackersPosts();
+    return caches.ih.promise;
   }
-  return fetchNewPosts(source.name);
+  caches.reddit.promise ??= fetchNewPostsForSubreddits(redditSubredditNames);
+  const postsByName = await caches.reddit.promise;
+  return postsByName.get(source.name.toLowerCase()) ?? [];
 }
 
 // One batch: fetch new posts for the least-recently-polled sources, skip
@@ -115,44 +116,60 @@ export async function pollAllSources(options?: {
 }): Promise<PollSummary> {
   const emit = options?.onProgress ?? (() => {});
 
-  // A manual poll always targets one specific project (productId, and
-  // implicitly one account) — there's nothing to be "fair" between in that
-  // case, and the founder is actively waiting on all of that project's due
-  // sources, not a fairness-throttled subset of them.
-  const isScopedToOneAccount = Boolean(options?.userId || options?.productId);
+  // Archived projects (see the Danger Zone in project settings) are
+  // excluded from every poll trigger — cron batch AND a manual poll of one
+  // specific product — so ingestion actually stops rather than silently
+  // continuing to spend Signal Scoring calls on a project the founder
+  // archived.
+  const productFilter = {
+    archivedAt: null,
+    ...(options?.userId ? { userId: options.userId } : {}),
+  };
+  const staleFirst = [
+    { lastPolledAt: { sort: "asc" as const, nulls: "first" as const } },
+    { createdAt: "asc" as const },
+  ];
+  const sourceInclude = { product: { include: { user: true, positioning: true } } };
 
-  const candidates = await prisma.source.findMany({
+  // Reddit sources no longer need a per-account fairness pass: since every
+  // due subreddit in the run shares one combined request (see caches.reddit
+  // below), including a second source from the same account doesn't cost
+  // any other account a turn the way a dedicated serialized request used to.
+  const redditSources = await prisma.source.findMany({
     where: {
       selected: true,
-      // Archived projects (see the Danger Zone in project settings) are
-      // excluded from every poll trigger — cron batch AND a manual poll of
-      // one specific product — so ingestion actually stops rather than
-      // silently continuing to spend Signal Scoring calls on a project the
-      // founder archived.
-      product: {
-        archivedAt: null,
-        ...(options?.userId ? { userId: options.userId } : {}),
-      },
+      type: "REDDIT_SUBREDDIT",
+      product: productFilter,
       ...(options?.productId ? { productId: options.productId } : {}),
     },
-    include: { product: { include: { user: true, positioning: true } } },
-    orderBy: [{ lastPolledAt: { sort: "asc", nulls: "first" } }, { createdAt: "asc" }],
-    take: isScopedToOneAccount ? MAX_SOURCES_PER_RUN : CANDIDATE_POOL_SIZE,
+    include: sourceInclude,
+    orderBy: staleFirst,
+    take: MAX_REDDIT_SOURCES_PER_RUN,
   });
 
-  let sources = candidates;
-  if (!isScopedToOneAccount) {
-    const selectedPerAccount = new Map<string, number>();
-    sources = [];
-    for (const candidate of candidates) {
-      if (sources.length >= MAX_SOURCES_PER_RUN) break;
-      const accountId = candidate.product.userId;
-      const selectedSoFar = selectedPerAccount.get(accountId) ?? 0;
-      if (selectedSoFar >= MAX_SOURCES_PER_ACCOUNT_PER_RUN) continue;
-      selectedPerAccount.set(accountId, selectedSoFar + 1);
-      sources.push(candidate);
-    }
-  }
+  const nonRedditSources = await prisma.source.findMany({
+    where: {
+      selected: true,
+      type: { in: ["HACKERNEWS", "INDIEHACKERS"] },
+      product: productFilter,
+      ...(options?.productId ? { productId: options.productId } : {}),
+    },
+    include: sourceInclude,
+    orderBy: staleFirst,
+    take: MAX_NON_REDDIT_SOURCES_PER_RUN,
+  });
+
+  // Merged back into one staleness-ordered run for processing/progress-event
+  // order; every Reddit source's raw posts still come from a single shared
+  // batch request (see caches.reddit below), regardless of where in this list
+  // it ends up.
+  const sources = [...redditSources, ...nonRedditSources].sort(
+    (a, b) => (a.lastPolledAt?.getTime() ?? 0) - (b.lastPolledAt?.getTime() ?? 0)
+  );
+  // Computed once up front — every Reddit source in the run is fetched via
+  // one combined-subreddit request keyed to this exact list (see
+  // fetchForSource), not discovered incrementally as the loop encounters them.
+  const redditSubredditNames = redditSources.map((s) => s.name);
 
   const summary: PollSummary = {
     sourcesPolled: 0,
@@ -196,25 +213,22 @@ export async function pollAllSources(options?: {
     return count;
   }
 
-  const hnCache: { promise?: Promise<RawSourcePost[]> } = {};
-  const ihCache: { promise?: Promise<RawSourcePost[]> } = {};
-  let hasFetchedReddit = false;
+  const caches = {
+    reddit: {} as { promise?: Promise<Map<string, RawSourcePost[]>> },
+    hn: {} as { promise?: Promise<RawSourcePost[]> },
+    ih: {} as { promise?: Promise<RawSourcePost[]> },
+  };
+  const runStartedAt = Date.now();
 
   for (const [index, source] of sources.entries()) {
-    const sourceLabel = formatSourceLabel(source.type, source.name);
-    const isReddit = source.type === "REDDIT_SUBREDDIT";
-    if (isReddit && hasFetchedReddit) {
-      for (let waited = 0; waited < REQUEST_SPACING_MS; waited += WAIT_TICK_MS) {
-        emit({
-          type: "waiting",
-          secondsLeft: Math.ceil((REQUEST_SPACING_MS - waited) / 1000),
-          nextSource: sourceLabel,
-        });
-        await sleep(WAIT_TICK_MS);
-      }
+    if (Date.now() - runStartedAt > RUN_TIME_BUDGET_MS) {
+      console.warn(
+        `[poll] time budget reached after ${summary.sourcesPolled}/${sources.length} sources — stopping run early, the rest stay stalest-first for next run`
+      );
+      break;
     }
-    if (isReddit) hasFetchedReddit = true;
 
+    const sourceLabel = formatSourceLabel(source.type, source.name);
     summary.sourcesPolled += 1;
     emit({
       type: "source-start",
@@ -225,7 +239,7 @@ export async function pollAllSources(options?: {
 
     let posts: RawSourcePost[];
     try {
-      posts = await fetchForSource(source, hnCache, ihCache);
+      posts = await fetchForSource(source, caches, redditSubredditNames);
       emit({ type: "source-fetched", name: sourceLabel, postCount: posts.length });
       const updated = await prisma.source.update({
         where: { id: source.id },
@@ -277,107 +291,131 @@ export async function pollAllSources(options?: {
     }
     summary.postsFetched += posts.length;
 
-    for (const post of posts) {
+    // One query instead of one findUnique per post — the same batching idea
+    // as the AI scoring calls below, applied to the dedup check.
+    const alreadyScoredIds = new Set(
+      (
+        await prisma.scoredPost.findMany({
+          where: { sourceId: source.id, externalId: { in: posts.map((p) => p.id) } },
+          select: { externalId: true },
+        })
+      ).map((row) => row.externalId)
+    );
+    const unscoredPosts = posts.filter((post) => !alreadyScoredIds.has(post.id));
+
+    for (let i = 0; i < unscoredPosts.length; ) {
+      const scoredToday = await scoredTodayFor(source.product.id);
+      const scoredTodayAccount = await scoredTodayForAccount(source.product.userId);
+      const exempt = isExemptFromLimits(source.product.user.email);
+      const projectHeadroom = exempt ? Infinity : DAILY_SCORING_CAP_PER_PROJECT - scoredToday;
+      const accountHeadroom = exempt ? Infinity : DAILY_SCORING_CAP_PER_ACCOUNT - scoredTodayAccount;
+
+      if (projectHeadroom <= 0) {
+        console.warn(
+          `[poll] daily Signal Scoring cap (${DAILY_SCORING_CAP_PER_PROJECT}) reached for product ${source.product.id} — pausing scoring for its sources until tomorrow`
+        );
+        emit({ type: "daily-cap-reached", sourceName: sourceLabel });
+        break;
+      }
+      if (accountHeadroom <= 0) {
+        console.warn(
+          `[poll] daily Signal Scoring cap (${DAILY_SCORING_CAP_PER_ACCOUNT}) reached for account ${source.product.userId} — pausing scoring for all its projects until tomorrow`
+        );
+        emit({ type: "daily-cap-reached", sourceName: sourceLabel });
+        break;
+      }
+
+      // Batch size respects both the fixed scoring-batch limit and however
+      // much of today's cap headroom is left, so a batch never scores past
+      // either cap even when the remaining allowance is smaller than a full
+      // batch.
+      const batchSize = Math.max(
+        1,
+        Math.min(MAX_POSTS_PER_SCORING_BATCH, projectHeadroom, accountHeadroom, unscoredPosts.length - i)
+      );
+      const batch = unscoredPosts.slice(i, i + batchSize);
+      i += batchSize;
+
+      let results: { relevanceScore: number; reason: string }[];
       try {
-        const alreadyScored = await prisma.scoredPost.findUnique({
-          where: {
-            sourceId_externalId: {
-              sourceId: source.id,
-              externalId: post.id,
-            },
-          },
-        });
-        if (alreadyScored) continue;
-
-        const scoredToday = await scoredTodayFor(source.product.id);
-        if (
-          !isExemptFromLimits(source.product.user.email) &&
-          scoredToday >= DAILY_SCORING_CAP_PER_PROJECT
-        ) {
-          console.warn(
-            `[poll] daily Signal Scoring cap (${DAILY_SCORING_CAP_PER_PROJECT}) reached for product ${source.product.id} — pausing scoring for its sources until tomorrow`
-          );
-          emit({ type: "daily-cap-reached", sourceName: sourceLabel });
-          break;
-        }
-
-        const scoredTodayAccount = await scoredTodayForAccount(source.product.userId);
-        if (
-          !isExemptFromLimits(source.product.user.email) &&
-          scoredTodayAccount >= DAILY_SCORING_CAP_PER_ACCOUNT
-        ) {
-          console.warn(
-            `[poll] daily Signal Scoring cap (${DAILY_SCORING_CAP_PER_ACCOUNT}) reached for account ${source.product.userId} — pausing scoring for all its projects until tomorrow`
-          );
-          emit({ type: "daily-cap-reached", sourceName: sourceLabel });
-          break;
-        }
-
-        const { relevanceScore, reason } = await scorePost({
+        results = await scorePosts({
           productDescription: source.product.description,
           sourceType: source.type,
           sourceName: source.name,
-          postTitle: post.title,
-          postBody: post.selftext,
+          posts: batch.map((post) => ({ postTitle: post.title, postBody: post.selftext })),
           icpContext: describeSelectedIcp(source.product.positioning),
         });
-        summary.postsScored += 1;
-        scoredTodayByProduct.set(source.product.id, scoredToday + 1);
-        scoredTodayByAccount.set(source.product.userId, scoredTodayAccount + 1);
+      } catch (error) {
+        // The whole batch failed together (network/parsing error) — none of
+        // these posts got a ScoredPost row, so they're simply still unscored
+        // next poll (same fault-tolerance as a single post failing before).
+        console.error(`[poll] failed to score a batch of ${batch.length} posts in ${source.name}`, error);
+        Sentry.captureException(error, { tags: { source: source.name, sourceType: source.type } });
+        summary.errors += batch.length;
+        continue;
+      }
 
-        const passed = relevanceScore >= source.product.relevanceThreshold;
-        emit({
-          type: "post-scored",
-          sourceName: sourceLabel,
-          title: post.title,
-          score: relevanceScore,
-          passed,
-        });
+      summary.postsScored += results.length;
+      scoredTodayByProduct.set(source.product.id, scoredToday + results.length);
+      scoredTodayByAccount.set(source.product.userId, scoredTodayAccount + results.length);
 
-        await prisma.scoredPost.create({
-          data: {
-            sourceId: source.id,
-            externalId: post.id,
+      for (const [batchIndex, post] of batch.entries()) {
+        try {
+          const { relevanceScore, reason } = results[batchIndex];
+          const passed = relevanceScore >= source.product.relevanceThreshold;
+          emit({
+            type: "post-scored",
+            sourceName: sourceLabel,
             title: post.title,
-            permalink: post.permalink,
-            relevanceScore,
+            score: relevanceScore,
             passed,
-          },
-        });
+          });
 
-        if (passed) {
-          const signal = await prisma.signal.create({
+          await prisma.scoredPost.create({
             data: {
               sourceId: source.id,
               externalId: post.id,
               title: post.title,
-              body: post.selftext,
               permalink: post.permalink,
-              author: post.author,
               relevanceScore,
-              relevanceReason: reason,
-              postedAt: post.createdAt,
+              passed,
             },
           });
-          summary.signalsCreated += 1;
-          emit({ type: "signal-created", sourceName: sourceLabel, title: post.title });
 
-          await notifySignalCreated({
-            userEmail: source.product.user.email,
-            notifyNewSignal: source.product.user.notifyNewSignal,
-            productId: source.product.id,
-            productName: source.product.name,
-            sourceType: source.type,
-            sourceName: source.name,
-            signalId: signal.id,
-            title: post.title,
-            body: post.selftext,
-          });
+          if (passed) {
+            const signal = await prisma.signal.create({
+              data: {
+                sourceId: source.id,
+                externalId: post.id,
+                title: post.title,
+                body: post.selftext,
+                permalink: post.permalink,
+                author: post.author,
+                relevanceScore,
+                relevanceReason: reason,
+                postedAt: post.createdAt,
+              },
+            });
+            summary.signalsCreated += 1;
+            emit({ type: "signal-created", sourceName: sourceLabel, title: post.title });
+
+            await notifySignalCreated({
+              userEmail: source.product.user.email,
+              notifyNewSignal: source.product.user.notifyNewSignal,
+              productId: source.product.id,
+              productName: source.product.name,
+              sourceType: source.type,
+              sourceName: source.name,
+              signalId: signal.id,
+              title: post.title,
+              body: post.selftext,
+            });
+          }
+        } catch (error) {
+          console.error(`[poll] failed to persist scored post ${post.id} in ${source.name}`, error);
+          Sentry.captureException(error, { tags: { source: source.name, postId: post.id } });
+          summary.errors += 1;
         }
-      } catch (error) {
-        console.error(`[poll] failed to score post ${post.id} in ${source.name}`, error);
-        Sentry.captureException(error, { tags: { source: source.name, postId: post.id } });
-        summary.errors += 1;
       }
     }
   }

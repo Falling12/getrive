@@ -37,11 +37,6 @@ export function lineFor(event: PollProgressEvent): { line: string; isSignal: boo
       };
     case "signal-created":
       return { line: `New signal in ${event.sourceName}`, isSignal: true };
-    case "waiting":
-      return {
-        line: `Waiting ${event.secondsLeft}s before ${event.nextSource} (Reddit's rate limit)`,
-        isSignal: false,
-      };
     case "daily-cap-reached":
       return { line: `Daily scoring limit reached — resumes tomorrow`, isSignal: false };
     case "ingestion-failing":
