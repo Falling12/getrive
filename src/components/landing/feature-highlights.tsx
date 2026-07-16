@@ -1,4 +1,4 @@
-import { Plus, Radio } from "lucide-react";
+import { Plus, Radio, Users } from "lucide-react";
 import { Reveal } from "@/components/landing/reveal";
 import { Counter } from "@/components/landing/counter";
 import { TerminalLoop } from "@/components/landing/terminal-loop";
@@ -33,6 +33,10 @@ export function FeatureHighlights() {
                 <div className="flex items-center gap-3 rounded-lg bg-background px-5 py-3 text-muted-foreground shadow-[inset_0_0_0_1px_var(--border)] transition-all hover:text-[var(--accent-glow)] hover:shadow-[inset_0_0_0_1px_var(--accent-glow)]">
                   <Radio className="size-5" style={{ color: "#ff6600" }} />
                   Hacker News
+                </div>
+                <div className="flex items-center gap-3 rounded-lg bg-background px-5 py-3 text-muted-foreground shadow-[inset_0_0_0_1px_var(--border)] transition-all hover:text-[var(--accent-glow)] hover:shadow-[inset_0_0_0_1px_var(--accent-glow)]">
+                  <Users className="size-5" style={{ color: "#6be0a4" }} />
+                  IndieHackers
                 </div>
                 <div className="flex items-center gap-3 rounded-lg bg-background px-5 py-3 text-muted-foreground shadow-[inset_0_0_0_1px_var(--border)]">
                   <Plus className="size-4" style={{ color: "var(--accent-glow)" }} />

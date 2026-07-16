@@ -1,16 +1,22 @@
 "use client";
 
 import { useActionState, useTransition } from "react";
-import { MessageCircle, RadioTower, Search } from "lucide-react";
+import { MessageCircle, RadioTower, Search, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { addRedditSourceAction, enableHackerNewsAction } from "@/app/(app)/projects/[projectId]/sources/actions";
+import {
+  addRedditSourceAction,
+  enableHackerNewsAction,
+  enableIndieHackersAction,
+} from "@/app/(app)/projects/[projectId]/sources/actions";
 
 export function AddSourceForm({
   projectId,
   hasHackerNews,
+  hasIndieHackers,
 }: {
   projectId: string;
   hasHackerNews: boolean;
+  hasIndieHackers: boolean;
 }) {
   const [, startTransition] = useTransition();
   const [redditState, redditAction, isRedditPending] = useActionState(
@@ -19,6 +25,10 @@ export function AddSourceForm({
   );
   const [hnState, setHnState] = useActionState(
     async () => enableHackerNewsAction(projectId),
+    {}
+  );
+  const [ihState, setIhState] = useActionState(
+    async () => enableIndieHackersAction(projectId),
     {}
   );
 
@@ -71,6 +81,37 @@ export function AddSourceForm({
               {hasHackerNews ? "Enabled" : "Enable"}
             </Button>
             {hnState.error && <p className="text-xs text-destructive">{hnState.error}</p>}
+          </div>
+        </div>
+
+        <div className="grid gap-4 p-5 md:grid-cols-[minmax(0,1fr)_auto] md:items-center md:p-6">
+          <div className="flex min-w-0 items-start gap-3">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded border border-border bg-secondary/20 text-accent">
+              <Users className="size-4" />
+            </span>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="text-sm font-medium text-foreground">IndieHackers</h3>
+                <span className="rounded-sm border border-accent/25 bg-accent/10 px-1.5 py-0.5 font-mono text-[9px] tracking-widest text-accent uppercase">
+                  {hasIndieHackers ? "Active" : "Ready"}
+                </span>
+              </div>
+              <p className="mt-1 max-w-[58ch] font-mono text-[11px] leading-relaxed text-muted-foreground">
+                One broad public feed. No karma gate, supportive founder-to-founder community.
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-col items-start gap-2 md:items-end">
+            <Button
+              type="button"
+              variant={hasIndieHackers ? "outline" : "default"}
+              disabled={hasIndieHackers}
+              onClick={() => startTransition(() => setIhState())}
+              className="rounded-md font-mono text-[11px] tracking-wider uppercase"
+            >
+              {hasIndieHackers ? "Enabled" : "Enable"}
+            </Button>
+            {ihState.error && <p className="text-xs text-destructive">{ihState.error}</p>}
           </div>
         </div>
 

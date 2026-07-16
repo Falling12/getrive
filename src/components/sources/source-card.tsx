@@ -47,7 +47,9 @@ export function SourceCard({
       ? `https://www.reddit.com/r/${name}`
       : type === "HACKERNEWS"
         ? "https://news.ycombinator.com/newest"
-        : null;
+        : type === "INDIEHACKERS"
+          ? "https://www.indiehackers.com"
+          : null;
   const isFailing = consecutiveFailures >= CONSECUTIVE_FAILURE_ALERT_THRESHOLD;
   const isEmptyPolling =
     !isFailing && consecutiveEmptyPolls >= CONSECUTIVE_EMPTY_POLL_ALERT_THRESHOLD;

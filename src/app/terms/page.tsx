@@ -17,8 +17,8 @@ export default function TermsPage() {
 
       <h2>What Getrive does</h2>
       <p>
-        Getrive helps founders find posts — on Reddit and Hacker News — that describe the pain
-        point their product solves, and drafts a suggested reply or outreach
+        Getrive helps founders find posts — on Reddit, Hacker News, and IndieHackers — that describe
+        the pain point their product solves, and drafts a suggested reply or outreach
         message using AI. <strong>Getrive never posts, comments, DMs, or sends anything on your
         behalf.</strong> Every draft is something you review, edit, and send yourself, under your own
         account on that platform, subject to that platform&apos;s own rules and terms.
@@ -37,7 +37,7 @@ export default function TermsPage() {
       <h2>Acceptable use</h2>
       <p>You agree not to:</p>
       <ul>
-        <li>Use Getrive to spam, harass, or mislead people on Reddit, Hacker News, or elsewhere.</li>
+        <li>Use Getrive to spam, harass, or mislead people on Reddit, Hacker News, IndieHackers, or elsewhere.</li>
         <li>Attempt to circumvent usage limits (e.g. monitored-source caps, polling rate limits, daily AI-scoring caps) built into the product.</li>
         <li>Use the tracking snippet or redirect mechanism to collect visitor data you don&apos;t have a legitimate right to collect (see the Privacy Policy for what you&apos;re responsible for there).</li>
         <li>Reverse-engineer, scrape, or resell access to the service.</li>
@@ -54,9 +54,9 @@ export default function TermsPage() {
       <h2>Service availability</h2>
       <p>
         Getrive is an early-access product. Features, limits, and pricing may change, and the
-        service is provided without uptime guarantees. Reddit&apos;s, Hacker News&apos;s, and other
-        monitored platforms&apos; own access policies (which Getrive doesn&apos;t control) can also
-        affect whether signal ingestion works at any given time.
+        service is provided without uptime guarantees. Reddit&apos;s, Hacker News&apos;s,
+        IndieHackers&apos;s, and other monitored platforms&apos; own access policies (which Getrive
+        doesn&apos;t control) can also affect whether signal ingestion works at any given time.
       </p>
 
       <h2>No warranty; limitation of liability</h2>

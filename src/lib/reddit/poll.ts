@@ -2,6 +2,7 @@ import * as Sentry from "@sentry/nextjs";
 import { prisma } from "@/lib/prisma";
 import { fetchNewPosts } from "@/lib/reddit/fetch-posts";
 import { fetchNewHackerNewsStories } from "@/lib/hackernews/fetch-hackernews";
+import { fetchNewIndieHackersPosts } from "@/lib/indiehackers/fetch-indiehackers";
 import { scorePost } from "@/lib/ai/signal-scoring";
 import {
   DAILY_SCORING_CAP_PER_PROJECT,
@@ -80,16 +81,22 @@ interface RawSourcePost {
   createdAt: Date;
 }
 
-// Hacker News is one shared feed, not a per-project target — `hnCache` lets
-// every Hacker News source encountered in a single run reuse one upstream
-// fetch instead of hitting the API once per project that monitors it.
+// Hacker News and IndieHackers are each one shared feed, not a per-project
+// target — `hnCache`/`ihCache` let every source of that type encountered in
+// a single run reuse one upstream fetch instead of hitting the feed once
+// per project that monitors it.
 async function fetchForSource(
   source: { type: SourceType; name: string },
-  hnCache: { promise?: Promise<RawSourcePost[]> }
+  hnCache: { promise?: Promise<RawSourcePost[]> },
+  ihCache: { promise?: Promise<RawSourcePost[]> }
 ): Promise<RawSourcePost[]> {
   if (source.type === "HACKERNEWS") {
     hnCache.promise ??= fetchNewHackerNewsStories();
     return hnCache.promise;
+  }
+  if (source.type === "INDIEHACKERS") {
+    ihCache.promise ??= fetchNewIndieHackersPosts();
+    return ihCache.promise;
   }
   return fetchNewPosts(source.name);
 }
@@ -190,6 +197,7 @@ export async function pollAllSources(options?: {
   }
 
   const hnCache: { promise?: Promise<RawSourcePost[]> } = {};
+  const ihCache: { promise?: Promise<RawSourcePost[]> } = {};
   let hasFetchedReddit = false;
 
   for (const [index, source] of sources.entries()) {
@@ -217,7 +225,7 @@ export async function pollAllSources(options?: {
 
     let posts: RawSourcePost[];
     try {
-      posts = await fetchForSource(source, hnCache);
+      posts = await fetchForSource(source, hnCache, ihCache);
       emit({ type: "source-fetched", name: sourceLabel, postCount: posts.length });
       const updated = await prisma.source.update({
         where: { id: source.id },

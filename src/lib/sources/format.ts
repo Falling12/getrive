@@ -9,6 +9,8 @@ export function formatSourceLabel(type: SourceType, name: string): string {
       return `r/${name}`;
     case "HACKERNEWS":
       return "Hacker News";
+    case "INDIEHACKERS":
+      return "IndieHackers";
   }
 }
 
@@ -18,6 +20,8 @@ export function formatSourceChannel(type: SourceType): string {
       return "Reddit";
     case "HACKERNEWS":
       return "Hacker News";
+    case "INDIEHACKERS":
+      return "IndieHackers";
   }
 }
 
@@ -27,6 +31,8 @@ export function formatSourceChannelDetail(type: SourceType): string {
       return "Community-specific listening — mind each subreddit's self-promo rules when you reply.";
     case "HACKERNEWS":
       return "One public feed, no access gate, high technical density.";
+    case "INDIEHACKERS":
+      return "One public feed, no access gate, supportive founder-to-founder community.";
   }
 }
 
@@ -44,5 +50,7 @@ export function formatViewOnLabel(type: SourceType): string {
       return "View on Reddit";
     case "HACKERNEWS":
       return "View on Hacker News";
+    case "INDIEHACKERS":
+      return "View on IndieHackers";
   }
 }

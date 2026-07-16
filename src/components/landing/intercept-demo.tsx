@@ -10,9 +10,11 @@ import { formatSourceLabel } from "@/lib/sources/format";
 // and every drafted reply follows generateReply's own real constraints
 // (lib/ai/reply-generation.ts): lead with genuine help, one brief, low-key
 // product mention near the end, never the main point. Only Reddit and
-// Hacker News appear — those are the only channels Getrive monitors.
+// Hacker News appear in the rotation for now — Getrive also monitors
+// IndieHackers (see lib/indiehackers/fetch-indiehackers.ts), just not
+// represented here yet with its own illustrative scenario.
 interface Scenario {
-  sourceType: "REDDIT_SUBREDDIT" | "HACKERNEWS";
+  sourceType: "REDDIT_SUBREDDIT" | "HACKERNEWS" | "INDIEHACKERS";
   sourceName: string;
   post: string;
   highlights: string[];

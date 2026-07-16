@@ -191,21 +191,24 @@ model Positioning {
 enum SourceType {
   REDDIT_SUBREDDIT
   HACKERNEWS
+  INDIEHACKERS
 }
 
 // Generalizes what was Reddit-only "MonitoredSubreddit" into any ingestion
 // channel. Founders check a box at onboarding/Sources to flip `selected` on;
 // that selection is what "monitoring" means for now. `name` still holds the
 // literal community name for reddit_subreddit (e.g. "SaaS"); for hackernews
-// it's a short display label since HN isn't subdivided into communities.
-// `config` carries type-specific settings — unused for both source types
+// and indiehackers it's a short display label since neither is subdivided
+// into communities the way Reddit is.
+// `config` carries type-specific settings — unused for every source type
 // today, kept for a future ingestion channel's settings.
 // Karma fields (karmaThreshold/selfPromoNotes/currentKarma) only mean
-// something for reddit_subreddit — Hacker News has no comparable self-promo
-// gate, so the Sources page hides the karma UI for it. `karmaStatus` is no
-// longer read or written by any UI (the manual "mark ready" gate was
-// removed — every source is fetched automatically regardless of karma) —
-// the column stays for now to avoid a migration, but nothing surfaces it.
+// something for reddit_subreddit — neither Hacker News nor IndieHackers has
+// a comparable self-promo gate, so the Sources page hides the karma UI for
+// both. `karmaStatus` is no longer read or written by any UI (the manual
+// "mark ready" gate was removed — every source is fetched automatically
+// regardless of karma) — the column stays for now to avoid a migration, but
+// nothing surfaces it.
 model Source {
   id                   String      @id @default(cuid())
   productId            String

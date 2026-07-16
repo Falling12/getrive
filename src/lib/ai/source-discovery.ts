@@ -22,6 +22,14 @@ const sourceDiscoverySchema = z.object({
       "2-3 sentences on whether Hacker News should be activated early for this product, including the access-barrier reasoning."
     ),
   hackerNewsPriority: z.number().int().min(1).max(3),
+  indieHackersReasoning: z
+    .string()
+    .describe(
+      "2-3 sentences on whether IndieHackers should be activated early for this product. It's a supportive " +
+        "founder-to-founder community, not a general audience — strongest when the ICP is itself other " +
+        "founders/indie builders, much weaker fit for a product whose buyer is a non-founder consumer or enterprise."
+    ),
+  indieHackersPriority: z.number().int().min(1).max(3),
   redditPriority: z.number().int().min(1).max(3),
   redditReasoning: z
     .string()
@@ -72,11 +80,14 @@ export async function discoverSources({
       "",
       "Create a prioritized cross-channel activation plan using ONLY these channel families:",
       "1. Hacker News — one shared public feed, zero access barrier, already implementable.",
-      "2. Reddit — specific subreddits, implementable, but some communities require karma-building first.",
+      "2. IndieHackers — one shared public feed, zero access barrier, a supportive founder-to-founder",
+      "   community. Only prioritize this highly when the ICP is genuinely other founders/indie builders —",
+      "   it's a weak channel for a product whose real buyer is a non-founder consumer or enterprise team.",
+      "3. Reddit — specific subreddits, implementable, but some communities require karma-building first.",
       "",
-      "Return Hacker News as a first-class channel with priority/reasoning, then recommend 3-6 specific",
-      "subreddits. Do not over-index on founder communities unless the selected ICP really is founders.",
-      "Prefer channels where the actual buyer feels the pain in public.",
+      "Return Hacker News and IndieHackers as first-class channels with priority/reasoning each, then",
+      "recommend 3-6 specific subreddits. Do not over-index on founder communities unless the selected",
+      "ICP really is founders. Prefer channels where the actual buyer feels the pain in public.",
       "Rank priority 1 as the best place to start, 2 as next, 3 as later/setup-dependent.",
     ]
       .filter(Boolean)
@@ -95,11 +106,18 @@ export async function discoverSources({
       rank: 0,
       priority: object.hackerNewsPriority,
     },
+    {
+      type: "INDIEHACKERS",
+      name: "IndieHackers",
+      reasoning: object.indieHackersReasoning,
+      rank: 1,
+      priority: object.indieHackersPriority,
+    },
     ...redditSources.map((source, index) => ({
       type: "REDDIT_SUBREDDIT" as const,
       name: source.name,
       reasoning: source.reasoning,
-      rank: index + 1,
+      rank: index + 2,
       priority: object.redditPriority,
     })),
   ];

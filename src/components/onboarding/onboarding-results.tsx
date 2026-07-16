@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useMemo, useState } from "react";
-import { CheckCircle2, Mic, RadioTower, Search } from "lucide-react";
+import { CheckCircle2, Mic, RadioTower, Search, Users } from "lucide-react";
 import type { SourceType } from "@/generated/prisma/client";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -19,11 +19,17 @@ const CHANNEL_META: Record<
     icon: RadioTower,
     order: 0,
   },
+  INDIEHACKERS: {
+    label: "IndieHackers",
+    detail: "Public feed, no access setup, no karma gate. A supportive, founder-to-founder community — strongest when your buyer is another founder.",
+    icon: Users,
+    order: 1,
+  },
   REDDIT_SUBREDDIT: {
     label: "Reddit communities",
     detail: "Specific communities with stronger fit, but some require karma-building before a founder can safely reply.",
     icon: Search,
-    order: 1,
+    order: 2,
   },
 };
 

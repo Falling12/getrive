@@ -26,9 +26,9 @@ export default function PrivacyPage() {
       <h2>Post content from monitored channels</h2>
       <p>
         To find relevant signals, Getrive fetches public post content from the channels you choose to
-        monitor — Reddit subreddits (via Reddit&apos;s public RSS feeds) and Hacker News (via its
-        public API). We only process publicly-visible posts — never private messages, DMs, or
-        anything requiring a login to view.
+        monitor — Reddit subreddits (via Reddit&apos;s public RSS feeds), Hacker News (via its
+        public API), and IndieHackers (via a public feed). We only process publicly-visible posts —
+        never private messages, DMs, or anything requiring a login to view.
       </p>
 
       <h2>Outreach lead data</h2>
@@ -50,12 +50,12 @@ export default function PrivacyPage() {
           <strong>Anthropic</strong> (Claude) — your product description and target customer (to
           generate positioning statements and channel/subreddit suggestions), the scraped text of
           your own website if you use &ldquo;Prefill from your website&rdquo; during setup,
-          individual Reddit/Hacker News posts (to draft a suggested reply), and outreach lead context
-          as described above (to draft a suggested message).
+          individual Reddit/Hacker News/IndieHackers posts (to draft a suggested reply), and outreach
+          lead context as described above (to draft a suggested message).
         </li>
         <li>
-          <strong>OpenAI</strong> (GPT) — individual Reddit/Hacker News posts, scored for relevance
-          against your product description.
+          <strong>OpenAI</strong> (GPT) — individual Reddit/Hacker News/IndieHackers posts, scored for
+          relevance against your product description.
         </li>
       </ul>
       <p>
@@ -104,7 +104,7 @@ export default function PrivacyPage() {
 
       <h2>What we don&apos;t do</h2>
       <ul>
-        <li>We never post, comment, DM, or send anything on your behalf — on Reddit, Hacker News, or anywhere else.</li>
+        <li>We never post, comment, DM, or send anything on your behalf — on Reddit, Hacker News, IndieHackers, or anywhere else.</li>
         <li>We don&apos;t sell your data to anyone.</li>
         <li>We don&apos;t process post content beyond what&apos;s needed to score relevance and draft replies.</li>
       </ul>

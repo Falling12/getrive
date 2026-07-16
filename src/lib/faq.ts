@@ -14,7 +14,7 @@ export const FAQS: Faq[] = [
   {
     question: "What is Getrive?",
     answer:
-      "Getrive listens across Reddit and Hacker News for people already describing the exact pain point your product solves, then helps you draft an authentic reply. Nothing is posted without you reviewing it first.",
+      "Getrive listens across Reddit, Hacker News, and IndieHackers for people already describing the exact pain point your product solves, then helps you draft an authentic reply. Nothing is posted without you reviewing it first.",
   },
   {
     question: "Will replying like this get me banned or called out for self-promotion?",
@@ -24,12 +24,12 @@ export const FAQS: Faq[] = [
   {
     question: "Does Getrive post replies automatically?",
     answer:
-      "No. Getrive drafts, it doesn't post — every draft sits in front of you before anything happens, and you remain the final human operator on Reddit, Hacker News, or anywhere else. Auto-reply systems are disabled by design.",
+      "No. Getrive drafts, it doesn't post — every draft sits in front of you before anything happens, and you remain the final human operator on Reddit, Hacker News, IndieHackers, or anywhere else. Auto-reply systems are disabled by design.",
   },
   {
     question: "Which platforms does Getrive monitor?",
     answer:
-      "Reddit (the subreddits you choose) and Hacker News, polled continuously and fairly, oldest-checked-first. More channels are planned.",
+      "Reddit (the subreddits you choose), Hacker News, and IndieHackers, polled continuously and fairly, oldest-checked-first. More channels are planned.",
   },
   {
     question: "How does Getrive know which posts are actually relevant?",
@@ -39,7 +39,7 @@ export const FAQS: Faq[] = [
   {
     question: "How much does Getrive cost?",
     answer:
-      "Getrive is currently in early access on a single free plan ($0) while the team works directly with founders to get it right. It includes Reddit + Hacker News monitoring, AI relevance scoring, reply & outreach drafting, and signup attribution. There's no paid tier yet.",
+      "Getrive is currently in early access on a single free plan ($0) while the team works directly with founders to get it right. It includes Reddit + Hacker News + IndieHackers monitoring, AI relevance scoring, reply & outreach drafting, and signup attribution. There's no paid tier yet.",
   },
   {
     question: "Can Getrive tell me if a reply actually brought in a signup?",

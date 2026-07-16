@@ -22,8 +22,10 @@ export interface ReplyGenerationResult {
 // comment" instructions produce a wrong-feeling draft on Hacker News (HN
 // culture reads self-promotion mentions as much more suspect, rewards
 // terser and more technical phrasing, and has no concept of subreddit-by-
-// subreddit variation) — this is the one line of source-specific steering;
-// everything else in the prompt stays shared.
+// subreddit variation) or on IndieHackers (a supportive founder-to-founder
+// community where sharing your own product is expected peer generosity,
+// not suspect self-promotion the way it is on HN) — this is the one line
+// of source-specific steering; everything else in the prompt stays shared.
 function sourceGuidance(sourceType: SourceType, sourceName: string): string {
   switch (sourceType) {
     case "HACKERNEWS":
@@ -32,6 +34,15 @@ function sourceGuidance(sourceType: SourceType, sourceName: string): string {
         "and considerably more skeptical of anything reading as self-promotion than most subreddits. " +
         "Lead with substance a technical reader would respect; keep the product mention especially " +
         "brief and factual, closer to an aside than Reddit's already-low-key standard."
+      );
+    case "INDIEHACKERS":
+      return (
+        "This is an IndieHackers comment, not a Reddit reply or an HN comment — IndieHackers' culture " +
+        "is warm and founder-to-founder: most posters are building solo too, and openly sharing what " +
+        "you built and why reads as generous peer support rather than self-promotion, as long as it's " +
+        "genuinely tied to the poster's specific situation. Lead with real empathy for the struggle " +
+        "described, and don't undersell the product mention the way HN's guidance does — a fuller, " +
+        "warmer mention fits this community better than the terse HN aside or Reddit's low-key default."
       );
     case "REDDIT_SUBREDDIT":
     default:

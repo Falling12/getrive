@@ -70,7 +70,7 @@ const STEPS: TourStep[] = [
     segment: "sources",
     target: '[data-tour="source-list"]',
     title: "Your channel mix",
-    description: "Hacker News is broad and immediate; Reddit is community-specific — mind each subreddit's self-promo rules.",
+    description: "Hacker News is broad and immediate, Reddit is community-specific (mind each subreddit's self-promo rules), and IndieHackers is founder-focused.",
   },
 ];
 

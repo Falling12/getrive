@@ -10,7 +10,7 @@ import { formatSourceChannel, formatSourceChannelDetail } from "@/lib/sources/fo
 
 export const metadata: Metadata = { title: "Sources — Getrive" };
 
-const CHANNEL_ORDER: SourceType[] = ["HACKERNEWS", "REDDIT_SUBREDDIT"];
+const CHANNEL_ORDER: SourceType[] = ["HACKERNEWS", "INDIEHACKERS", "REDDIT_SUBREDDIT"];
 
 export default async function SourcesPage({
   params,
@@ -31,6 +31,7 @@ export default async function SourcesPage({
   const { bySource } = await getSignupsBySource(product.id);
 
   const hasHackerNews = sources.some((s) => s.type === "HACKERNEWS");
+  const hasIndieHackers = sources.some((s) => s.type === "INDIEHACKERS");
   const grouped = CHANNEL_ORDER.map((type) => ({
     type,
     sources: sources.filter((source) => source.type === type),
@@ -43,14 +44,19 @@ export default async function SourcesPage({
           <h1 className="text-2xl font-medium tracking-wide text-foreground">Sources</h1>
           <p className="mt-1 max-w-[68ch] font-mono text-xs leading-relaxed text-muted-foreground">
             Manage the channel mix Getrive listens on. Every source here is fetched
-            automatically — Hacker News is broad and immediate, Reddit is community-specific.
+            automatically — Hacker News is broad and immediate, IndieHackers is founder-focused,
+            Reddit is community-specific.
           </p>
         </header>
 
         <AiDiscoveryPanel projectId={projectId} />
 
         <div data-tour="add-source">
-          <AddSourceForm projectId={projectId} hasHackerNews={hasHackerNews} />
+          <AddSourceForm
+            projectId={projectId}
+            hasHackerNews={hasHackerNews}
+            hasIndieHackers={hasIndieHackers}
+          />
         </div>
 
         <section data-tour="source-list" className="flex flex-col gap-6">

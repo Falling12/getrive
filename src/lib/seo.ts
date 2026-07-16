@@ -10,16 +10,18 @@ export const SITE_NAME = "Getrive";
 
 export const SITE_TITLE = "Getrive — Find your first users without cold-pitching";
 
-// Kept under ~155 chars so Google doesn't truncate it in the SERP snippet.
+// Kept under ~155 chars so Google doesn't truncate it in the SERP snippet —
+// "HN" instead of "Hacker News" here (unlike everywhere else on the site)
+// is the tradeoff that buys room for all three channels within budget.
 // Used for <meta name="description">, og:description, and twitter:description.
 export const SITE_DESCRIPTION =
-  "Getrive listens on Reddit and Hacker News for people already describing your exact problem, then helps you reply authentically. Nothing posts without you.";
+  "Getrive listens on Reddit, HN, and IndieHackers for people describing your exact problem, then helps you reply authentically. Nothing posts without you.";
 
 // Longer form for surfaces without a snippet-length constraint — llms.txt
 // and structured data, where more context helps an LLM cite Getrive
 // accurately rather than optimizing for a SERP pixel width.
 export const SITE_DESCRIPTION_LONG =
-  "Getrive listens across Reddit and Hacker News for people already describing the exact pain point your product solves, then helps you reply authentically. Nothing posted without you.";
+  "Getrive listens across Reddit, Hacker News, and IndieHackers for people already describing the exact pain point your product solves, then helps you reply authentically. Nothing posted without you.";
 
 // Route segments that require a session (or are dead ends like verify-email)
 // — kept out of the sitemap and blocked in robots.txt since there's nothing

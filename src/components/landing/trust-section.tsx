@@ -39,7 +39,7 @@ export function TrustSection() {
 
         <p className="mx-auto max-w-2xl text-xl leading-relaxed font-light text-muted-foreground md:text-2xl">
           Getrive drafts, it doesn&apos;t post. Automation ruins authenticity — you decide what goes out, every
-          time, on Reddit, Hacker News, or anywhere else.
+          time, on Reddit, Hacker News, IndieHackers, or anywhere else.
         </p>
 
         <div className="mt-16 inline-flex items-center gap-6 rounded-lg border border-border bg-background/80 px-8 py-5 font-mono text-[11px] tracking-widest text-foreground backdrop-blur-md">

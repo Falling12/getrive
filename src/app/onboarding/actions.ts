@@ -183,7 +183,7 @@ async function selectPositioningStep(
         reasoning: suggestion.reasoning,
         rank: suggestion.rank,
         selected: false,
-        karmaStatus: suggestion.type === "HACKERNEWS" ? "READY" : "WATCH",
+        karmaStatus: suggestion.type === "REDDIT_SUBREDDIT" ? "WATCH" : "READY",
       })),
     }),
   ]);

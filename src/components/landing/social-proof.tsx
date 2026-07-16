@@ -8,7 +8,7 @@ import { TESTIMONIALS } from "@/lib/testimonials";
 const LOGS = [
   {
     id: "Built on itself",
-    body: "Getrive finds its own first users the same way — by watching Reddit and Hacker News for founders describing exactly this problem, and drafting a genuine reply.",
+    body: "Getrive finds its own first users the same way — by watching Reddit, Hacker News, and IndieHackers for founders describing exactly this problem, and drafting a genuine reply.",
     detail: "Built by a solo founder, used on itself daily.",
   },
   {

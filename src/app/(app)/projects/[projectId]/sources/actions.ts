@@ -12,6 +12,7 @@ import type { SourceType } from "@/generated/prisma/client";
 
 const SUBREDDIT_NAME_PATTERN = /^[A-Za-z0-9_]{3,21}$/;
 const HACKERNEWS_SOURCE_NAME = "Hacker News";
+const INDIEHACKERS_SOURCE_NAME = "IndieHackers";
 
 async function assertOwned(sourceId: string, userId: string) {
   await prisma.source.findFirstOrThrow({
@@ -261,7 +262,7 @@ export async function addDiscoveredSourceAction(
         reasoning: suggestion.reasoning,
         rank: await nextRank(product.id),
         selected: true,
-        karmaStatus: suggestion.type === "HACKERNEWS" ? "READY" : "WATCH",
+        karmaStatus: suggestion.type === "REDDIT_SUBREDDIT" ? "WATCH" : "READY",
       },
     });
   }
@@ -317,6 +318,63 @@ export async function enableHackerNewsAction(projectId: string): Promise<AddSour
         productId: product.id,
         type: "HACKERNEWS",
         name: HACKERNEWS_SOURCE_NAME,
+        reasoning: "Enabled manually by you.",
+        rank: await nextRank(product.id),
+        selected: true,
+        karmaStatus: "READY",
+      },
+    });
+  }
+
+  revalidatePath(`/projects/${projectId}/sources`);
+  revalidatePath(`/projects/${projectId}/signals`);
+  return { success: true };
+}
+
+// Mirrors enableHackerNewsAction — IndieHackers is also one shared feed
+// with no per-project sub-target, and has no karma/self-promo gate of its
+// own either, so it's created READY the same way.
+export async function enableIndieHackersAction(projectId: string): Promise<AddSourceState> {
+  const session = await requireSession();
+  const product = await prisma.product.findFirst({
+    where: { id: projectId, userId: session.user.id },
+  });
+  if (!product) return { error: "Project not found." };
+
+  const monitoredCount = await prisma.source.count({
+    where: { productId: product.id, selected: true },
+  });
+  if (!isExemptFromLimits(session.user.email) && monitoredCount >= MAX_MONITORED_SOURCES) {
+    return {
+      error: `You've reached the ${MAX_MONITORED_SOURCES}-source limit for this project. Stop monitoring one before adding another.`,
+    };
+  }
+
+  const accountMonitoredCount = await countAccountMonitoredSources(session.user.id);
+  if (!isExemptFromLimits(session.user.email) && accountMonitoredCount >= MAX_MONITORED_SOURCES_PER_ACCOUNT) {
+    return {
+      error: `You've reached the ${MAX_MONITORED_SOURCES_PER_ACCOUNT}-source limit across your account. Stop monitoring one somewhere before adding another.`,
+    };
+  }
+
+  const existing = await prisma.source.findUnique({
+    where: { productId_name: { productId: product.id, name: INDIEHACKERS_SOURCE_NAME } },
+  });
+  if (existing?.selected) {
+    return { error: "IndieHackers is already being monitored." };
+  }
+
+  if (existing) {
+    await prisma.source.update({
+      where: { id: existing.id },
+      data: { selected: true, rank: await nextRank(product.id) },
+    });
+  } else {
+    await prisma.source.create({
+      data: {
+        productId: product.id,
+        type: "INDIEHACKERS",
+        name: INDIEHACKERS_SOURCE_NAME,
         reasoning: "Enabled manually by you.",
         rank: await nextRank(product.id),
         selected: true,
