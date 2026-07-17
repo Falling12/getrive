@@ -3,6 +3,7 @@
 import * as Sentry from "@sentry/nextjs";
 import { redirect } from "next/navigation";
 import { requireSession } from "@/lib/session";
+import { captureServerEvent } from "@/lib/analytics/posthog-server";
 import { prisma } from "@/lib/prisma";
 import { onboardingSchema } from "@/lib/validation/onboarding";
 import { isExemptFromLimits, MAX_PROJECTS_PER_ACCOUNT, MAX_MONITORED_SOURCES_PER_ACCOUNT } from "@/lib/limits";
@@ -308,12 +309,22 @@ export async function confirmSourcesAction(
     }),
   ]);
 
+  // Completing this step (the wizard's "select" state) never fires the
+  // client-side onboarding_step_completed track() call in
+  // onboarding-wizard.tsx — the redirect() below unmounts the wizard before
+  // that component's useEffect can react to a state change, and there's no
+  // later client state transition to catch it on since this is the last
+  // step. Captured here instead, server-side, right before the redirect —
+  // same event name/property shape as the client's own calls so PostHog
+  // funnels don't need to treat this step differently from steps 1-2.
+  await captureServerEvent(session.user.id, "onboarding_step_completed", { step: "select" });
+
   // `?tour=1` triggers the one-time dashboard walkthrough (DashboardTour) —
   // only true on this exact redirect, never on a normal later visit to the
-  // dashboard, since the page strips the param on mount. `firstscan=1` is a
-  // separate one-shot signal (see AutoFirstScan) that auto-starts the first
-  // "check for new posts" run — kept distinct from `tour` because Settings'
-  // "Retake tour" link reuses `?tour=1` on its own and must never replay a
-  // live poll.
-  redirect(`/projects/${product.id}/dashboard?tour=1&firstscan=1`);
+  // dashboard, since the page strips the param on mount. The dashboard's
+  // own AutoFirstScan no longer needs a matching one-shot query param: it
+  // derives "has this project ever been scanned" from durable DB state
+  // (see dashboard/page.tsx), which survives refreshes/retries/second tabs
+  // that a URL param can't.
+  redirect(`/projects/${product.id}/dashboard?tour=1`);
 }

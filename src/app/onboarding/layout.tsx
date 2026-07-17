@@ -4,6 +4,7 @@ import { requireSession } from "@/lib/session";
 import { brandSans, brandMono } from "@/lib/fonts";
 import { appUrl } from "@/lib/config";
 import { reportSnippetBodyFor } from "@/lib/tracking-snippet";
+import { IdentifyUser } from "@/components/analytics/identify-user";
 
 // Requires a session — nothing here for search engines.
 export const metadata: Metadata = { robots: { index: false, follow: false } };
@@ -12,12 +13,18 @@ export const metadata: Metadata = { robots: { index: false, follow: false } };
 // — so it deliberately does NOT redirect away when the founder already has
 // completed projects.
 export default async function OnboardingLayout({ children }: { children: React.ReactNode }) {
-  await requireSession();
+  const session = await requireSession();
 
   return (
     <div
       className={`${brandSans.variable} ${brandMono.variable} theme-getrive min-h-[100dvh] bg-background font-sans text-foreground`}
     >
+      {/* Onboarding lives outside the (app) route group, so AppLayout's own
+          IdentifyUser never mounts for it — a founder who drops off
+          mid-wizard (the most common single-day-user drop-off point) was
+          never linked to their pre-signup anonymous activity at all. This
+          is the earliest point after signIn() where a real session exists. */}
+      <IdentifyUser userId={session.user.id} />
       {children}
       {/* Report half of Getrive's own signup-attribution dogfooding — see
           app/layout.tsx for the capture half and the comment there for the

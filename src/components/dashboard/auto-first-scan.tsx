@@ -2,36 +2,37 @@
 
 import { useEffect } from "react";
 import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Radar, Target, Clock } from "lucide-react";
 import { usePollStream } from "@/lib/hooks/use-poll-stream";
 
-// Fires automatically right after onboarding — see the `firstscan=1` param
-// onboarding's confirmSourcesAction appends to its dashboard redirect.
-// Distinct from `tour=1` (also on that URL, consumed separately by
-// ProductTour) because Settings' "Retake tour" link reuses `tour=1` on its
-// own and must never re-trigger a live poll.
+// Auto-triggers the first "check for new posts" run right after onboarding.
+// Used to gate on a one-shot `?firstscan=1` query param appended to
+// onboarding's dashboard redirect, but that param survived only as long as
+// the exact client navigation that carried it — a refresh before the
+// effect ran, a second tab, or the param simply getting lost could leave a
+// founder on a permanently blank dashboard with no way to retry. Trigger is
+// now `needsFirstScan` (see dashboard/page.tsx): durable, DB-derived, and
+// self-clearing — it's true exactly until this project's first post is
+// scored, then never again, so this effect can safely re-run on every
+// mount without needing a param to strip.
 export function AutoFirstScan({
   projectId,
   initialIsActive,
+  needsFirstScan,
 }: {
   projectId: string;
   initialIsActive: boolean;
+  needsFirstScan: boolean;
 }) {
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
   const { status, tick, isRunning, start } = usePollStream(projectId, initialIsActive);
 
   useEffect(() => {
-    if (searchParams.get("firstscan") !== "1") return;
-    // Strip immediately — a refresh or back-navigation must not replay this.
-    router.replace(pathname, { scroll: false });
+    if (!needsFirstScan || initialIsActive) return;
     // usePollStream's start() is itself a no-op once a stream is already
     // owned by this tab, so there's no need to separately track "did we
     // already call this" here.
-    if (!initialIsActive) start();
-  }, [searchParams, pathname, router, initialIsActive, start]);
+    start();
+  }, [needsFirstScan, initialIsActive, start]);
 
   // Nothing to show until this tab has actually kicked off (or picked up)
   // the first scan — most page loads never render this at all. status
@@ -96,12 +97,12 @@ export function AutoFirstScan({
             <p className="font-mono text-[11px] text-muted-foreground">
               {`Checked ${status.summary.sourcesPolled} source${status.summary.sourcesPolled === 1 ? "" : "s"} · ${status.summary.postsFetched} posts scored${status.summary.errors ? ` · ${status.summary.errors} error${status.summary.errors === 1 ? "" : "s"}` : ""}. Getrive keeps checking automatically from here.`}
             </p>
-            {status.summary.signalsCreated > 0 && (
+            {(status.summary.signalsCreated > 0 || status.summary.postsFetched > 0) && (
               <Link
                 href={`/projects/${projectId}/signals`}
                 className="mt-2 w-fit rounded-md border border-accent/40 bg-accent/10 px-3 py-1.5 font-mono text-[11px] tracking-wider text-accent uppercase transition-colors hover:bg-accent/20"
               >
-                View signals
+                {status.summary.signalsCreated > 0 ? "View signals" : "See what was scored"}
               </Link>
             )}
           </>

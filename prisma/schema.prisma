@@ -129,6 +129,15 @@ model Product {
   // stale after POLL_STALE_MINUTES (see lib/reddit/poll.ts) in case a
   // crashed run left it stuck set.
   activePollStartedAt DateTime?
+  // Set the moment this project's very first-ever signal(s) are created and
+  // the "your first signals are ready" retention email has been sent for it
+  // (see notifyFirstSignals in lib/reddit/poll.ts) — null means that email
+  // is still pending. Doubles as the idempotency gate (claimed via a
+  // conditional updateMany) so a cron run and a concurrent manual poll can
+  // never both send it, and as the "has this project ever had a signal"
+  // check itself, so a project with pre-existing signals at migration time
+  // is backfilled to a non-null value rather than retroactively emailed.
+  firstSignalsEmailSentAt DateTime?
   // Soft-delete: archived projects drop out of the project switcher/picker
   // and onboarding-redirect logic, but their data (signals, subreddits,
   // tracked links) is kept intact and the project's own pages stay

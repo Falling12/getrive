@@ -34,6 +34,8 @@ export default async function DashboardPage({
     karmaAgg,
     agingSignals,
     failingSources,
+    selectedSourceCount,
+    everScoredCount,
   ] = await Promise.all([
     prisma.signup.count({ where: { productId: product.id, trackedLinkId: { not: null } } }),
     prisma.signal.count({
@@ -66,6 +68,8 @@ export default async function DashboardPage({
       },
       select: { name: true, type: true, consecutiveFailures: true },
     }),
+    prisma.source.count({ where: { productId: product.id, selected: true } }),
+    prisma.scoredPost.count({ where: { source: { productId: product.id } } }),
   ]);
 
   const goalTarget = parseSignupGoalTarget(product.signupGoal);
@@ -74,11 +78,18 @@ export default async function DashboardPage({
     product.activePollStartedAt &&
       Date.now() - product.activePollStartedAt.getTime() < POLL_STALE_MINUTES * 60_000
   );
+  // Durable, DB-derived replacement for the old `?firstscan=1` query-param
+  // trigger: "this project has at least one monitored source and has never
+  // scored a single post" can only ever be true once, flips permanently
+  // false the moment any post is scored, and survives page refreshes,
+  // duplicate tabs, and lost/stripped query strings — none of which the URL
+  // param did. See AutoFirstScan for how this replaces that gate.
+  const needsFirstScan = selectedSourceCount > 0 && everScoredCount === 0;
 
   return (
     <div className="flex w-full flex-col items-center pt-16 pb-16 md:pt-0">
       <div className="flex w-full max-w-5xl flex-col px-6 pt-12 md:px-12 md:pt-20 lg:pt-24">
-        <AutoFirstScan projectId={projectId} initialIsActive={isPollActive} />
+        <AutoFirstScan projectId={projectId} initialIsActive={isPollActive} needsFirstScan={needsFirstScan} />
 
         <section data-tour="metric" className="relative flex w-full flex-col border-b-2 border-border pb-16 md:pb-24">
           <div className="pointer-events-none absolute top-0 right-0 size-32 rounded-full bg-accent/10 blur-[80px]" />

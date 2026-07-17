@@ -12,8 +12,12 @@ import {
   isExemptFromLimits,
 } from "@/lib/limits";
 import { notifySignalCreated } from "@/lib/services/notification.service";
+import { sendEmail } from "@/lib/email";
+import { firstSignalsEmailTemplate, type DigestSignalItem } from "@/lib/email-templates";
+import { captureServerEvent } from "@/lib/analytics/posthog-server";
 import { describeSelectedIcp } from "@/lib/services/positioning.service";
 import { formatSourceLabel } from "@/lib/sources/format";
+import { appUrl } from "@/lib/config";
 import type { SourceType } from "@/generated/prisma/client";
 
 // This file lives under lib/reddit/ from when Getrive only ingested Reddit;
@@ -220,6 +224,20 @@ export async function pollAllSources(options?: {
   };
   const runStartedAt = Date.now();
 
+  // Accumulates signals for any product still awaiting its one-time "your
+  // first signals are ready" email (sent in the loop over this map, below
+  // the main source loop) — gathered across every source of that product
+  // in this run, since a
+  // project can have several sources and its first-ever signals may land
+  // from more than one of them in the same batch. Keyed by productId rather
+  // than sent inline per-signal so the eventual email can pick the
+  // highest-scoring 2-3 across the whole batch, not just whichever source
+  // happened to be processed first.
+  const pendingFirstSignalEmails = new Map<
+    string,
+    { productId: string; productName: string; userEmail: string; signals: DigestSignalItem[] }
+  >();
+
   for (const [index, source] of sources.entries()) {
     if (Date.now() - runStartedAt > RUN_TIME_BUDGET_MS) {
       console.warn(
@@ -229,6 +247,7 @@ export async function pollAllSources(options?: {
     }
 
     const sourceLabel = formatSourceLabel(source.type, source.name);
+    let signalsCreatedForSource = 0;
     summary.sourcesPolled += 1;
     emit({
       type: "source-start",
@@ -397,19 +416,44 @@ export async function pollAllSources(options?: {
               },
             });
             summary.signalsCreated += 1;
+            signalsCreatedForSource += 1;
             emit({ type: "signal-created", sourceName: sourceLabel, title: post.title });
 
-            await notifySignalCreated({
-              userEmail: source.product.user.email,
-              notifyNewSignal: source.product.user.notifyNewSignal,
-              productId: source.product.id,
-              productName: source.product.name,
-              sourceType: source.type,
-              sourceName: source.name,
-              signalId: signal.id,
-              title: post.title,
-              body: post.selftext,
-            });
+            // A project still waiting on its one-time "first signals ready"
+            // email gets this signal folded into that batch instead of the
+            // ongoing per-signal alert below — otherwise a brand-new
+            // founder's very first scan could fire off both the welcome
+            // email AND 2-3 separate "new signal" emails in the same
+            // minute. Once that email has gone out (or always did, for a
+            // project that predates this feature — see the migration
+            // backfill), this reverts to the normal per-signal alert.
+            if (!source.product.firstSignalsEmailSentAt) {
+              const bucket = pendingFirstSignalEmails.get(source.product.id) ?? {
+                productId: source.product.id,
+                productName: source.product.name,
+                userEmail: source.product.user.email,
+                signals: [],
+              };
+              bucket.signals.push({
+                title: post.title,
+                sourceLabel,
+                relevanceScore,
+                url: `${appUrl}/projects/${source.product.id}/signals/${signal.id}`,
+              });
+              pendingFirstSignalEmails.set(source.product.id, bucket);
+            } else {
+              await notifySignalCreated({
+                userEmail: source.product.user.email,
+                notifyNewSignal: source.product.user.notifyNewSignal,
+                productId: source.product.id,
+                productName: source.product.name,
+                sourceType: source.type,
+                sourceName: source.name,
+                signalId: signal.id,
+                title: post.title,
+                body: post.selftext,
+              });
+            }
           }
         } catch (error) {
           console.error(`[poll] failed to persist scored post ${post.id} in ${source.name}`, error);
@@ -418,6 +462,41 @@ export async function pollAllSources(options?: {
         }
       }
     }
+
+    // Server-side counterpart to the client-only funnel today — without
+    // this, PostHog can't tell "no signals were ever generated for this
+    // project" apart from "signals existed but the user never came back",
+    // since both look identical from client events alone (there's simply no
+    // client present when a cron run is what creates them).
+    if (signalsCreatedForSource > 0) {
+      await captureServerEvent(source.product.userId, "signals_generated", {
+        project_id: source.product.id,
+        count: signalsCreatedForSource,
+        source: sourceLabel,
+      });
+    }
+  }
+
+  for (const bucket of pendingFirstSignalEmails.values()) {
+    // Conditional update as the atomic claim: if another process (a
+    // concurrent cron tick, or a manual poll racing the cron) already
+    // flipped this row, `count` comes back 0 and this run simply skips
+    // sending — the same compare-and-swap idea as the daily scoring caps
+    // above, applied to "has this email gone out yet" instead of "how much
+    // has been scored today".
+    const claimed = await prisma.product.updateMany({
+      where: { id: bucket.productId, firstSignalsEmailSentAt: null },
+      data: { firstSignalsEmailSentAt: new Date() },
+    });
+    if (claimed.count === 0) continue;
+
+    const topSignals = [...bucket.signals].sort((a, b) => b.relevanceScore - a.relevanceScore).slice(0, 3);
+    const { subject, html } = firstSignalsEmailTemplate({
+      productName: bucket.productName,
+      signals: topSignals,
+      dashboardUrl: `${appUrl}/projects/${bucket.productId}/dashboard`,
+    });
+    await sendEmail({ to: bucket.userEmail, subject, html });
   }
 
   return summary;

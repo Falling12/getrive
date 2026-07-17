@@ -183,3 +183,34 @@ export function weeklyDigestEmailTemplate({ projects }: { projects: DigestProjec
     ),
   };
 }
+
+// The one-time "your first scan actually found something" email — sent
+// exactly once per project (claimed via Product.firstSignalsEmailSentAt in
+// lib/reddit/poll.ts), not gated on the notifyNewSignal preference the way
+// signalAlertEmailTemplate is: this is the activation nudge that brings a
+// founder back after onboarding, not an ongoing notification they can
+// reasonably want off.
+export function firstSignalsEmailTemplate({
+  productName,
+  signals,
+  dashboardUrl,
+}: {
+  productName: string;
+  signals: DigestSignalItem[];
+  dashboardUrl: string;
+}) {
+  return {
+    subject: `Your first ${productName} signals are ready`,
+    html: wrapper(
+      `
+    <h1 style="margin:0 0 12px;font-size:22px;color:${INK};">Your first signals are in</h1>
+    <p style="margin:0 0 16px;font-size:14px;color:${MUTED};">
+      Getrive just scored its first posts for ${productName} — here's what matched:
+    </p>
+    ${signals.map(signalRow).join("")}
+    ${button(dashboardUrl, "View dashboard")}
+  `,
+      "You're getting this because it's the first time Getrive found something for this project."
+    ),
+  };
+}
