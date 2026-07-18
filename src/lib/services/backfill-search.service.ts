@@ -254,13 +254,34 @@ async function runStackExchangeQuery(
 // their own sequential chain concurrently with the Reddit chain instead of
 // queuing behind every Reddit wait — total wall time is roughly
 // max(redditChainTime, seChainTime) instead of their sum.
-export async function runBackfillSearchForProduct(productId: string): Promise<BackfillSummary> {
+// options.deadline is an absolute Date.now()-comparable timestamp past
+// which no *new* query is started (a query already in flight, including
+// its own throttle wait, still runs to completion). Without this, a
+// product with many ACTIVE Reddit queries can blow well past the caller's
+// own time budget on its own — see measurement-run.service.ts, whose
+// maxDuration=300s route this feeds — and since Reddit queries run
+// strictly sequentially (the throttle above is global), the run has no
+// other way to bound its own wall time. Left unbounded (the default) for
+// scripts/run-phase1-diagnostic.ts, which isn't running inside a
+// time-limited request.
+export async function runBackfillSearchForProduct(
+  productId: string,
+  options?: { deadline?: number }
+): Promise<BackfillSummary> {
   const { allowed } = await assertSearchPipelineGate(productId, "backfill-search");
   if (!allowed) return { productId, queriesRun: 0, matchesStored: 0, errors: [] };
 
+  const deadline = options?.deadline ?? Infinity;
   const sinceDate = new Date(Date.now() - BACKFILL_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+  // Stalest-lastRunAt-first (nulls — never run — first): the same
+  // "resume where it left off" ordering measurement-run.service.ts already
+  // applies across products, applied here across one product's own
+  // queries so a deadline cutting a run short still rotates coverage
+  // across the full query set over successive runs instead of always
+  // starving whichever queries sort last.
   const queries = await prisma.searchQuery.findMany({
     where: { productId, status: "ACTIVE" },
+    orderBy: { lastRunAt: { sort: "asc", nulls: "first" } },
   });
 
   const summary: BackfillSummary = { productId, queriesRun: 0, matchesStored: 0, errors: [] };
@@ -272,11 +293,13 @@ export async function runBackfillSearchForProduct(productId: string): Promise<Ba
   await Promise.all([
     (async () => {
       for (const query of redditQueries) {
+        if (Date.now() >= deadline) break;
         await runRedditQuery(productId, query, sinceDate, summary);
       }
     })(),
     (async () => {
       for (const query of seQueries) {
+        if (Date.now() >= deadline) break;
         await runStackExchangeQuery(productId, query, seSites, sinceDate, summary);
       }
     })(),

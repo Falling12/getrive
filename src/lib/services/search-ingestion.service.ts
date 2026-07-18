@@ -222,6 +222,7 @@ async function runScoringBatch(job: ScoringBatchJob, product: {
         await proposeQueryFromPassingMatch({
           productId: product.id,
           userId: product.user.id,
+          userEmail: product.user.email,
           platform: match.platform,
           title: match.title,
         });

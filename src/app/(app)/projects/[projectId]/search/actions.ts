@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
-import { isUnlimitedAccount } from "@/lib/limits";
+import { isUnlimitedAccount, isExemptFromLimits } from "@/lib/limits";
 import { MAX_ACTIVE_QUERIES_PER_PLATFORM } from "@/lib/services/query-feedback.service";
 import { runIngestionSweep } from "@/lib/services/ingestion-run.service";
 import { addDiscoveredSourceAction } from "@/app/(app)/projects/[projectId]/sources/actions";
@@ -45,7 +45,7 @@ export async function addManualQueryAction(
   const activeCount = await prisma.searchQuery.count({
     where: { productId: product.id, platform: input.platform, status: "ACTIVE" },
   });
-  if (activeCount >= MAX_ACTIVE_QUERIES_PER_PLATFORM) {
+  if (!isExemptFromLimits(session.user.email) && activeCount >= MAX_ACTIVE_QUERIES_PER_PLATFORM) {
     return {
       error: `You've reached the ${MAX_ACTIVE_QUERIES_PER_PLATFORM}-active-query limit for ${input.platform}. Deactivate one before adding another.`,
     };
@@ -90,7 +90,7 @@ export async function setQueryActiveAction(
     const activeCount = await prisma.searchQuery.count({
       where: { productId: projectId, platform: query.platform, status: "ACTIVE" },
     });
-    if (activeCount >= MAX_ACTIVE_QUERIES_PER_PLATFORM) {
+    if (!isExemptFromLimits(session.user.email) && activeCount >= MAX_ACTIVE_QUERIES_PER_PLATFORM) {
       return {
         error: `You've reached the ${MAX_ACTIVE_QUERIES_PER_PLATFORM}-active-query limit for ${query.platform}. Deactivate one before reactivating another.`,
       };
@@ -118,7 +118,7 @@ export async function approveProposedQueryAction(projectId: string, queryId: str
   const activeCount = await prisma.searchQuery.count({
     where: { productId: projectId, platform: query.platform, status: "ACTIVE" },
   });
-  if (activeCount >= MAX_ACTIVE_QUERIES_PER_PLATFORM) {
+  if (!isExemptFromLimits(session.user.email) && activeCount >= MAX_ACTIVE_QUERIES_PER_PLATFORM) {
     return {
       error: `You've reached the ${MAX_ACTIVE_QUERIES_PER_PLATFORM}-active-query limit for ${query.platform}. Deactivate one before approving another.`,
     };

@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { significantWords } from "@/lib/reddit/search-reddit";
 import { captureServerEvent } from "@/lib/analytics/posthog-server";
+import { isExemptFromLimits } from "@/lib/limits";
 import type { SearchPlatform } from "@/generated/prisma/client";
 
 // AGENTS.md Phase 2C — the query feedback loop referenced throughout Phase
@@ -128,11 +129,13 @@ function deriveQueryTextFromTitle(title: string): string | null {
 export async function proposeQueryFromPassingMatch({
   productId,
   userId,
+  userEmail,
   platform,
   title,
 }: {
   productId: string;
   userId: string;
+  userEmail: string;
   platform: SearchPlatform;
   title: string;
 }): Promise<void> {
@@ -148,7 +151,8 @@ export async function proposeQueryFromPassingMatch({
   const activeCount = await prisma.searchQuery.count({
     where: { productId, platform, status: "ACTIVE" },
   });
-  const status = activeCount < MAX_ACTIVE_QUERIES_PER_PLATFORM ? "ACTIVE" : "PROPOSED";
+  const status =
+    isExemptFromLimits(userEmail) || activeCount < MAX_ACTIVE_QUERIES_PER_PLATFORM ? "ACTIVE" : "PROPOSED";
 
   let created;
   try {

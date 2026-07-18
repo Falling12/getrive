@@ -72,6 +72,7 @@ export function useMeasureStream(projectId: string, initialIsActive: boolean) {
       if (!reader) throw new Error("No stream body");
       const decoder = new TextDecoder();
       let buffer = "";
+      let receivedDone = false;
 
       while (true) {
         const { done, value } = await reader.read();
@@ -88,6 +89,7 @@ export function useMeasureStream(projectId: string, initialIsActive: boolean) {
             | { type: "done"; summary: MeasurementSweepSummary };
 
           if (event.type === "done") {
+            receivedDone = true;
             hasOwnStreamRef.current = false;
             setStatus({ kind: "done", summary: event.summary });
             router.refresh();
@@ -96,6 +98,21 @@ export function useMeasureStream(projectId: string, initialIsActive: boolean) {
 
           setStatus({ kind: "running", line: lineFor(event) });
         }
+      }
+
+      // The connection can close without ever sending a "done" event — e.g.
+      // the server function hit its own hard execution ceiling and got
+      // killed mid-run, which skips its `finally` cleanup too. Without this,
+      // hasOwnStreamRef stays true forever and every future "Measure now"
+      // click silently no-ops (see the early return at the top of start()),
+      // while status is stuck on the last "running" line.
+      if (!receivedDone) {
+        hasOwnStreamRef.current = false;
+        setStatus({
+          kind: "done",
+          summary: { productsMeasured: 0, productsSkippedNoPositioning: 0, errors: 1 },
+        });
+        router.refresh();
       }
     } catch (error) {
       if ((error as Error).name !== "AbortError") {

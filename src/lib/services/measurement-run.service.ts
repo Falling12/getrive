@@ -30,6 +30,23 @@ import { UNLIMITED_ACCOUNT_EMAILS } from "@/lib/limits";
 // run, which keeps it stalest-first (and tried again first) next time.
 const RUN_TIME_BUDGET_MS = 270_000;
 
+// Hard ceiling on how long a single product's backfill (the sequential,
+// Reddit-throttled leg — see backfill-search.service.ts) gets before this
+// sweep stops starting new queries for it and moves on. Deliberately well
+// under RUN_TIME_BUDGET_MS/maxDuration, not derived from either: a product
+// sitting at or near MAX_ACTIVE_QUERIES_PER_PLATFORM Reddit queries would
+// otherwise take up to ~19 minutes (15 queries * ~75s) to finish on its
+// own, which the 300s route ceiling can't accommodate regardless of how
+// many other products are in the sweep — Vercel kills the function outright
+// mid-run, skipping classifyBaseRate (so baseRateMeasuredAt never updates)
+// and the route's own cleanup/`done` event (so the client-side stream looks
+// stuck — see use-measure-stream.ts). Capping backfill's own wall time
+// guarantees classifyBaseRate and the `done` event are always reached;
+// backfill-search.service.ts's stalest-lastRunAt-first ordering means a
+// product with more queries than fit in one budget just rotates through the
+// rest on its next measurement run instead of never finishing this one.
+const PER_PRODUCT_BACKFILL_BUDGET_MS = 150_000;
+
 export type MeasurementProgressEvent =
   | { type: "product-start"; name: string; index: number; total: number }
   | { type: "product-done"; name: string; totalMatches: number; classification: string }
@@ -98,7 +115,7 @@ export async function runMeasurementSweep(options?: {
     emit({ type: "product-start", name: product.name, index: index + 1, total: products.length });
     try {
       await generateAndStoreQuerySet(product.id);
-      await runBackfillSearchForProduct(product.id);
+      await runBackfillSearchForProduct(product.id, { deadline: Date.now() + PER_PRODUCT_BACKFILL_BUDGET_MS });
       const baseRate = await classifyBaseRate(product.id);
       summary.productsMeasured += 1;
       emit({
