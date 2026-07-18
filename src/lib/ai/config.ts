@@ -1,6 +1,7 @@
 export type AiTask =
   | "positioningGeneration"
   | "sourceDiscovery"
+  | "queryGeneration"
   | "signalScoring"
   | "replyGeneration"
   | "outreachDraft"
@@ -25,6 +26,12 @@ export const AI_TASK_MODELS: Record<AiTask, AiTaskModelConfig> = {
   // decides the founder's first cross-channel promotion plan — prioritize
   // reasoning quality over cost.
   sourceDiscovery: { provider: "anthropic", model: "claude-sonnet-5" },
+  // Onboarding/base-rate re-measurement (AGENTS.md Phase 1A), once per
+  // product per re-measurement, not per-post — low call volume and it
+  // decides what backfill search actually looks for, so a weak query set
+  // silently undercounts a product's real base rate. Quality over cost,
+  // same reasoning as sourceDiscovery.
+  queryGeneration: { provider: "anthropic", model: "claude-sonnet-5" },
   // Background job, called for every new post fetched from every monitored
   // source — by far the highest-volume call in the product. Pure
   // relevance classification, so use the smallest/cheapest capable model.
