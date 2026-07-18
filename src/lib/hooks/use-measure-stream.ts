@@ -4,8 +4,10 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import type { MeasurementProgressEvent, MeasurementSweepSummary } from "@/lib/services/measurement-run.service";
 
-const IDLE_REFRESH_MS = 20_000;
-const ACTIVE_REFRESH_MS = 4_000;
+// How often to ping the cheap /status endpoint for "is another tab running
+// a measurement right now" — a single-column read, not a data refresh.
+const IDLE_STATUS_POLL_MS = 20_000;
+const REMOTE_ACTIVE_STATUS_POLL_MS = 4_000;
 
 export type MeasureStreamStatus =
   | { kind: "idle" }
@@ -28,7 +30,9 @@ function lineFor(event: MeasurementProgressEvent): string {
 // — structurally the same connect/parse/reconnect-safety shape as
 // use-poll-stream.ts's usePollStream, just without the rate-limit status
 // (this is allowlist-only, low volume, so a manual-poll-style rate limiter
-// isn't needed here the way it is for the founder-facing poll button).
+// isn't needed here the way it is for the founder-facing poll button), and
+// without a mid-run page refresh — the page only shows the final base
+// rate, so there's nothing worth syncing until the sweep is done.
 export function useMeasureStream(projectId: string, initialIsActive: boolean) {
   const router = useRouter();
   const [status, setStatus] = useState<MeasureStreamStatus>(
@@ -36,17 +40,51 @@ export function useMeasureStream(projectId: string, initialIsActive: boolean) {
   );
   const abortRef = useRef<AbortController | null>(null);
   const hasOwnStreamRef = useRef(false);
+  const remoteActiveRef = useRef(initialIsActive);
   const isRunning = status.kind === "running" || status.kind === "remote-active";
 
   useEffect(() => {
+    remoteActiveRef.current = initialIsActive;
     if (hasOwnStreamRef.current) return;
     setStatus(initialIsActive ? { kind: "remote-active" } : { kind: "idle" });
   }, [initialIsActive]);
 
+  // Detects a run started elsewhere (another tab) by pinging a cheap
+  // single-column status endpoint. Only refreshes the page when that
+  // status flips from active to idle, since that's the one moment a
+  // remote run may have produced a new base rate worth showing.
   useEffect(() => {
-    const id = setInterval(() => router.refresh(), isRunning ? ACTIVE_REFRESH_MS : IDLE_REFRESH_MS);
-    return () => clearInterval(id);
-  }, [router, isRunning]);
+    let cancelled = false;
+    let timeoutId: ReturnType<typeof setTimeout>;
+
+    async function poll() {
+      if (!hasOwnStreamRef.current && typeof document !== "undefined" && !document.hidden) {
+        try {
+          const response = await fetch(`/api/measure-stream/status?projectId=${projectId}`);
+          if (!cancelled && response.ok && !hasOwnStreamRef.current) {
+            const { isActive } = (await response.json()) as { isActive: boolean };
+            const wasActive = remoteActiveRef.current;
+            remoteActiveRef.current = isActive;
+            if (isActive !== wasActive) {
+              setStatus(isActive ? { kind: "remote-active" } : { kind: "idle" });
+              if (wasActive && !isActive) router.refresh();
+            }
+          }
+        } catch {
+          // Network hiccup — just try again next tick.
+        }
+      }
+      if (!cancelled) {
+        timeoutId = setTimeout(poll, remoteActiveRef.current ? REMOTE_ACTIVE_STATUS_POLL_MS : IDLE_STATUS_POLL_MS);
+      }
+    }
+
+    timeoutId = setTimeout(poll, remoteActiveRef.current ? REMOTE_ACTIVE_STATUS_POLL_MS : IDLE_STATUS_POLL_MS);
+    return () => {
+      cancelled = true;
+      clearTimeout(timeoutId);
+    };
+  }, [projectId, router]);
 
   useEffect(() => {
     return () => abortRef.current?.abort();

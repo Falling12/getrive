@@ -4,11 +4,21 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import type { PollProgressEvent, PollSummary } from "@/lib/reddit/poll";
 
-// Idle: still picks up whatever the automatic 5-minute cron creates.
-// Active: ticks much faster so signals created mid-poll actually appear as
-// they land, instead of only once the full ~2 minute batch finishes.
-const IDLE_REFRESH_MS = 20_000;
-const ACTIVE_REFRESH_MS = 4_000;
+// How often to ping the cheap /status endpoint for "is some other tab (or
+// the cron) running a poll right now" — not a data refresh, just a
+// single-column read. Faster while we know one is running elsewhere, so
+// its completion (and the router.refresh() that follows) is noticed
+// promptly; slower otherwise since nothing is expected to change.
+const IDLE_STATUS_POLL_MS = 20_000;
+const REMOTE_ACTIVE_STATUS_POLL_MS = 4_000;
+
+// Full-page router.refresh() is expensive (every Prisma query the page
+// makes re-runs) and visually disruptive (the whole tree re-renders), so
+// it's reserved for moments a refresh actually has something new to show:
+// this tab's own stream finishing, a remote run finishing, or — while
+// running — no more than once per this window, and only when a signal
+// actually landed.
+const REFRESH_THROTTLE_MS = 5_000;
 
 export type PollStreamStatus =
   | { kind: "idle" }
@@ -65,26 +75,74 @@ export function usePollStream(projectId: string, initialIsActive: boolean) {
   const [tick, setTick] = useState(0);
   const abortRef = useRef<AbortController | null>(null);
   // Set once this tab starts its own stream, so a later server-render prop
-  // update (from the periodic router.refresh() below) doesn't clobber the
+  // update (from a background router.refresh()) doesn't clobber the
   // detailed live status with the generic "remote-active" one.
   const hasOwnStreamRef = useRef(false);
+  // Baseline for the remote-status poll below — starts from what the
+  // server already told us, so we don't mistake "still active from before
+  // this mount" for a fresh transition and refresh needlessly.
+  const remoteActiveRef = useRef(initialIsActive);
+  const lastRefreshAtRef = useRef(0);
   const isRunning = status.kind === "running" || status.kind === "remote-active";
+
+  const refreshThrottled = useCallback(() => {
+    const now = Date.now();
+    if (now - lastRefreshAtRef.current < REFRESH_THROTTLE_MS) return;
+    lastRefreshAtRef.current = now;
+    router.refresh();
+  }, [router]);
+
+  const refreshNow = useCallback(() => {
+    lastRefreshAtRef.current = Date.now();
+    router.refresh();
+  }, [router]);
 
   // Reflects the server's view of "is a poll active for this project" —
   // this is what survives a page refresh mid-poll, since local state alone
   // resets to nothing on reload.
   useEffect(() => {
+    remoteActiveRef.current = initialIsActive;
     if (hasOwnStreamRef.current) return;
     setStatus(initialIsActive ? { kind: "remote-active" } : { kind: "idle" });
   }, [initialIsActive]);
 
+  // Detects a poll started elsewhere (another tab, or the cron job) by
+  // pinging a cheap single-column status endpoint — never a full page
+  // refresh just to check. Only refreshes the page when that status
+  // actually flips from active to idle, since that's the one moment a
+  // remote run may have produced new data worth showing.
   useEffect(() => {
-    const id = setInterval(
-      () => router.refresh(),
-      isRunning ? ACTIVE_REFRESH_MS : IDLE_REFRESH_MS
-    );
-    return () => clearInterval(id);
-  }, [router, isRunning]);
+    let cancelled = false;
+    let timeoutId: ReturnType<typeof setTimeout>;
+
+    async function poll() {
+      if (!hasOwnStreamRef.current && typeof document !== "undefined" && !document.hidden) {
+        try {
+          const response = await fetch(`/api/poll-stream/status?projectId=${projectId}`);
+          if (!cancelled && response.ok && !hasOwnStreamRef.current) {
+            const { isActive } = (await response.json()) as { isActive: boolean };
+            const wasActive = remoteActiveRef.current;
+            remoteActiveRef.current = isActive;
+            if (isActive !== wasActive) {
+              setStatus(isActive ? { kind: "remote-active" } : { kind: "idle" });
+              if (wasActive && !isActive) refreshNow();
+            }
+          }
+        } catch {
+          // Network hiccup — just try again next tick.
+        }
+      }
+      if (!cancelled) {
+        timeoutId = setTimeout(poll, remoteActiveRef.current ? REMOTE_ACTIVE_STATUS_POLL_MS : IDLE_STATUS_POLL_MS);
+      }
+    }
+
+    timeoutId = setTimeout(poll, remoteActiveRef.current ? REMOTE_ACTIVE_STATUS_POLL_MS : IDLE_STATUS_POLL_MS);
+    return () => {
+      cancelled = true;
+      clearTimeout(timeoutId);
+    };
+  }, [projectId, refreshNow]);
 
   useEffect(() => {
     return () => abortRef.current?.abort();
@@ -132,12 +190,19 @@ export function usePollStream(projectId: string, initialIsActive: boolean) {
           if (event.type === "done") {
             hasOwnStreamRef.current = false;
             setStatus({ kind: "done", summary: event.summary });
-            router.refresh();
+            refreshNow();
             continue;
           }
 
           const { line, isSignal } = lineFor(event);
-          if (isSignal) signalsSoFar += 1;
+          if (isSignal) {
+            signalsSoFar += 1;
+            // A signal actually landed mid-run — worth surfacing without
+            // waiting for the whole (up to ~2 minute) batch to finish, but
+            // throttled so a burst of matches doesn't refresh the page
+            // once per event.
+            refreshThrottled();
+          }
           setTick((t) => t + 1);
           setStatus({ kind: "running", line, signalsSoFar, highlight: isSignal });
         }
@@ -152,7 +217,7 @@ export function usePollStream(projectId: string, initialIsActive: boolean) {
         });
       }
     }
-  }, [projectId, router]);
+  }, [projectId, refreshNow, refreshThrottled]);
 
   return { status, tick, isRunning, start };
 }
