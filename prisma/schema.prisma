@@ -201,6 +201,8 @@ enum SourceType {
   REDDIT_SUBREDDIT
   HACKERNEWS
   INDIEHACKERS
+  STACKEXCHANGE
+  ASKMETAFILTER
 }
 
 // Generalizes what was Reddit-only "MonitoredSubreddit" into any ingestion
@@ -210,7 +212,10 @@ enum SourceType {
 // and indiehackers it's a short display label since neither is subdivided
 // into communities the way Reddit is.
 // `config` carries type-specific settings — unused for every source type
-// today, kept for a future ingestion channel's settings.
+// today, kept for a future ingestion channel's settings. Stack Exchange
+// follows Reddit's convention instead: `name` holds the literal SE site
+// slug (e.g. "softwarerecs"), not a display label, since it's one Source
+// row per monitored SE site the same way Reddit is one row per subreddit.
 // Karma fields (karmaThreshold/selfPromoNotes/currentKarma) only mean
 // something for reddit_subreddit — neither Hacker News nor IndieHackers has
 // a comparable self-promo gate, so the Sources page hides the karma UI for

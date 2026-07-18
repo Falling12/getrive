@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { fetchNewPostsForSubreddits, MAX_SUBREDDITS_PER_BATCH } from "@/lib/reddit/fetch-posts";
 import { fetchNewHackerNewsStories } from "@/lib/hackernews/fetch-hackernews";
 import { fetchNewIndieHackersPosts } from "@/lib/indiehackers/fetch-indiehackers";
+import { fetchNewQuestionsForSites } from "@/lib/stackexchange/fetch-stackexchange";
+import { fetchNewAskMetaFilterPosts } from "@/lib/askmetafilter/fetch-askmetafilter";
 import { scorePosts, MAX_POSTS_PER_SCORING_BATCH } from "@/lib/ai/signal-scoring";
 import {
   DAILY_SCORING_CAP_PER_PROJECT,
@@ -48,11 +50,12 @@ export type PollProgressEvent =
 // a crashed run can't leave the button permanently disabled.
 export const POLL_STALE_MINUTES = 20;
 
-// Hacker News and IndieHackers sources cost one shared, cached fetch (see
-// caches.hn/caches.ih below) plus per-post Signal Scoring, already bounded by
-// the daily scoring caps in lib/limits.ts — there's no external rate limit
-// on either, so a run sweeps every due source of these types rather than
-// throttling to a handful per run.
+// Hacker News, IndieHackers, and Ask MetaFilter sources cost one shared,
+// cached fetch (see caches.hn/caches.ih/caches.amf below) plus per-post
+// Signal Scoring, already bounded by the daily scoring caps in
+// lib/limits.ts — there's no external rate limit on any of the three, so a
+// run sweeps every due source of these types rather than throttling to a
+// handful per run.
 const MAX_NON_REDDIT_SOURCES_PER_RUN = 100;
 // Reddit sources are also fetched as one shared, batched request per run
 // (see caches.reddit below and MAX_SUBREDDITS_PER_BATCH in fetch-posts.ts) —
@@ -62,6 +65,13 @@ const MAX_NON_REDDIT_SOURCES_PER_RUN = 100;
 // batch size so `take` never selects more subreddits than one request can
 // actually combine.
 const MAX_REDDIT_SOURCES_PER_RUN = MAX_SUBREDDITS_PER_BATCH;
+// Stack Exchange has no Reddit-style multi-site query syntax (see
+// fetch-stackexchange.ts) — one request per site, and each request spends
+// real, finite daily quota (300/day unauthenticated, 10,000/day with an app
+// key) rather than facing Reddit's soft per-request throttle. Capped well
+// under even the unauthenticated quota so one run monitoring several sites
+// can't come close to exhausting a whole day's budget by itself.
+const MAX_STACKEXCHANGE_SOURCES_PER_RUN = 20;
 // Soft ceiling on total run time, kept under `maxDuration` (300s on the
 // cron route) so a run that's about to be hard-killed exits early after its
 // current source instead, returning a real (partial) summary. Sources it
@@ -78,20 +88,25 @@ interface RawSourcePost {
   createdAt: Date;
 }
 
-// Hacker News and IndieHackers are each one shared feed, not a per-project
-// target — `caches.hn`/`caches.ih` let every source of that type encountered
-// in a single run reuse one upstream fetch instead of hitting the feed once
-// per project that monitors it. `caches.reddit` is the same idea applied to
-// every Reddit source in the run at once: one combined-subreddit request
-// (see fetchNewPostsForSubreddits), sliced back apart per source below.
+// Hacker News, IndieHackers, and Ask MetaFilter are each one shared feed,
+// not a per-project target — `caches.hn`/`caches.ih`/`caches.amf` let every
+// source of that type encountered in a single run reuse one upstream fetch
+// instead of hitting the feed once per project that monitors it.
+// `caches.reddit`/`caches.se` are the same idea applied per-community
+// instead: one combined-subreddit request (fetchNewPostsForSubreddits) or
+// one request-per-site batch (fetchNewQuestionsForSites), each sliced back
+// apart per source below.
 async function fetchForSource(
   source: { type: SourceType; name: string },
   caches: {
     reddit: { promise?: Promise<Map<string, RawSourcePost[]>> };
+    se: { promise?: Promise<Map<string, RawSourcePost[]>> };
     hn: { promise?: Promise<RawSourcePost[]> };
     ih: { promise?: Promise<RawSourcePost[]> };
+    amf: { promise?: Promise<RawSourcePost[]> };
   },
-  redditSubredditNames: string[]
+  redditSubredditNames: string[],
+  stackExchangeSiteSlugs: string[]
 ): Promise<RawSourcePost[]> {
   if (source.type === "HACKERNEWS") {
     caches.hn.promise ??= fetchNewHackerNewsStories();
@@ -100,6 +115,15 @@ async function fetchForSource(
   if (source.type === "INDIEHACKERS") {
     caches.ih.promise ??= fetchNewIndieHackersPosts();
     return caches.ih.promise;
+  }
+  if (source.type === "ASKMETAFILTER") {
+    caches.amf.promise ??= fetchNewAskMetaFilterPosts();
+    return caches.amf.promise;
+  }
+  if (source.type === "STACKEXCHANGE") {
+    caches.se.promise ??= fetchNewQuestionsForSites(stackExchangeSiteSlugs);
+    const postsBySite = await caches.se.promise;
+    return postsBySite.get(source.name.toLowerCase()) ?? [];
   }
   caches.reddit.promise ??= fetchNewPostsForSubreddits(redditSubredditNames);
   const postsByName = await caches.reddit.promise;
@@ -154,7 +178,7 @@ export async function pollAllSources(options?: {
   const nonRedditSources = await prisma.source.findMany({
     where: {
       selected: true,
-      type: { in: ["HACKERNEWS", "INDIEHACKERS"] },
+      type: { in: ["HACKERNEWS", "INDIEHACKERS", "ASKMETAFILTER"] },
       product: productFilter,
       ...(options?.productId ? { productId: options.productId } : {}),
     },
@@ -163,17 +187,36 @@ export async function pollAllSources(options?: {
     take: MAX_NON_REDDIT_SOURCES_PER_RUN,
   });
 
+  // Same fairness reasoning as Reddit's query above no longer applying (see
+  // its comment) doesn't hold for Stack Exchange — each site still costs its
+  // own real request against a finite daily quota (see
+  // MAX_STACKEXCHANGE_SOURCES_PER_RUN), so it gets a dedicated, separately
+  // capped query rather than folding into nonRedditSources.
+  const stackExchangeSources = await prisma.source.findMany({
+    where: {
+      selected: true,
+      type: "STACKEXCHANGE",
+      product: productFilter,
+      ...(options?.productId ? { productId: options.productId } : {}),
+    },
+    include: sourceInclude,
+    orderBy: staleFirst,
+    take: MAX_STACKEXCHANGE_SOURCES_PER_RUN,
+  });
+
   // Merged back into one staleness-ordered run for processing/progress-event
-  // order; every Reddit source's raw posts still come from a single shared
-  // batch request (see caches.reddit below), regardless of where in this list
-  // it ends up.
-  const sources = [...redditSources, ...nonRedditSources].sort(
+  // order; every Reddit/Stack Exchange source's raw posts still come from a
+  // single shared batch request (see caches.reddit/caches.se below),
+  // regardless of where in this list it ends up.
+  const sources = [...redditSources, ...stackExchangeSources, ...nonRedditSources].sort(
     (a, b) => (a.lastPolledAt?.getTime() ?? 0) - (b.lastPolledAt?.getTime() ?? 0)
   );
-  // Computed once up front — every Reddit source in the run is fetched via
-  // one combined-subreddit request keyed to this exact list (see
-  // fetchForSource), not discovered incrementally as the loop encounters them.
+  // Computed once up front — every Reddit/Stack Exchange source in the run
+  // is fetched via one combined-subreddit request or one request-per-site
+  // batch keyed to this exact list (see fetchForSource), not discovered
+  // incrementally as the loop encounters them.
   const redditSubredditNames = redditSources.map((s) => s.name);
+  const stackExchangeSiteSlugs = stackExchangeSources.map((s) => s.name);
 
   const summary: PollSummary = {
     sourcesPolled: 0,
@@ -219,8 +262,10 @@ export async function pollAllSources(options?: {
 
   const caches = {
     reddit: {} as { promise?: Promise<Map<string, RawSourcePost[]>> },
+    se: {} as { promise?: Promise<Map<string, RawSourcePost[]>> },
     hn: {} as { promise?: Promise<RawSourcePost[]> },
     ih: {} as { promise?: Promise<RawSourcePost[]> },
+    amf: {} as { promise?: Promise<RawSourcePost[]> },
   };
   const runStartedAt = Date.now();
 
@@ -258,7 +303,7 @@ export async function pollAllSources(options?: {
 
     let posts: RawSourcePost[];
     try {
-      posts = await fetchForSource(source, caches, redditSubredditNames);
+      posts = await fetchForSource(source, caches, redditSubredditNames, stackExchangeSiteSlugs);
       emit({ type: "source-fetched", name: sourceLabel, postCount: posts.length });
       const updated = await prisma.source.update({
         where: { id: source.id },
@@ -456,9 +501,20 @@ export async function pollAllSources(options?: {
             }
           }
         } catch (error) {
-          console.error(`[poll] failed to persist scored post ${post.id} in ${source.name}`, error);
-          Sentry.captureException(error, { tags: { source: source.name, postId: post.id } });
-          summary.errors += 1;
+          // P2002 = unique constraint on (sourceId, externalId) — a
+          // concurrent poll run (cron overlapping a manual poll, or two
+          // manual polls back to back) already recorded this exact post
+          // for this exact source between our dedup check above and this
+          // insert. Expected under concurrency, not a real failure: the
+          // other run's insert is the source of truth for this post, so
+          // this one just skips it rather than logging/alerting as an error.
+          const isDuplicate =
+            typeof error === "object" && error !== null && "code" in error && error.code === "P2002";
+          if (!isDuplicate) {
+            console.error(`[poll] failed to persist scored post ${post.id} in ${source.name}`, error);
+            Sentry.captureException(error, { tags: { source: source.name, postId: post.id } });
+            summary.errors += 1;
+          }
         }
       }
     }

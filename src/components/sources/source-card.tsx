@@ -6,7 +6,7 @@ import type { SourceType } from "@/generated/prisma/client";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { formatRelativeTime } from "@/lib/format";
-import { formatSourceLabel } from "@/lib/sources/format";
+import { formatSourceLabel, stackExchangeSiteDomain } from "@/lib/sources/format";
 import {
   CONSECUTIVE_FAILURE_ALERT_THRESHOLD,
   CONSECUTIVE_EMPTY_POLL_ALERT_THRESHOLD,
@@ -49,7 +49,11 @@ export function SourceCard({
         ? "https://news.ycombinator.com/newest"
         : type === "INDIEHACKERS"
           ? "https://www.indiehackers.com"
-          : null;
+          : type === "STACKEXCHANGE"
+            ? `https://${stackExchangeSiteDomain(name)}`
+            : type === "ASKMETAFILTER"
+              ? "https://ask.metafilter.com"
+              : null;
   const isFailing = consecutiveFailures >= CONSECUTIVE_FAILURE_ALERT_THRESHOLD;
   const isEmptyPolling =
     !isFailing && consecutiveEmptyPolls >= CONSECUTIVE_EMPTY_POLL_ALERT_THRESHOLD;

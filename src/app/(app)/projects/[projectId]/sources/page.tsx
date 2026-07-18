@@ -10,7 +10,13 @@ import { formatSourceChannel, formatSourceChannelDetail } from "@/lib/sources/fo
 
 export const metadata: Metadata = { title: "Sources — Getrive" };
 
-const CHANNEL_ORDER: SourceType[] = ["HACKERNEWS", "INDIEHACKERS", "REDDIT_SUBREDDIT"];
+const CHANNEL_ORDER: SourceType[] = [
+  "HACKERNEWS",
+  "INDIEHACKERS",
+  "ASKMETAFILTER",
+  "REDDIT_SUBREDDIT",
+  "STACKEXCHANGE",
+];
 
 export default async function SourcesPage({
   params,
@@ -32,6 +38,7 @@ export default async function SourcesPage({
 
   const hasHackerNews = sources.some((s) => s.type === "HACKERNEWS");
   const hasIndieHackers = sources.some((s) => s.type === "INDIEHACKERS");
+  const hasAskMetaFilter = sources.some((s) => s.type === "ASKMETAFILTER");
   const grouped = CHANNEL_ORDER.map((type) => ({
     type,
     sources: sources.filter((source) => source.type === type),
@@ -45,7 +52,8 @@ export default async function SourcesPage({
           <p className="mt-1 max-w-[68ch] font-mono text-xs leading-relaxed text-muted-foreground">
             Manage the channel mix Getrive listens on. Every source here is fetched
             automatically — Hacker News is broad and immediate, IndieHackers is founder-focused,
-            Reddit is community-specific.
+            Ask MetaFilter is general-audience and conversational, Reddit and Stack Exchange are
+            community/site-specific.
           </p>
         </header>
 
@@ -56,6 +64,7 @@ export default async function SourcesPage({
             projectId={projectId}
             hasHackerNews={hasHackerNews}
             hasIndieHackers={hasIndieHackers}
+            hasAskMetaFilter={hasAskMetaFilter}
           />
         </div>
 
