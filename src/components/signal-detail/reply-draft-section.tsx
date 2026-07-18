@@ -5,7 +5,6 @@ import { generateReply } from "@/lib/ai/reply-generation";
 import { describeSelectedIcp } from "@/lib/services/positioning.service";
 import { getOrCreateSignalTrackedLink, buildTrackedUrl } from "@/lib/tracked-links";
 import { ReplyEditor } from "@/components/signal-detail/reply-editor";
-import { MarkReplied } from "@/components/signal-detail/mark-replied";
 
 // Deliberately its own async Server Component, rendered inside a <Suspense>
 // boundary from the page — the reply draft is the one slow part of this
@@ -81,7 +80,6 @@ export async function ReplyDraftSection({
         trackedUrl={trackedUrl}
         postUrl={signal.permalink}
       />
-      <MarkReplied projectId={projectId} signalId={signal.id} sourceType={signal.source.type} />
     </section>
   );
 }

@@ -28,35 +28,28 @@ export function ThresholdControl({
   return (
     <form
       action={formAction}
-      className="flex flex-col gap-2 rounded-md border border-border bg-background/60 px-4 py-3"
+      className="flex w-full flex-col gap-2 border-b border-border/60 p-5 md:px-6"
     >
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <label
           htmlFor="threshold"
-          className="flex items-center gap-1.5 font-mono text-[10px] tracking-widest text-muted-foreground uppercase"
+          className="flex shrink-0 items-center gap-1.5 font-mono text-[10px] tracking-widest text-muted-foreground uppercase"
         >
           <SlidersHorizontal className="size-3" />
           Relevance threshold
         </label>
-        <span className="font-mono text-[11px] text-foreground">{value.toFixed(2)}</span>
-      </div>
-
-      <input
-        id="threshold"
-        name="threshold"
-        type="range"
-        min={0}
-        max={1}
-        step={0.01}
-        value={value}
-        onChange={(e) => setValue(Number(e.target.value))}
-        className="w-full accent-accent"
-      />
-
-      <div className="flex items-center justify-between gap-3">
-        <p className="font-mono text-[10px] leading-relaxed text-muted-foreground">
-          Posts scoring at or above this become a signal. Lower it to see more candidates.
-        </p>
+        <input
+          id="threshold"
+          name="threshold"
+          type="range"
+          min={0}
+          max={1}
+          step={0.01}
+          value={value}
+          onChange={(e) => setValue(Number(e.target.value))}
+          className="min-w-[140px] flex-1 accent-accent"
+        />
+        <span className="shrink-0 font-mono text-[11px] text-foreground tabular-nums">{value.toFixed(2)}</span>
         {dirty && (
           <button
             type="submit"
@@ -67,6 +60,9 @@ export function ThresholdControl({
           </button>
         )}
       </div>
+      <p className="font-mono text-[10px] leading-relaxed text-muted-foreground/80">
+        Posts scoring at or above this become a signal. Lower it to see more candidates.
+      </p>
       {state.error && <p className="font-mono text-[10px] text-destructive">{state.error}</p>}
     </form>
   );

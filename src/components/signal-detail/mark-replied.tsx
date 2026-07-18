@@ -1,23 +1,29 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect } from "react";
 import { CheckCircle2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import type { SourceType } from "@/generated/prisma/client";
 import { markAsRepliedAction } from "@/app/(app)/projects/[projectId]/signals/[id]/actions";
-import { formatReplyUrlPlaceholder } from "@/lib/sources/format";
 import { track } from "@/lib/analytics/posthog-client";
+import { cn } from "@/lib/utils";
 
+// Lives inside ReplyEditor's own action bar (not a separate section below
+// it) so it's never a second thing to scroll past. `variant` controls how
+// loud it reads: "quiet" is the fallback for someone who replies without
+// ever clicking Copy (still reachable, but this is the uncommon path so it
+// stays out of the way). "primary" is what ReplyEditor swaps in the moment
+// the founder clicks "Copy & open post" — the single remaining action, in
+// the exact spot they were just looking at, with the same pulsing-dot
+// "needs your attention" motif used elsewhere (PollNowButton, signals page
+// header) rather than inventing a new one.
 export function MarkReplied({
   projectId,
   signalId,
-  sourceType,
+  variant,
 }: {
   projectId: string;
   signalId: string;
-  sourceType: SourceType;
+  variant: "primary" | "quiet";
 }) {
-  const [expanded, setExpanded] = useState(false);
   const boundAction = markAsRepliedAction.bind(null, projectId, signalId);
   const [state, formAction, isPending] = useActionState(boundAction, {});
 
@@ -27,50 +33,45 @@ export function MarkReplied({
 
   if (state.success) {
     return (
-      <div className="flex flex-col items-center gap-2 py-4 text-center">
-        <div className="flex size-10 items-center justify-center rounded-full border border-accent/50 bg-accent/10">
-          <CheckCircle2 className="size-5 text-accent" />
-        </div>
-        <p className="text-sm font-medium text-foreground">Reply logged.</p>
-        <p className="font-mono text-xs text-muted-foreground">
-          Tracking is enabled for this reply&apos;s link.
-        </p>
+      <div className="flex items-center gap-1.5 font-mono text-[11px] text-accent">
+        <CheckCircle2 className="size-3.5" />
+        Reply logged.
       </div>
     );
   }
 
-  if (!expanded) {
+  if (variant === "quiet") {
     return (
-      <div className="flex justify-center pt-4">
+      <form action={formAction}>
         <button
-          type="button"
-          onClick={() => setExpanded(true)}
-          className="rounded-full px-6 py-2 font-mono text-[11px] tracking-wider text-muted-foreground uppercase shadow-[inset_0_0_0_1px_var(--border)] transition-all hover:text-foreground hover:shadow-[inset_0_0_0_1px_var(--accent)]"
+          type="submit"
+          disabled={isPending}
+          className="rounded px-1 py-1 font-mono text-[10px] tracking-wider text-muted-foreground/70 uppercase transition-colors hover:text-foreground disabled:opacity-50"
         >
-          Mark as replied…
+          {isPending ? "Marking…" : "Already replied? Mark it"}
         </button>
-      </div>
+        {state.error && <p className="pt-1 text-[11px] font-medium text-destructive">{state.error}</p>}
+      </form>
     );
   }
 
   return (
-    <form action={formAction} className="mx-auto flex w-full max-w-md flex-col gap-3 pt-4">
-      <label className="text-center font-mono text-[10px] tracking-widest text-muted-foreground uppercase">
-        Paste the URL of the comment you posted
-      </label>
-      <div className="flex gap-2">
-        <input
-          type="url"
-          name="postUrl"
-          required
-          placeholder={formatReplyUrlPlaceholder(sourceType)}
-          className="flex-1 rounded border border-border bg-background px-4 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground/50 focus:border-accent"
-        />
-        <Button type="submit" disabled={isPending} className="rounded-md">
-          {isPending ? "Saving…" : "Confirm"}
-        </Button>
-      </div>
-      {state.error && <p className="text-center text-sm font-medium text-destructive">{state.error}</p>}
+    <form action={formAction} className="flex flex-col items-end gap-1.5">
+      <button
+        type="submit"
+        disabled={isPending}
+        className={cn(
+          "flex items-center gap-2 rounded-md border border-accent/40 bg-accent/10 px-4 py-2 font-mono text-[11px] tracking-wider text-accent uppercase transition-colors hover:bg-accent/20",
+          "disabled:opacity-60"
+        )}
+      >
+        <span className="relative flex size-2 shrink-0 items-center justify-center">
+          <span className="absolute inline-flex size-2 animate-ping rounded-full bg-accent/60" />
+          <span className="relative inline-flex size-1 rounded-full bg-accent" />
+        </span>
+        {isPending ? "Marking…" : "Mark replied"}
+      </button>
+      {state.error && <p className="text-[11px] font-medium text-destructive">{state.error}</p>}
     </form>
   );
 }

@@ -59,19 +59,14 @@ export async function markAsRepliedAction(
   projectId: string,
   signalId: string,
   _prevState: MarkRepliedState,
-  formData: FormData
+  _formData: FormData
 ): Promise<MarkRepliedState> {
   const session = await requireSession();
   await loadOwnedSignal(signalId, session.user.id);
 
-  const postUrl = String(formData.get("postUrl") ?? "").trim();
-  if (!postUrl) {
-    return { error: "Paste the URL of the comment you posted." };
-  }
-
   await prisma.signal.update({
     where: { id: signalId },
-    data: { replied: true, repliedPostUrl: postUrl, repliedAt: new Date() },
+    data: { replied: true, repliedAt: new Date() },
   });
 
   revalidatePath(`/projects/${projectId}/signals/${signalId}`);

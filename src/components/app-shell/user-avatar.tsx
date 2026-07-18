@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 
-// Shared by AccountLink (desktop sidebar) and MobileTopBar (mobile header)
+// Shared by AccountLink (desktop sidebar) and MobileNavDrawer (mobile header)
 // — both render the same "avatar linking to /settings" concept, just at
 // different sizes. Google sign-in populates `image` (see auth.ts's Google
 // profile() mapping); credentials-only accounts never have one, so the

@@ -28,8 +28,9 @@ export function ProjectSwitcher({
   currentProjectId: string;
   currentProjectName: string;
   projects: ProjectSummary[];
-  // "sidebar": full-width row used in the desktop sidebar. "compact": small
-  // centered pill used in the mobile top bar (see MobileTopBar).
+  // "sidebar": full-width row used in the desktop sidebar and mobile
+  // drawer. "compact": small centered pill used in the mobile top bar (see
+  // MobileNavDrawer).
   variant?: "sidebar" | "compact";
 }) {
   // Same portal-scoping fix as UserMenu: anchor the popup to a local,

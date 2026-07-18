@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ArrowRight, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { MOBILE_NAV_OPEN_EVENT } from "@/lib/mobile-nav-events";
 import { cn } from "@/lib/utils";
 
 interface TourStep {
@@ -107,11 +108,15 @@ const MAX_MEASURE_WAIT_MS = 8000;
 
 // Elements with `display:none` (Tailwind `hidden`) always have a null
 // offsetParent, so this filters out e.g. the desktop sidebar's copy of a
-// nav-tour target on mobile, where only the bottom tab bar's copy is visible.
+// nav-tour target on mobile, where only the mobile drawer's copy is
+// visible. The drawer's copy is present (not display:none) even while
+// closed — it's translated off-canvas and marked `inert` instead, so
+// `closest("[inert]")` catches that case the same way offsetParent catches
+// display:none.
 function queryVisible(selector: string): HTMLElement | null {
   const matches = document.querySelectorAll<HTMLElement>(selector);
   for (const el of matches) {
-    if (el.offsetParent !== null) return el;
+    if (el.offsetParent !== null && !el.closest("[inert]")) return el;
   }
   return matches[0] ?? null;
 }
@@ -179,6 +184,12 @@ export function ProductTour() {
       const el = queryVisible(STEPS[stepIndex].target);
       if (!el) return false;
       const r = el.getBoundingClientRect();
+      // A zero-size rect means queryVisible fell through to its
+      // last-resort `matches[0]` (nothing passed the visibility check yet)
+      // — e.g. the mobile drawer was just asked to open but hasn't
+      // finished its transition. Treat that the same as "not found" so the
+      // observer below keeps waiting instead of highlighting nothing.
+      if (r.width === 0 && r.height === 0) return false;
       setRect({ top: r.top, left: r.left, width: r.width, height: r.height });
       // Only now — target genuinely found and positioned — does the
       // popover's own content catch up to this step. Until this fires, the
@@ -201,7 +212,16 @@ export function ProductTour() {
     const observer = new MutationObserver(() => {
       if (tryFind()) cleanup();
     });
-    observer.observe(document.body, { childList: true, subtree: true });
+    // attributes: true (not just childList) — the mobile drawer opening in
+    // response to MOBILE_NAV_OPEN_EVENT below doesn't add/remove any
+    // nodes, it only flips a class (translate) and the `inert` attribute
+    // on already-rendered elements.
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["class", "inert"],
+    });
     const timeoutId = setTimeout(() => {
       cleanup();
       setStepIndex((current) => (current < STEPS.length - 1 ? current + 1 : current));
@@ -242,6 +262,13 @@ export function ProductTour() {
       return;
     }
     if (isNavigating) return;
+    // A nav-row target lives inside the mobile drawer, closed by default —
+    // ask it to open before measuring. Harmless on desktop, where the
+    // drawer stays display:none regardless of this event (see
+    // mobile-nav-drawer.tsx).
+    if (STEPS[stepIndex].target.startsWith('[data-tour="nav-')) {
+      window.dispatchEvent(new Event(MOBILE_NAV_OPEN_EVENT));
+    }
     // measure() reads getBoundingClientRect(), which only exists once the
     // target is committed to the DOM — there's no way to read live layout
     // during render, so this has to happen from an effect.

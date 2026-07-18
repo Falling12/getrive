@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { RefreshCw, Copy, Check, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { regenerateReplyAction } from "@/app/(app)/projects/[projectId]/signals/[id]/actions";
+import { MarkReplied } from "@/components/signal-detail/mark-replied";
 import { track } from "@/lib/analytics/posthog-client";
 
 export function ReplyEditor({
@@ -25,6 +26,11 @@ export function ReplyEditor({
   const [toneNote, setToneNote] = useState(initialToneNote);
   const [isPending, startTransition] = useTransition();
   const [copied, setCopied] = useState(false);
+  // Distinct from `copied` (which flashes for 2s) — this persists for the
+  // rest of the session once they've clicked Copy at least once, so "Mark
+  // replied" stays promoted even after the checkmark reverts to the copy
+  // icon.
+  const [hasCopiedOnce, setHasCopiedOnce] = useState(false);
   const [error, setError] = useState<string>();
 
   function handleRegenerate() {
@@ -49,6 +55,7 @@ export function ReplyEditor({
     window.open(postUrl, "_blank", "noopener,noreferrer");
     track("signal_reply_copied", { signal_id: signalId });
     setCopied(true);
+    setHasCopiedOnce(true);
     setTimeout(() => setCopied(false), 2000);
   }
 
@@ -79,24 +86,53 @@ export function ReplyEditor({
         </p>
       )}
 
+      {hasCopiedOnce && (
+        <p className="px-5 pb-2 font-mono text-[10px] text-accent">
+          Posted it? One click below logs it as replied.
+        </p>
+      )}
+
       {error && <p className="px-5 pb-2 text-sm font-medium text-destructive">{error}</p>}
 
-      <div className="flex items-center justify-between border-t border-border bg-background/60 px-4 py-3">
-        <button
-          type="button"
-          disabled={isPending}
-          onClick={handleRegenerate}
-          className="flex items-center gap-2 rounded px-3 py-1.5 font-mono text-[10px] tracking-wider text-muted-foreground uppercase transition-colors hover:text-foreground disabled:opacity-50"
-        >
-          <RefreshCw className={`size-3.5 ${isPending ? "animate-spin" : ""}`} />
-          {isPending ? "Regenerating…" : "Regenerate angle"}
-        </button>
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border bg-background/60 px-4 py-3">
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            disabled={isPending}
+            onClick={handleRegenerate}
+            className="flex items-center gap-2 rounded px-3 py-1.5 font-mono text-[10px] tracking-wider text-muted-foreground uppercase transition-colors hover:text-foreground disabled:opacity-50"
+          >
+            <RefreshCw className={`size-3.5 ${isPending ? "animate-spin" : ""}`} />
+            {isPending ? "Regenerating…" : "Regenerate angle"}
+          </button>
 
-        <Button onClick={handleCopy} className="gap-2 rounded-md text-[11px] tracking-wider uppercase">
-          {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
-          {copied ? "Copied" : trackedUrl ? "Copy reply + link & open post" : "Copy reply & open post"}
-        </Button>
+          {hasCopiedOnce && (
+            <button
+              type="button"
+              onClick={handleCopy}
+              className="flex items-center gap-1.5 rounded px-2.5 py-1.5 font-mono text-[10px] tracking-wider text-muted-foreground uppercase transition-colors hover:text-foreground"
+            >
+              {copied ? <Check className="size-3" /> : <Copy className="size-3" />}
+              {copied ? "Copied" : "Copy again"}
+            </button>
+          )}
+        </div>
+
+        {hasCopiedOnce ? (
+          <MarkReplied projectId={projectId} signalId={signalId} variant="primary" />
+        ) : (
+          <Button onClick={handleCopy} className="gap-2 rounded-md text-[11px] tracking-wider uppercase">
+            {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
+            {copied ? "Copied" : trackedUrl ? "Copy reply + link & open post" : "Copy reply & open post"}
+          </Button>
+        )}
       </div>
+
+      {!hasCopiedOnce && (
+        <div className="flex justify-end border-t border-border/60 px-4 py-2">
+          <MarkReplied projectId={projectId} signalId={signalId} variant="quiet" />
+        </div>
+      )}
     </div>
   );
 }

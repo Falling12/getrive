@@ -168,20 +168,19 @@ export default async function SignalsPage({
     <div className="flex w-full flex-col items-center pt-16 pb-12 md:pt-0">
       <div className="flex w-full max-w-[1000px] flex-col gap-8 px-4 pt-8 md:px-8 md:pt-12">
         <div className="flex w-full flex-col overflow-hidden rounded-xl bg-background shadow-[inset_0_0_0_1px_var(--border)]">
-          <header className="flex w-full flex-wrap items-center justify-between gap-4 border-b border-border/60 bg-gradient-to-r from-secondary/15 to-transparent p-5 md:px-6">
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-medium tracking-wide text-foreground">Signals</h1>
-              <span className="relative flex size-2.5">
-                <span className="absolute inline-flex size-full animate-ping rounded-full bg-accent/50" />
-                <span className="relative inline-flex size-2.5 rounded-full bg-accent" />
-              </span>
-            </div>
-            <PollNowButton projectId={projectId} initialIsActive={isPollActive} />
+          <header className="flex w-full flex-col gap-3 border-b border-border/60 bg-gradient-to-r from-secondary/15 to-transparent p-5 md:px-6">
+            <PollNowButton projectId={projectId} initialIsActive={isPollActive}>
+              <div className="flex items-center gap-3">
+                <h1 className="text-2xl font-medium tracking-wide text-foreground">Signals</h1>
+                <span className="relative flex size-2.5">
+                  <span className="absolute inline-flex size-full animate-ping rounded-full bg-accent/50" />
+                  <span className="relative inline-flex size-2.5 rounded-full bg-accent" />
+                </span>
+              </div>
+            </PollNowButton>
           </header>
 
-          <div className="border-b border-border/60 p-5 md:px-6">
-            <ThresholdControl projectId={projectId} initialThreshold={product.relevanceThreshold} />
-          </div>
+          <ThresholdControl projectId={projectId} initialThreshold={product.relevanceThreshold} />
 
           <SignalFilterBar
             projectId={projectId}
