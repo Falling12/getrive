@@ -9,14 +9,6 @@ export default defineConfig({
     path: "prisma/migrations",
   },
   datasource: {
-    // Migrations (and the advisory lock `migrate deploy` takes) need a
-    // direct, session-level connection — a transaction-mode pooler (the
-    // usual setup behind DATABASE_URL for serverless Postgres) can hold or
-    // release that lock on the wrong underlying connection, which shows up
-    // as a P1002 timeout. DIRECT_DATABASE_URL bypasses the pooler for CLI
-    // operations only; the app's runtime client (src/lib/prisma.ts) still
-    // uses the pooled DATABASE_URL. Falls back to DATABASE_URL so local dev
-    // (a single, unpooled Postgres) doesn't need a second env var.
-    url: process.env["DIRECT_DATABASE_URL"] ?? process.env["DATABASE_URL"],
+    url: process.env["DATABASE_URL"],
   },
 });
