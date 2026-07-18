@@ -82,6 +82,13 @@ export function usePollStream(projectId: string, initialIsActive: boolean) {
   // server already told us, so we don't mistake "still active from before
   // this mount" for a fresh transition and refresh needlessly.
   const remoteActiveRef = useRef(initialIsActive);
+  // Durable activity marker (max Source.lastPolledAt) from the last status
+  // check, so a poll that starts and finishes entirely between two ticks
+  // still gets noticed — isActive flipping true-then-false is not
+  // guaranteed to ever be observed, but this marker keeps moving forward
+  // for the whole run regardless of polling cadence.
+  const lastActivityRef = useRef<string | null>(null);
+  const hasCheckedActivityRef = useRef(false);
   const lastRefreshAtRef = useRef(0);
   const isRunning = status.kind === "running" || status.kind === "remote-active";
 
@@ -107,10 +114,11 @@ export function usePollStream(projectId: string, initialIsActive: boolean) {
   }, [initialIsActive]);
 
   // Detects a poll started elsewhere (another tab, or the cron job) by
-  // pinging a cheap single-column status endpoint — never a full page
-  // refresh just to check. Only refreshes the page when that status
-  // actually flips from active to idle, since that's the one moment a
-  // remote run may have produced new data worth showing.
+  // pinging a cheap status endpoint — never a full page refresh just to
+  // check. Refreshes the page whenever the durable activity marker moves
+  // forward (a run completed since we last checked, whether or not we ever
+  // saw it as "active") or when isActive flips from true to false while we
+  // were watching it live.
   useEffect(() => {
     let cancelled = false;
     let timeoutId: ReturnType<typeof setTimeout>;
@@ -120,13 +128,21 @@ export function usePollStream(projectId: string, initialIsActive: boolean) {
         try {
           const response = await fetch(`/api/poll-stream/status?projectId=${projectId}`);
           if (!cancelled && response.ok && !hasOwnStreamRef.current) {
-            const { isActive } = (await response.json()) as { isActive: boolean };
+            const { isActive, lastActivityAt } = (await response.json()) as {
+              isActive: boolean;
+              lastActivityAt: string | null;
+            };
             const wasActive = remoteActiveRef.current;
             remoteActiveRef.current = isActive;
             if (isActive !== wasActive) {
               setStatus(isActive ? { kind: "remote-active" } : { kind: "idle" });
-              if (wasActive && !isActive) refreshNow();
             }
+
+            const activityMoved = hasCheckedActivityRef.current && lastActivityRef.current !== lastActivityAt;
+            hasCheckedActivityRef.current = true;
+            lastActivityRef.current = lastActivityAt;
+
+            if (activityMoved || (wasActive && !isActive)) refreshNow();
           }
         } catch {
           // Network hiccup — just try again next tick.
@@ -151,6 +167,11 @@ export function usePollStream(projectId: string, initialIsActive: boolean) {
   const start = useCallback(async () => {
     if (hasOwnStreamRef.current) return;
     hasOwnStreamRef.current = true;
+    // The background status checker is paused while this stream owns the
+    // status; re-baseline its activity marker (instead of leaving it
+    // stale) so that when it resumes after this run it doesn't mistake
+    // this run's own progress for a newly-detected one and double-refresh.
+    hasCheckedActivityRef.current = false;
     const controller = new AbortController();
     abortRef.current = controller;
     let signalsSoFar = 0;

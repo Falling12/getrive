@@ -41,6 +41,13 @@ export function useMeasureStream(projectId: string, initialIsActive: boolean) {
   const abortRef = useRef<AbortController | null>(null);
   const hasOwnStreamRef = useRef(false);
   const remoteActiveRef = useRef(initialIsActive);
+  // Durable activity marker (Product.baseRateMeasuredAt) from the last
+  // status check, so a run that starts and finishes entirely between two
+  // ticks still gets noticed — isActive flipping true-then-false is not
+  // guaranteed to ever be observed, but this marker only ever moves
+  // forward, once, when a run actually completes.
+  const lastActivityRef = useRef<string | null>(null);
+  const hasCheckedActivityRef = useRef(false);
   const isRunning = status.kind === "running" || status.kind === "remote-active";
 
   useEffect(() => {
@@ -50,9 +57,10 @@ export function useMeasureStream(projectId: string, initialIsActive: boolean) {
   }, [initialIsActive]);
 
   // Detects a run started elsewhere (another tab) by pinging a cheap
-  // single-column status endpoint. Only refreshes the page when that
-  // status flips from active to idle, since that's the one moment a
-  // remote run may have produced a new base rate worth showing.
+  // status endpoint. Refreshes the page whenever the durable activity
+  // marker moves forward (a run completed since we last checked, whether
+  // or not we ever saw it as "active") or when isActive flips from true to
+  // false while we were watching it live.
   useEffect(() => {
     let cancelled = false;
     let timeoutId: ReturnType<typeof setTimeout>;
@@ -62,13 +70,21 @@ export function useMeasureStream(projectId: string, initialIsActive: boolean) {
         try {
           const response = await fetch(`/api/measure-stream/status?projectId=${projectId}`);
           if (!cancelled && response.ok && !hasOwnStreamRef.current) {
-            const { isActive } = (await response.json()) as { isActive: boolean };
+            const { isActive, lastActivityAt } = (await response.json()) as {
+              isActive: boolean;
+              lastActivityAt: string | null;
+            };
             const wasActive = remoteActiveRef.current;
             remoteActiveRef.current = isActive;
             if (isActive !== wasActive) {
               setStatus(isActive ? { kind: "remote-active" } : { kind: "idle" });
-              if (wasActive && !isActive) router.refresh();
             }
+
+            const activityMoved = hasCheckedActivityRef.current && lastActivityRef.current !== lastActivityAt;
+            hasCheckedActivityRef.current = true;
+            lastActivityRef.current = lastActivityAt;
+
+            if (activityMoved || (wasActive && !isActive)) router.refresh();
           }
         } catch {
           // Network hiccup — just try again next tick.
@@ -93,6 +109,11 @@ export function useMeasureStream(projectId: string, initialIsActive: boolean) {
   const start = useCallback(async () => {
     if (hasOwnStreamRef.current) return;
     hasOwnStreamRef.current = true;
+    // The background status checker is paused while this stream owns the
+    // status; re-baseline its activity marker so that when it resumes
+    // after this run it doesn't mistake this run's own completion for a
+    // newly-detected one and double-refresh.
+    hasCheckedActivityRef.current = false;
     const controller = new AbortController();
     abortRef.current = controller;
     setStatus({ kind: "running", line: "Starting…" });
