@@ -79,9 +79,17 @@ export function SourceCard({
               </a>
             )}
           </div>
-          <span className="rounded-full border border-accent/30 bg-accent/10 px-2.5 py-1 font-mono text-[10px] tracking-widest text-accent uppercase">
-            Active
-          </span>
+          <div className="flex items-center gap-3">
+            {!isReddit && (
+              <span className="font-mono text-[10px] text-muted-foreground">
+                <Users className="mr-1 inline size-3 -translate-y-px" />
+                {usersAcquired} acquired
+              </span>
+            )}
+            <span className="rounded-full border border-accent/30 bg-accent/10 px-2.5 py-1 font-mono text-[10px] tracking-widest text-accent uppercase">
+              Active
+            </span>
+          </div>
         </div>
         <span className="font-mono text-[10px] text-muted-foreground/70">
           Last successful poll:{" "}
@@ -108,8 +116,8 @@ export function SourceCard({
       )}
 
       <form action={formAction}>
-        <div className="grid grid-cols-1 gap-px bg-border/60 md:grid-cols-4">
-          {isReddit && (
+        {isReddit && (
+          <div className="grid grid-cols-1 gap-px bg-border/60 md:grid-cols-4">
             <div className="flex flex-col gap-2 bg-background p-5 md:px-6">
               <Label className="flex items-center gap-1.5 font-mono text-[10px] tracking-wider text-muted-foreground uppercase">
                 <Shield className="size-3.5" /> Karma threshold
@@ -131,18 +139,16 @@ export function SourceCard({
                 />
               </span>
             </div>
-          )}
 
-          <div className="flex flex-col gap-2 bg-background p-5 md:px-6">
-            <span className="flex items-center gap-1.5 font-mono text-[10px] tracking-wider text-muted-foreground uppercase">
-              <Users className="size-3.5" /> Users acquired
-            </span>
-            <span className="text-3xl font-medium tracking-tight text-foreground">
-              {usersAcquired}
-            </span>
-          </div>
+            <div className="flex flex-col gap-2 bg-background p-5 md:px-6">
+              <span className="flex items-center gap-1.5 font-mono text-[10px] tracking-wider text-muted-foreground uppercase">
+                <Users className="size-3.5" /> Users acquired
+              </span>
+              <span className="text-3xl font-medium tracking-tight text-foreground">
+                {usersAcquired}
+              </span>
+            </div>
 
-          {isReddit && (
             <div className="col-span-1 flex flex-col gap-2 bg-background p-5 md:col-span-2 md:px-6">
               <Label className="flex items-center gap-1.5 font-mono text-[10px] tracking-wider text-muted-foreground uppercase">
                 <ScrollText className="size-3.5" /> Self-promo rules
@@ -155,17 +161,8 @@ export function SourceCard({
                 className="w-full resize-none rounded border border-transparent bg-transparent text-sm leading-relaxed text-foreground outline-none transition-colors focus:border-border focus:bg-secondary/10"
               />
             </div>
-          )}
-
-          {!isReddit && (
-            <div className="col-span-1 flex flex-col justify-center gap-1 bg-background p-5 md:col-span-3 md:px-6">
-              <p className="font-mono text-[11px] leading-relaxed text-muted-foreground">
-                This channel has no per-community karma constraints — Getrive fetches it
-                automatically as soon as monitoring is enabled.
-              </p>
-            </div>
-          )}
-        </div>
+          </div>
+        )}
 
         <div className="flex items-center justify-end gap-3 border-t border-border/60 bg-secondary/5 p-4">
           {state.error && <p className="mr-auto text-sm text-destructive">{state.error}</p>}

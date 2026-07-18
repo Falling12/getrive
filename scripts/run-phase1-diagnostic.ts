@@ -1,18 +1,27 @@
 // AGENTS.md Phase 1 verification gate: run query generation (1A) + backfill
 // search (1B) + base-rate classification (1C) against every real
-// non-archived product, then print the diagnostic table the user has to
-// review before Phase 2 (search-mode ingestion) starts. Read-only w.r.t.
-// scoring/signals — this never calls Signal Scoring or creates a Signal.
+// non-archived product owned by an allowlisted account (see
+// UNLIMITED_ACCOUNT_EMAILS in lib/limits.ts — the same list
+// search-pipeline-gate.service.ts gates the whole pipeline behind), then
+// print the diagnostic table the user has to review before Phase 2
+// (search-mode ingestion) starts. Read-only w.r.t. scoring/signals — this
+// never calls Signal Scoring or creates a Signal.
+//
+// Every service function this script calls re-checks the gate itself
+// (defense in depth), so this filter is about not wasting time generating
+// diagnostic output for products the pipeline will just no-op on anyway —
+// it is not the enforcement point.
 //
 // Run with: npx tsx -r dotenv/config scripts/run-phase1-diagnostic.ts
 import { prisma } from "@/lib/prisma";
 import { generateAndStoreQuerySet } from "@/lib/services/query-generation.service";
 import { runBackfillSearchForProduct } from "@/lib/services/backfill-search.service";
 import { classifyBaseRate } from "@/lib/services/base-rate.service";
+import { UNLIMITED_ACCOUNT_EMAILS } from "@/lib/limits";
 
 async function main() {
   const products = await prisma.product.findMany({
-    where: { archivedAt: null },
+    where: { archivedAt: null, user: { email: { in: [...UNLIMITED_ACCOUNT_EMAILS] } } },
     select: { id: true, name: true },
     orderBy: { createdAt: "asc" },
   });

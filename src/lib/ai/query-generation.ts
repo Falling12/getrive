@@ -18,7 +18,14 @@ const queryItemSchema = z.object({
         "(confirmed empirically), and unquoted single common words return mostly noise. A COLLOQUIAL " +
         "variant should still be the words a real person would use (not marketing language) — just " +
         "distilled to the key 3-6 words, e.g. \"app that calls me about meds\" rather than a full " +
-        "venting sentence."
+        "venting sentence. Every query, COLLOQUIAL included, MUST contain at least one concrete " +
+        "domain-anchor word — a noun tied to the actual category/action/tool (e.g. \"app\", \"SaaS\", " +
+        "\"startup\", \"subscription\", \"reddit\", \"cofounder\", \"waitlist\") — never pure generic " +
+        "emotional language alone. Confirmed empirically that anchor-less colloquial queries like " +
+        "\"cold DMs feel gross nobody responds\" or \"first users without feeling spammy\" return " +
+        "unrelated relationship/drama posts that happen to share common words like \"feeling\" or " +
+        "\"nobody\" — swap in anchored phrasing instead, e.g. \"promoting my app without feeling spammy\" " +
+        "or \"cold outreach on reddit nobody responds\"."
     ),
   variantType: z
     .enum(["LITERAL", "COLLOQUIAL", "PLATFORM_IDIOMATIC"])
@@ -30,21 +37,32 @@ const queryItemSchema = z.object({
     ),
 });
 
+// Capped at 6 (not 10) per platform — AGENTS.md Phase 1B's Reddit backfill
+// spends one real, rate-limited request (~75s, see
+// backfill-search.service.ts) per Reddit query, so this cap directly bounds
+// how long a backfill run takes. Safe to keep tight now that Phase 2C's
+// query feedback loop (query-feedback.service.ts) mines new candidate
+// queries from real passing signals and retires underperforming ones — this
+// set doesn't need to be exhaustive on the first generation, it just needs
+// to be a decent seed.
+const MAX_QUERIES_PER_PLATFORM = 6;
+
 const querySetSchema = z.object({
   redditQueries: z
     .array(queryItemSchema)
     .min(3)
-    .max(10)
+    .max(MAX_QUERIES_PER_PLATFORM)
     .describe(
-      "3-10 Reddit search queries. Mix literal, colloquial, and idiomatic phrasings — bias toward how " +
-        "someone venting about this exact pain point would actually type it, not marketing copy."
+      "3-6 Reddit search queries. Mix literal, colloquial, and idiomatic phrasings — bias toward how " +
+        "someone venting about this exact pain point would actually type it, not marketing copy. Prefer " +
+        "fewer, sharper queries — each one costs a real rate-limited search request."
     ),
   stackExchangeQueries: z
     .array(queryItemSchema)
     .min(3)
-    .max(10)
+    .max(MAX_QUERIES_PER_PLATFORM)
     .describe(
-      "3-10 Stack Exchange search queries. PLATFORM_IDIOMATIC entries here should be a plausible SE tag " +
+      "3-6 Stack Exchange search queries. PLATFORM_IDIOMATIC entries here should be a plausible SE tag " +
         "slug (lowercase, hyphenated, e.g. \"time-management\") suitable for a tagged= search — only " +
         "include one if a real SE tag like that plausibly exists. LITERAL/COLLOQUIAL entries are free-text " +
         "\"which tool/app should I use for X\" style questions, matching how SE's Q&A culture actually asks."
@@ -98,6 +116,12 @@ export async function generateQuerySet({
       "Every query must be specific enough to plausibly find someone with this exact pain point, not so",
       "broad it would match unrelated content. Do not force a query variant that doesn't genuinely fit —",
       "fewer, sharper queries are better than hitting the count ceiling with filler.",
+      "",
+      "Every query, including COLLOQUIAL ones, must contain at least one concrete domain-anchor word (a",
+      "noun naming the product category, action, or platform — \"app\", \"SaaS\", \"startup\", \"tool\",",
+      "\"subscription\", \"reddit\", etc.), never only generic emotional language. A query built entirely",
+      "from vague feeling-words (\"cold\", \"gross\", \"tired\", \"nobody responds\") with no anchor noun",
+      "will match random venting posts on totally unrelated topics — confirmed empirically.",
       "",
       "Keep every query text SHORT: 3-6 keywords, never a full sentence — this is a search-engine query,",
       "not a quote. Distill the colloquial phrasing down to its most distinctive, specific keyword combo.",

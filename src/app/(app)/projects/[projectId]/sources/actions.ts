@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { isExemptFromLimits, MAX_MONITORED_SOURCES, MAX_MONITORED_SOURCES_PER_ACCOUNT } from "@/lib/limits";
 import { countAccountMonitoredSources } from "@/lib/account-limits";
 import { discoverSources } from "@/lib/ai/source-discovery";
+import { getVenueMiningCandidates } from "@/lib/services/venue-mining.service";
 import { describeSelectedIcp } from "@/lib/services/positioning.service";
 import { stackExchangeSiteDomain } from "@/lib/sources/format";
 import type { SourceType } from "@/generated/prisma/client";
@@ -233,6 +234,11 @@ export interface DiscoveredSourceView {
   name: string;
   reasoning: string;
   alreadyActive: boolean;
+  // Present only for venue-mining candidates (Phase 3A) — real evidence
+  // this venue already produced Signals, vs. an LLM guess with no track
+  // record. The UI uses this to visually separate "proven" from "guessed"
+  // instead of rendering both identically.
+  evidence?: { signalCount: number; matchCount: number };
 }
 
 export type DiscoverSourcesState =
@@ -245,6 +251,13 @@ export type DiscoverSourcesState =
 // wipe-and-replace — a founder's audience understanding evolves past day
 // zero, and re-discovery shouldn't touch sources they're already
 // monitoring.
+//
+// AGENTS.md Phase 3A: venue-mining candidates (real evidence from search-mode
+// ingestion, see lib/services/venue-mining.service.ts) are listed first,
+// ahead of the LLM's guesses — a venue that's already produced real Signals
+// is a stronger recommendation than one the AI merely thinks might work.
+// Both kinds activate through the same addDiscoveredSourceAction below,
+// since both are just an existing Source row waiting for `selected: true`.
 export async function discoverNewSourcesAction(projectId: string): Promise<DiscoverSourcesState> {
   const session = await requireSession();
   const product = await prisma.product.findFirst({
@@ -260,6 +273,8 @@ export async function discoverNewSourcesAction(projectId: string): Promise<Disco
   const existingKeys = new Set(
     existing.filter((s) => s.selected).map((s) => `${s.type}:${s.name.toLowerCase()}`)
   );
+
+  const venueMiningCandidates = await getVenueMiningCandidates(product.id);
 
   let suggestions;
   try {
@@ -277,12 +292,21 @@ export async function discoverNewSourcesAction(projectId: string): Promise<Disco
 
   return {
     status: "results",
-    suggestions: suggestions.map((s) => ({
-      type: s.type,
-      name: s.name,
-      reasoning: s.reasoning,
-      alreadyActive: existingKeys.has(`${s.type}:${s.name.toLowerCase()}`),
-    })),
+    suggestions: [
+      ...venueMiningCandidates.map((c) => ({
+        type: c.type,
+        name: c.name,
+        reasoning: c.reasoning,
+        alreadyActive: existingKeys.has(`${c.type}:${c.name.toLowerCase()}`),
+        evidence: { signalCount: c.signalCount, matchCount: c.matchCount },
+      })),
+      ...suggestions.map((s) => ({
+        type: s.type,
+        name: s.name,
+        reasoning: s.reasoning,
+        alreadyActive: existingKeys.has(`${s.type}:${s.name.toLowerCase()}`),
+      })),
+    ],
   };
 }
 

@@ -33,7 +33,6 @@ export async function extractProductFromPageText({
   const { object } = await generateObject({
     model: getModel("websitePrefill"),
     schema: prefillSchema,
-    temperature: 0.3,
     prompt: [
       "A founder is onboarding to Getrive and gave this URL for their product's website:",
       url,

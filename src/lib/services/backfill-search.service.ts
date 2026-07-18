@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { fetchRedditSearchMatches } from "@/lib/reddit/search-reddit";
 import { searchStackExchangeSite } from "@/lib/stackexchange/search-stackexchange";
+import { assertSearchPipelineGate } from "@/lib/services/search-pipeline-gate.service";
 import type { SearchPlatform } from "@/generated/prisma/client";
 
 // AGENTS.md Phase 1B — read-only backfill search. Runs every ACTIVE
@@ -75,7 +76,12 @@ async function stackExchangeSitesForProduct(productId: string): Promise<string[]
 // Upserted per (productId, platform, venue, externalId) — the same post can
 // legitimately be found by more than one query (different phrasings hitting
 // the same thread), and the unique constraint means a later query re-finding
-// it is a no-op, not a duplicate row or an error.
+// it is a no-op, not a duplicate row or an error. Returns how many matches
+// were genuinely new (not already-seen re-finds) — AGENTS.md Phase 2C's
+// query feedback loop tracks SearchQuery.matchCount as a lifetime total of
+// real new finds, not a raw per-run result count, so a query that keeps
+// re-finding the same handful of old posts every run doesn't look like it's
+// still producing fresh value.
 async function storeMatches({
   productId,
   queryId,
@@ -86,8 +92,24 @@ async function storeMatches({
   queryId: string;
   platform: SearchPlatform;
   matches: NormalizedMatch[];
-}): Promise<void> {
+}): Promise<number> {
+  const existingIds = new Set(
+    (
+      await prisma.searchResult.findMany({
+        where: {
+          productId,
+          platform,
+          venue: { in: [...new Set(matches.map((m) => m.venue))] },
+          externalId: { in: matches.map((m) => m.externalId) },
+        },
+        select: { venue: true, externalId: true },
+      })
+    ).map((r) => `${r.venue}::${r.externalId}`)
+  );
+
+  let newCount = 0;
   for (const match of matches) {
+    if (!existingIds.has(`${match.venue}::${match.externalId}`)) newCount += 1;
     await prisma.searchResult.upsert({
       where: {
         productId_platform_venue_externalId: {
@@ -115,6 +137,110 @@ async function storeMatches({
       update: {},
     });
   }
+  return newCount;
+}
+
+async function runRedditQuery(
+  productId: string,
+  query: { id: string; text: string },
+  sinceDate: Date,
+  summary: BackfillSummary
+): Promise<void> {
+  try {
+    await waitForRedditSearchSlot();
+    // A single retry on 429: the ~60s interval above is Reddit's
+    // documented steady-state limit, but a burst of other traffic
+    // against this IP (or a prior run finishing recently) can still
+    // trip the throttle once — one extra wait-and-retry recovers most
+    // of those without failing the whole query outright.
+    let matches;
+    try {
+      matches = await fetchRedditSearchMatches(query.text, sinceDate);
+    } catch (error) {
+      if (!(error instanceof Error) || !error.message.includes("429")) throw error;
+      await sleep(REDDIT_SEARCH_INTERVAL_MS * 2);
+      lastRedditSearchAt = Date.now();
+      matches = await fetchRedditSearchMatches(query.text, sinceDate);
+    }
+    const newCount = await storeMatches({
+      productId,
+      queryId: query.id,
+      platform: "REDDIT",
+      matches: matches.map((m) => ({
+        externalId: m.id,
+        title: m.title,
+        body: m.selftext,
+        permalink: m.permalink,
+        author: m.author,
+        postedAt: m.createdAt,
+        venue: m.venue,
+      })),
+    });
+    summary.matchesStored += matches.length;
+    await prisma.searchQuery.update({
+      where: { id: query.id },
+      data: { matchCount: { increment: newCount }, lastRunAt: new Date() },
+    });
+    summary.queriesRun += 1;
+  } catch (error) {
+    summary.errors.push({
+      query: query.text,
+      platform: "REDDIT",
+      message: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
+async function runStackExchangeQuery(
+  productId: string,
+  query: { id: string; text: string; variantType: string },
+  seSites: string[],
+  sinceDate: Date,
+  summary: BackfillSummary
+): Promise<void> {
+  try {
+    const isTag = query.variantType === "PLATFORM_IDIOMATIC";
+    let totalMatches = 0;
+    let newMatches = 0;
+    for (const site of seSites) {
+      const { matches } = await searchStackExchangeSite({
+        site,
+        text: isTag ? undefined : query.text,
+        tag: isTag ? query.text : undefined,
+        sinceDate,
+      });
+      totalMatches += matches.length;
+      newMatches += await storeMatches({
+        productId,
+        queryId: query.id,
+        platform: "STACKEXCHANGE",
+        matches: matches.map((m) => ({
+          externalId: m.id,
+          title: m.title,
+          body: m.selftext,
+          permalink: m.permalink,
+          author: m.author,
+          postedAt: m.createdAt,
+          venue: m.venue,
+          answerCount: m.answerCount,
+          hasAcceptedAnswer: m.hasAcceptedAnswer,
+          threadState: m.threadState,
+        })),
+      });
+    }
+    summary.matchesStored += totalMatches;
+    await prisma.searchQuery.update({
+      where: { id: query.id },
+      data: { matchCount: { increment: newMatches }, lastRunAt: new Date() },
+    });
+    summary.queriesRun += 1;
+  } catch (error) {
+    summary.errors.push({
+      query: query.text,
+      platform: "STACKEXCHANGE",
+      message: error instanceof Error ? error.message : String(error),
+    });
+  }
 }
 
 // Runs every ACTIVE SearchQuery for one product. Callers spanning multiple
@@ -122,7 +248,16 @@ async function storeMatches({
 // sequentially per product, not in parallel — the Reddit spacing above is
 // per-process, not per-product, and concurrent calls would silently race
 // past Reddit's real per-IP throttle.
+//
+// Reddit queries run one at a time, spaced by the real per-IP throttle;
+// Stack Exchange queries have no comparable global limit, so they run as
+// their own sequential chain concurrently with the Reddit chain instead of
+// queuing behind every Reddit wait — total wall time is roughly
+// max(redditChainTime, seChainTime) instead of their sum.
 export async function runBackfillSearchForProduct(productId: string): Promise<BackfillSummary> {
+  const { allowed } = await assertSearchPipelineGate(productId, "backfill-search");
+  if (!allowed) return { productId, queriesRun: 0, matchesStored: 0, errors: [] };
+
   const sinceDate = new Date(Date.now() - BACKFILL_WINDOW_DAYS * 24 * 60 * 60 * 1000);
   const queries = await prisma.searchQuery.findMany({
     where: { productId, status: "ACTIVE" },
@@ -131,87 +266,21 @@ export async function runBackfillSearchForProduct(productId: string): Promise<Ba
   const summary: BackfillSummary = { productId, queriesRun: 0, matchesStored: 0, errors: [] };
   const seSites = await stackExchangeSitesForProduct(productId);
 
-  for (const query of queries) {
-    try {
-      if (query.platform === "REDDIT") {
-        await waitForRedditSearchSlot();
-        // A single retry on 429: the ~60s interval above is Reddit's
-        // documented steady-state limit, but a burst of other traffic
-        // against this IP (or a prior run finishing recently) can still
-        // trip the throttle once — one extra wait-and-retry recovers most
-        // of those without failing the whole query outright.
-        let matches;
-        try {
-          matches = await fetchRedditSearchMatches(query.text, sinceDate);
-        } catch (error) {
-          if (!(error instanceof Error) || !error.message.includes("429")) throw error;
-          await sleep(REDDIT_SEARCH_INTERVAL_MS * 2);
-          lastRedditSearchAt = Date.now();
-          matches = await fetchRedditSearchMatches(query.text, sinceDate);
-        }
-        await storeMatches({
-          productId,
-          queryId: query.id,
-          platform: "REDDIT",
-          matches: matches.map((m) => ({
-            externalId: m.id,
-            title: m.title,
-            body: m.selftext,
-            permalink: m.permalink,
-            author: m.author,
-            postedAt: m.createdAt,
-            venue: m.venue,
-          })),
-        });
-        summary.matchesStored += matches.length;
-        await prisma.searchQuery.update({
-          where: { id: query.id },
-          data: { matchCount: matches.length, lastRunAt: new Date() },
-        });
-      } else {
-        const isTag = query.variantType === "PLATFORM_IDIOMATIC";
-        let totalMatches = 0;
-        for (const site of seSites) {
-          const { matches } = await searchStackExchangeSite({
-            site,
-            text: isTag ? undefined : query.text,
-            tag: isTag ? query.text : undefined,
-            sinceDate,
-          });
-          totalMatches += matches.length;
-          await storeMatches({
-            productId,
-            queryId: query.id,
-            platform: "STACKEXCHANGE",
-            matches: matches.map((m) => ({
-              externalId: m.id,
-              title: m.title,
-              body: m.selftext,
-              permalink: m.permalink,
-              author: m.author,
-              postedAt: m.createdAt,
-              venue: m.venue,
-              answerCount: m.answerCount,
-              hasAcceptedAnswer: m.hasAcceptedAnswer,
-              threadState: m.threadState,
-            })),
-          });
-        }
-        summary.matchesStored += totalMatches;
-        await prisma.searchQuery.update({
-          where: { id: query.id },
-          data: { matchCount: totalMatches, lastRunAt: new Date() },
-        });
+  const redditQueries = queries.filter((q) => q.platform === "REDDIT");
+  const seQueries = queries.filter((q) => q.platform === "STACKEXCHANGE");
+
+  await Promise.all([
+    (async () => {
+      for (const query of redditQueries) {
+        await runRedditQuery(productId, query, sinceDate, summary);
       }
-      summary.queriesRun += 1;
-    } catch (error) {
-      summary.errors.push({
-        query: query.text,
-        platform: query.platform,
-        message: error instanceof Error ? error.message : String(error),
-      });
-    }
-  }
+    })(),
+    (async () => {
+      for (const query of seQueries) {
+        await runStackExchangeQuery(productId, query, seSites, sinceDate, summary);
+      }
+    })(),
+  ]);
 
   return summary;
 }

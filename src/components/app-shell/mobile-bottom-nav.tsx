@@ -2,25 +2,31 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { NAV_ITEMS } from "@/components/app-shell/nav-items";
+import { NAV_ITEMS, SEARCH_NAV_ITEM } from "@/components/app-shell/nav-items";
 import { cn } from "@/lib/utils";
 
 export function MobileBottomNav({
   projectId,
   unrepliedSignalCount,
+  showSearchPipeline = false,
 }: {
   projectId: string;
   unrepliedSignalCount: number;
+  showSearchPipeline?: boolean;
 }) {
   const pathname = usePathname();
   const base = `/projects/${projectId}`;
+  const items = showSearchPipeline ? [...NAV_ITEMS, SEARCH_NAV_ITEM] : NAV_ITEMS;
 
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-40 grid h-16 shrink-0 grid-cols-7 border-t border-border bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden"
+      className={cn(
+        "fixed inset-x-0 bottom-0 z-40 grid h-16 shrink-0 border-t border-border bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden",
+        showSearchPipeline ? "grid-cols-8" : "grid-cols-7"
+      )}
       aria-label="Primary"
     >
-      {NAV_ITEMS.map(({ segment, label, icon: Icon }) => {
+      {items.map(({ segment, label, icon: Icon }) => {
         const href = `${base}/${segment}`;
         const isActive = pathname.startsWith(href);
         return (

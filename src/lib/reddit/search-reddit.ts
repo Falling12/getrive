@@ -23,6 +23,53 @@ import {
 // responsible for spacing calls out.
 const REDDIT_SEARCH_LIMIT = 100;
 
+// Common words carrying no distinguishing signal for relevance filtering —
+// stripped from a query before checking match overlap so a query like
+// "promoting my startup without getting banned" is judged on "promoting",
+// "startup", "banned", not "my"/"without"/"getting", which would match
+// almost any post. Exported for reuse by
+// lib/services/query-feedback.service.ts's Phase 2C query-mining, which
+// needs the same "strip generic words, keep the distinctive ones" logic to
+// turn a passing signal's own title into a candidate query phrase.
+export const STOPWORDS = new Set([
+  "a", "an", "the", "and", "or", "but", "of", "to", "in", "on", "for", "with",
+  "without", "about", "that", "this", "is", "are", "was", "were", "be", "been",
+  "my", "your", "our", "their", "his", "her", "its", "i", "you", "we", "they",
+  "it", "as", "at", "by", "from", "if", "not", "no", "do", "does", "did",
+  "so", "than", "then", "just", "get", "getting", "got", "how", "what",
+  "who", "which", "will", "would", "can", "could", "should",
+]);
+
+export function significantWords(text: string): string[] {
+  return [...new Set(text.toLowerCase().match(/[a-z0-9']+/g) ?? [])].filter(
+    (word) => word.length >= 3 && !STOPWORDS.has(word)
+  );
+}
+
+// Reddit's search.rss, run with sort=new (chosen elsewhere to maximize how
+// far back into the backfill window the capped 100-result feed reaches —
+// see fetchRedditSearchMatches), returns loosely/OR-matched results ranked
+// purely by recency rather than relevance. For generic multi-word queries
+// this surfaces near-random recent posts sharing no real connection to the
+// query (confirmed empirically: e.g. "promoting my startup without getting
+// banned" returned a CPAP-machine post and a flood-conspiracy post — no
+// query word appeared in either).
+//
+// A single shared word is not enough of a backstop — confirmed empirically
+// that "no audience no list to launch" still passed a single-word check by
+// matching a video-game "Launch Trailer" post on the word "launch" alone,
+// and "how do I get my first users" matched unrelated dating-advice posts
+// on "first" alone. Requiring at least two overlapping significant words
+// (or all of them, for a query left with only one after stopword removal)
+// is a much stronger signal that the match is real rather than coincidental
+// single-word overlap.
+function isRelevantMatch(queryWords: string[], title: string, body: string): boolean {
+  if (queryWords.length === 0) return true;
+  const haystack = `${title} ${body}`.toLowerCase();
+  const overlap = queryWords.filter((word) => new RegExp(`\\b${word}\\b`).test(haystack)).length;
+  return overlap >= Math.min(2, queryWords.length);
+}
+
 export interface RawRedditSearchMatch {
   id: string;
   title: string;
@@ -37,18 +84,28 @@ export interface RawRedditSearchMatch {
 // each query against Reddit search API", and lets venue-mining (Phase 3A)
 // discover subreddits the product isn't already polling. `sinceDate` filters
 // client-side (Reddit's search.rss has no date-range param); the RSS feed
-// only returns its most recent ~100 matches regardless of true match volume,
-// so a very high-frequency query may undercount true trailing-window volume
-// — acceptable for the base-rate signal this feeds (HIGH vs LOW is a coarse
-// threshold, not a precise count) given Reddit search is the rate-constrained
-// call this whole pipeline is designed around.
+// only returns its ~100 best-matching results, so a very high-frequency
+// query may undercount true trailing-window volume — acceptable for the
+// base-rate signal this feeds (HIGH vs LOW is a coarse threshold, not a
+// precise count) given Reddit search is the rate-constrained call this
+// whole pipeline is designed around.
+//
+// sort=relevance (not sort=new): confirmed empirically that sort=new
+// discards Reddit's own relevance ranking and returns the newest posts that
+// loosely/OR-match any query word, which for generic multi-word queries is
+// close to random noise (e.g. "promoting my startup without getting
+// banned" returned a CPAP-machine post and a flood-conspiracy post with the
+// old sort=new). sort=relevance lets Reddit's ranking — a much stronger
+// signal than a hand-rolled keyword-overlap check can produce against
+// Reddit's everyday-topics corpus — do the real filtering; isRelevantMatch
+// above stays on as a light backstop, not the primary filter.
 export async function fetchRedditSearchMatches(
   query: string,
   sinceDate: Date
 ): Promise<RawRedditSearchMatch[]> {
   const params = new URLSearchParams({
     q: query,
-    sort: "new",
+    sort: "relevance",
     limit: String(REDDIT_SEARCH_LIMIT),
   });
   const url = `https://www.reddit.com/search.rss?${params.toString()}`;
@@ -69,6 +126,7 @@ export async function fetchRedditSearchMatches(
 
   const entries = Array.isArray(rawEntries) ? rawEntries : [rawEntries];
   const matches: RawRedditSearchMatch[] = [];
+  const queryWords = significantWords(query);
 
   for (const entry of entries) {
     // Reddit's sitewide search feed can return subreddits themselves as
@@ -82,10 +140,14 @@ export async function fetchRedditSearchMatches(
     const createdAt = new Date(entry.published);
     if (!venue || Number.isNaN(createdAt.getTime()) || createdAt < sinceDate) continue;
 
+    const title = entry.title;
+    const selftext = extractSelftext(textOf(entry.content));
+    if (!isRelevantMatch(queryWords, title, selftext)) continue;
+
     matches.push({
       id: entry.id.replace(/^t3_/, ""),
-      title: entry.title,
-      selftext: extractSelftext(textOf(entry.content)),
+      title,
+      selftext,
       author: entry.author?.name?.replace(/^\/u\//, "") ?? "unknown",
       permalink,
       createdAt,

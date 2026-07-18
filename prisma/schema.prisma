@@ -152,6 +152,28 @@ model Product {
   baseRateClass       BaseRateClass?
   baseRateMeasuredAt  DateTime?
   baseRateMatchCount  Int?
+  // Set when a manual measurement run (Phase 1: query generation + backfill
+  // search + base-rate classification) starts, cleared when it ends — same
+  // in-progress-lock shape as activePollStartedAt above, staleness-bound by
+  // MEASUREMENT_STALE_MINUTES (lib/services/measurement-run.service.ts).
+  activeMeasurementStartedAt DateTime?
+  // Same lock shape as activeMeasurementStartedAt, for a manual search-mode
+  // ingestion run (Phase 2A/2B/2C/3A scoring pass).
+  activeIngestionStartedAt   DateTime?
+  // Outcome of the most recent search-mode ingestion run (Phase 2A/2B) —
+  // the "last run" tracking pair the measurement fields above already had
+  // (baseRateClass/baseRateMeasuredAt/baseRateMatchCount), mirrored here
+  // since ingestion has no single classification result, just counts.
+  // Field names match SearchIngestionSummary's shape
+  // (lib/services/search-ingestion.service.ts) so the mapping is direct:
+  // matched=matchesEligible, filtered=matchesSkippedResolved,
+  // scored=matchesScored, signals=signalsCreated, errors=errors.
+  lastIngestionAt       DateTime?
+  lastIngestionMatched  Int?
+  lastIngestionFiltered Int?
+  lastIngestionScored   Int?
+  lastIngestionSignals  Int?
+  lastIngestionErrors   Int?
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
 
@@ -270,6 +292,21 @@ model Source {
   // Manually updated by the founder (no Reddit API access to read it for
   // real — see the redditUsername comment on Product).
   currentKarma         Int         @default(0)
+  // True for a Source auto-created by search-ingestion.service.ts's
+  // findOrCreateSourceForVenue (one per distinct venue a search match
+  // landed in) — never set by any founder-facing add-source flow. Replaces
+  // the earlier fragile `reasoning.includes("search-mode ingestion")`
+  // string check venue-mining.service.ts used to gate on. `selected` stays
+  // false on these until the founder explicitly promotes one (Phase 3A
+  // venue mining / addDiscoveredSourceAction), so they never show as
+  // "active" and are structurally excluded from polling (poll.ts's source
+  // queries all require selected: true).
+  discoveredViaSearch  Boolean     @default(false)
+  // Set when the founder dismisses this source's venue-mining
+  // recommendation (Phase 3A) — excluded from getVenueMiningCandidates
+  // from then on, even though it still qualifies on signal count, so a
+  // dismissed suggestion doesn't keep reappearing on every page load.
+  venueMiningDismissedAt DateTime?
   createdAt            DateTime    @default(now())
   updatedAt            DateTime    @updatedAt
 

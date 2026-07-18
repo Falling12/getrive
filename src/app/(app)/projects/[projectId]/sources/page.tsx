@@ -57,16 +57,32 @@ export default async function SourcesPage({
           </p>
         </header>
 
-        <AiDiscoveryPanel projectId={projectId} />
+        <section
+          data-tour="add-source"
+          className="overflow-hidden rounded-xl border border-border bg-background"
+        >
+          <header className="border-b border-border/60 p-5 md:p-6">
+            <h2 className="text-lg font-medium text-foreground">Add sources</h2>
+            <p className="mt-1 max-w-[68ch] font-mono text-[11px] leading-relaxed text-muted-foreground">
+              Enable a channel or add a specific community. Getrive listens only after a source is
+              active.
+            </p>
+          </header>
 
-        <div data-tour="add-source">
-          <AddSourceForm
-            projectId={projectId}
-            hasHackerNews={hasHackerNews}
-            hasIndieHackers={hasIndieHackers}
-            hasAskMetaFilter={hasAskMetaFilter}
-          />
-        </div>
+          <div className="divide-y divide-border/60">
+            <div className="p-5 md:p-6">
+              <AddSourceForm
+                projectId={projectId}
+                hasHackerNews={hasHackerNews}
+                hasIndieHackers={hasIndieHackers}
+                hasAskMetaFilter={hasAskMetaFilter}
+              />
+            </div>
+            <div className="p-5 md:p-6">
+              <AiDiscoveryPanel projectId={projectId} />
+            </div>
+          </div>
+        </section>
 
         <section data-tour="source-list" className="flex flex-col gap-6">
           {sources.length === 0 ? (
