@@ -17,9 +17,20 @@ export const isLocalDev = process.env.NODE_ENV !== "production";
 // founder's own account, for uncapped dogfooding/testing directly against
 // production. Not exposed anywhere in the UI; checked server-side only, via
 // isExemptFromLimits() below.
-const UNLIMITED_ACCOUNT_EMAILS = new Set(["senkcsani@gmail.com", "sonic002.96@gmail.com"]);
+//
+// Exported (along with isUnlimitedAccount) for
+// lib/services/search-pipeline-gate.service.ts, which gates the whole
+// search-intelligence pipeline (Phase 1/2/2C/3A) to these accounts only.
+// That gate deliberately uses isUnlimitedAccount directly, NOT
+// isExemptFromLimits — isExemptFromLimits also passes for isLocalDev
+// (true for any non-production run, including every local test script),
+// which would make the pipeline gate pass for every account whenever it's
+// invoked outside a production deploy — exactly where it's actually run
+// and tested. The pipeline gate needs to mean "this specific account",
+// full stop, not "this account, or anyone at all in dev".
+export const UNLIMITED_ACCOUNT_EMAILS = new Set(["senkcsani@gmail.com", "sonic002.96@gmail.com"]);
 
-function isUnlimitedAccount(email?: string | null): boolean {
+export function isUnlimitedAccount(email?: string | null): boolean {
   return !!email && UNLIMITED_ACCOUNT_EMAILS.has(email.toLowerCase());
 }
 

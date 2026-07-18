@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { AuthMark } from "@/components/auth/auth-mark";
 import { AccountLink } from "@/components/app-shell/account-link";
 import { ProjectSwitcher, type ProjectSummary } from "@/components/app-shell/project-switcher";
-import { NAV_ITEMS } from "@/components/app-shell/nav-items";
+import { NAV_ITEMS, SEARCH_NAV_ITEM } from "@/components/app-shell/nav-items";
 import { cn } from "@/lib/utils";
 
 export function AppSidebar({
@@ -15,6 +15,7 @@ export function AppSidebar({
   unrepliedSignalCount,
   email,
   image,
+  showSearchPipeline = false,
 }: {
   projectId: string;
   projectName: string;
@@ -22,9 +23,11 @@ export function AppSidebar({
   unrepliedSignalCount: number;
   email: string;
   image?: string | null;
+  showSearchPipeline?: boolean;
 }) {
   const pathname = usePathname();
   const base = `/projects/${projectId}`;
+  const items = showSearchPipeline ? [...NAV_ITEMS, SEARCH_NAV_ITEM] : NAV_ITEMS;
 
   return (
     <aside className="relative z-40 hidden h-full w-[240px] shrink-0 flex-col border-r border-border bg-background/80 backdrop-blur-md md:flex">
@@ -37,7 +40,7 @@ export function AppSidebar({
       </div>
 
       <nav className="mt-4 flex flex-1 flex-col gap-1 px-3">
-        {NAV_ITEMS.map(({ segment, label, icon: Icon }) => {
+        {items.map(({ segment, label, icon: Icon }) => {
           const href = `${base}/${segment}`;
           const isActive = pathname.startsWith(href);
           return (

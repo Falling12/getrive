@@ -11,7 +11,9 @@ import { SignalGroup } from "@/components/signals/signal-group";
 import { PollNowButton } from "@/components/signals/poll-now-button";
 import { ThresholdControl } from "@/components/signals/threshold-control";
 import { BelowThresholdSection } from "@/components/signals/below-threshold-section";
+import { HistoricalMentionsSection } from "@/components/signals/historical-mentions-section";
 import { POLL_STALE_MINUTES } from "@/lib/reddit/poll";
+import { isEligibleForScoring } from "@/lib/services/search-ingestion.service";
 
 // How many below-threshold candidates to actually list in the collapsed
 // section — bounded independent of the (unbounded) count shown in its
@@ -116,6 +118,23 @@ export default async function SignalsPage({
     }),
   ]);
 
+  // Historical mentions — Phase 2B's age/state bucketing (isEligibleForScoring,
+  // search-ingestion.service.ts) never scores these, so they never become a
+  // Signal or a ScoredPost row anywhere else. Reuses that exact predicate
+  // rather than re-deriving the same rule as a Prisma where clause, so the
+  // two never drift apart. Bounded to a recent window (most-recent-first)
+  // for display, same spirit as BELOW_THRESHOLD_DISPLAY_LIMIT above — not a
+  // claim of the true all-time count for very high-volume products.
+  const HISTORICAL_SCAN_WINDOW = 300;
+  const recentSearchResults = await prisma.searchResult.findMany({
+    where: { productId: product.id, ...(source ? { venue: source } : {}) },
+    orderBy: { postedAt: "desc" },
+    take: HISTORICAL_SCAN_WINDOW,
+  });
+  const historicalMentions = recentSearchResults
+    .filter((r) => !isEligibleForScoring(r))
+    .slice(0, BELOW_THRESHOLD_DISPLAY_LIMIT);
+
   function toCardProps(signal: (typeof signals)[number]) {
     return {
       id: signal.id,
@@ -128,6 +147,7 @@ export default async function SignalsPage({
       postedAt: signal.postedAt,
       replied: signal.replied,
       dismissed: signal.dismissed,
+      isSearchOrigin: signal.source.discoveredViaSearch,
     };
   }
 
@@ -217,6 +237,17 @@ export default async function SignalsPage({
               scoredAt: p.scoredAt,
               sourceType: p.source.type,
               sourceName: p.source.name,
+            }))}
+          />
+
+          <HistoricalMentionsSection
+            totalCount={historicalMentions.length}
+            items={historicalMentions.map((r) => ({
+              id: r.id,
+              title: r.title,
+              permalink: r.permalink,
+              venue: r.venue,
+              postedAt: r.postedAt,
             }))}
           />
         </section>

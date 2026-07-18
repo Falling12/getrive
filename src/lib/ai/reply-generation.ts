@@ -22,10 +22,17 @@ export interface ReplyGenerationResult {
 // comment" instructions produce a wrong-feeling draft on Hacker News (HN
 // culture reads self-promotion mentions as much more suspect, rewards
 // terser and more technical phrasing, and has no concept of subreddit-by-
-// subreddit variation) or on IndieHackers (a supportive founder-to-founder
+// subreddit variation), on IndieHackers (a supportive founder-to-founder
 // community where sharing your own product is expected peer generosity,
-// not suspect self-promotion the way it is on HN) — this is the one line
-// of source-specific steering; everything else in the prompt stays shared.
+// not suspect self-promotion the way it is on HN), on Stack Exchange (an
+// official Q&A network with an explicit, strictly-enforced self-promotion
+// policy — answers are expected to be terse, technical, and cite the
+// actual tool/library by name rather than talk around it, closer to
+// documentation than conversation), or on Ask MetaFilter (a paid,
+// moderated, more personal community whose culture rewards long-form,
+// narrative, conversational answers over quick link-drops — closer to
+// Reddit's tone than Stack Exchange's) — this is the one line of
+// source-specific steering; everything else in the prompt stays shared.
 function sourceGuidance(sourceType: SourceType, sourceName: string): string {
   switch (sourceType) {
     case "HACKERNEWS":
@@ -43,6 +50,24 @@ function sourceGuidance(sourceType: SourceType, sourceName: string): string {
         "genuinely tied to the poster's specific situation. Lead with real empathy for the struggle " +
         "described, and don't undersell the product mention the way HN's guidance does — a fuller, " +
         "warmer mention fits this community better than the terse HN aside or Reddit's low-key default."
+      );
+    case "STACKEXCHANGE":
+      return (
+        "This is a Stack Exchange answer, not a Reddit reply or a forum comment — Stack Exchange's " +
+        "culture (and its explicit self-promotion policy) expects terse, technical, cite-the-actual-" +
+        "tool answers that read as documentation, not conversation. Skip pleasantries and hedging; " +
+        "lead with the concrete answer to the actual question, name the specific tool/approach plainly " +
+        "rather than gesturing at it, and disclose the product connection directly and briefly rather " +
+        "than working it in gradually the way a Reddit or IndieHackers reply would."
+      );
+    case "ASKMETAFILTER":
+      return (
+        "This is an Ask MetaFilter answer, not a terse Stack Exchange one — MetaFilter is a small, paid, " +
+        "moderated community whose culture rewards thoughtful, personable, narrative answers over quick " +
+        "link-drops, closer to Reddit's tone than Stack Exchange's. It's fine (expected, even) to write " +
+        "a longer, more conversational answer that explains your reasoning and relates to the poster's " +
+        "specific situation before the product mention, rather than the clipped, cite-the-tool style " +
+        "that fits Stack Exchange."
       );
     case "REDDIT_SUBREDDIT":
     default:

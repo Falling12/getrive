@@ -9,7 +9,9 @@ import { decodeHtmlEntities } from "@/lib/html-text";
 // User-Agent strings outright. This is a pragmatic MVP choice, not a
 // long-term-guaranteed one: Reddit could tighten detection further at any
 // time, so failures here should be visible (logged), not silent.
-const BROWSER_USER_AGENT =
+// Exported for reuse by lib/reddit/search-reddit.ts (same bot-detection
+// constraint applies to reddit.com's search.rss as to the subreddit feeds).
+export const BROWSER_USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36";
 
 // Reddit's multi-subreddit URL syntax (r/sub1+sub2+sub3) works on the .rss
@@ -37,7 +39,10 @@ export const MAX_SUBREDDITS_PER_BATCH = 40;
 // subreddit sharing a batch with very busy ones, just a much better one.
 const REDDIT_RSS_LIMIT = 100;
 
-const xmlParser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: "@_" });
+// Exported (not just used internally) so lib/reddit/search-reddit.ts — the
+// Phase 1 backfill/search fetcher — can parse Reddit's search.rss feed with
+// the exact same Atom-entry logic instead of a second, drifting copy of it.
+export const xmlParser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: "@_" });
 
 export interface RawRedditPost {
   id: string;
@@ -48,7 +53,7 @@ export interface RawRedditPost {
   createdAt: Date;
 }
 
-interface AtomEntry {
+export interface AtomEntry {
   id: string;
   title: string;
   // The <content type="html"> element has an attribute, so with
@@ -60,7 +65,7 @@ interface AtomEntry {
   link?: { "@_href"?: string };
 }
 
-function textOf(value: string | { "#text"?: string } | undefined): string {
+export function textOf(value: string | { "#text"?: string } | undefined): string {
   if (typeof value === "string") return value;
   return value?.["#text"] ?? "";
 }
@@ -68,7 +73,7 @@ function textOf(value: string | { "#text"?: string } | undefined): string {
 // Reddit's RSS <content> is the post's HTML body plus an appended
 // "submitted by ... [link] [comments]" footer. Strip the footer, strip
 // remaining HTML tags, and decode entities to get plain text.
-function extractSelftext(html: string): string {
+export function extractSelftext(html: string): string {
   const withoutComments = html.replace(/<!--\s*SC_(OFF|ON)\s*-->/g, "");
   const submittedByIndex = withoutComments.indexOf("submitted by");
   const withoutFooter =
@@ -80,8 +85,10 @@ function extractSelftext(html: string): string {
 }
 
 // Every entry's permalink embeds its own subreddit (/r/<name>/comments/...),
-// which is how a combined multi-subreddit feed gets split back apart below.
-function subredditFromPermalink(permalink: string): string | undefined {
+// which is how a combined multi-subreddit feed gets split back apart below
+// (and how search-reddit.ts recovers which subreddit a sitewide search hit
+// landed in).
+export function subredditFromPermalink(permalink: string): string | undefined {
   return permalink.match(/^https?:\/\/[^/]+\/r\/([^/]+)\//)?.[1];
 }
 

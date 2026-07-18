@@ -7,12 +7,20 @@ import { prisma } from "@/lib/prisma";
 import { isExemptFromLimits, MAX_MONITORED_SOURCES, MAX_MONITORED_SOURCES_PER_ACCOUNT } from "@/lib/limits";
 import { countAccountMonitoredSources } from "@/lib/account-limits";
 import { discoverSources } from "@/lib/ai/source-discovery";
+import { getVenueMiningCandidates } from "@/lib/services/venue-mining.service";
 import { describeSelectedIcp } from "@/lib/services/positioning.service";
+import { stackExchangeSiteDomain } from "@/lib/sources/format";
 import type { SourceType } from "@/generated/prisma/client";
 
 const SUBREDDIT_NAME_PATTERN = /^[A-Za-z0-9_]{3,21}$/;
+// Stack Exchange site slugs, as used in the API's `site` query param — plain
+// lowercase-alphanumeric (softwarerecs, superuser, askubuntu, serverfault),
+// no hyphens/dots. Locale subsites (e.g. "es.stackoverflow") aren't covered
+// by this pattern; out of scope for this pass.
+const STACKEXCHANGE_SITE_PATTERN = /^[a-z0-9]{2,32}$/i;
 const HACKERNEWS_SOURCE_NAME = "Hacker News";
 const INDIEHACKERS_SOURCE_NAME = "IndieHackers";
+const ASKMETAFILTER_SOURCE_NAME = "Ask MetaFilter";
 
 async function assertOwned(sourceId: string, userId: string) {
   await prisma.source.findFirstOrThrow({
@@ -152,11 +160,85 @@ export async function addRedditSourceAction(
   return { success: true };
 }
 
+// Mirrors addRedditSourceAction — Stack Exchange is also monitored per
+// specific community (one Source row per site slug), not a single shared
+// feed, since the API has no way to combine multiple sites into one query
+// (see fetch-stackexchange.ts).
+export async function addStackExchangeSourceAction(
+  projectId: string,
+  _prevState: AddSourceState,
+  formData: FormData
+): Promise<AddSourceState> {
+  const session = await requireSession();
+  const product = await prisma.product.findFirst({
+    where: { id: projectId, userId: session.user.id },
+  });
+  if (!product) return { error: "Project not found." };
+
+  const rawSite = String(formData.get("site") ?? "").trim().toLowerCase();
+  if (!STACKEXCHANGE_SITE_PATTERN.test(rawSite)) {
+    return { error: "Enter a valid Stack Exchange site slug (e.g. softwarerecs, superuser, askubuntu)." };
+  }
+
+  const monitoredCount = await prisma.source.count({
+    where: { productId: product.id, selected: true },
+  });
+  if (!isExemptFromLimits(session.user.email) && monitoredCount >= MAX_MONITORED_SOURCES) {
+    return {
+      error: `You've reached the ${MAX_MONITORED_SOURCES}-source limit for this project. Stop monitoring one before adding another.`,
+    };
+  }
+
+  const accountMonitoredCount = await countAccountMonitoredSources(session.user.id);
+  if (!isExemptFromLimits(session.user.email) && accountMonitoredCount >= MAX_MONITORED_SOURCES_PER_ACCOUNT) {
+    return {
+      error: `You've reached the ${MAX_MONITORED_SOURCES_PER_ACCOUNT}-source limit across your account. Stop monitoring one somewhere before adding another.`,
+    };
+  }
+
+  // Same re-activate-vs-create pattern as addRedditSourceAction — the
+  // unique constraint is on (productId, name) regardless of `selected`.
+  const existing = await prisma.source.findUnique({
+    where: { productId_name: { productId: product.id, name: rawSite } },
+  });
+  if (existing?.selected) {
+    return { error: `${stackExchangeSiteDomain(rawSite)} is already being monitored.` };
+  }
+
+  if (existing) {
+    await prisma.source.update({
+      where: { id: existing.id },
+      data: { selected: true, rank: await nextRank(product.id) },
+    });
+  } else {
+    await prisma.source.create({
+      data: {
+        productId: product.id,
+        type: "STACKEXCHANGE",
+        name: rawSite,
+        reasoning: "Added manually by you.",
+        rank: await nextRank(product.id),
+        selected: true,
+        karmaStatus: "READY",
+      },
+    });
+  }
+
+  revalidatePath(`/projects/${projectId}/sources`);
+  revalidatePath(`/projects/${projectId}/signals`);
+  return { success: true };
+}
+
 export interface DiscoveredSourceView {
   type: SourceType;
   name: string;
   reasoning: string;
   alreadyActive: boolean;
+  // Present only for venue-mining candidates (Phase 3A) — real evidence
+  // this venue already produced Signals, vs. an LLM guess with no track
+  // record. The UI uses this to visually separate "proven" from "guessed"
+  // instead of rendering both identically.
+  evidence?: { signalCount: number; matchCount: number };
 }
 
 export type DiscoverSourcesState =
@@ -169,6 +251,13 @@ export type DiscoverSourcesState =
 // wipe-and-replace — a founder's audience understanding evolves past day
 // zero, and re-discovery shouldn't touch sources they're already
 // monitoring.
+//
+// AGENTS.md Phase 3A: venue-mining candidates (real evidence from search-mode
+// ingestion, see lib/services/venue-mining.service.ts) are listed first,
+// ahead of the LLM's guesses — a venue that's already produced real Signals
+// is a stronger recommendation than one the AI merely thinks might work.
+// Both kinds activate through the same addDiscoveredSourceAction below,
+// since both are just an existing Source row waiting for `selected: true`.
 export async function discoverNewSourcesAction(projectId: string): Promise<DiscoverSourcesState> {
   const session = await requireSession();
   const product = await prisma.product.findFirst({
@@ -184,6 +273,8 @@ export async function discoverNewSourcesAction(projectId: string): Promise<Disco
   const existingKeys = new Set(
     existing.filter((s) => s.selected).map((s) => `${s.type}:${s.name.toLowerCase()}`)
   );
+
+  const venueMiningCandidates = await getVenueMiningCandidates(product.id);
 
   let suggestions;
   try {
@@ -201,12 +292,21 @@ export async function discoverNewSourcesAction(projectId: string): Promise<Disco
 
   return {
     status: "results",
-    suggestions: suggestions.map((s) => ({
-      type: s.type,
-      name: s.name,
-      reasoning: s.reasoning,
-      alreadyActive: existingKeys.has(`${s.type}:${s.name.toLowerCase()}`),
-    })),
+    suggestions: [
+      ...venueMiningCandidates.map((c) => ({
+        type: c.type,
+        name: c.name,
+        reasoning: c.reasoning,
+        alreadyActive: existingKeys.has(`${c.type}:${c.name.toLowerCase()}`),
+        evidence: { signalCount: c.signalCount, matchCount: c.matchCount },
+      })),
+      ...suggestions.map((s) => ({
+        type: s.type,
+        name: s.name,
+        reasoning: s.reasoning,
+        alreadyActive: existingKeys.has(`${s.type}:${s.name.toLowerCase()}`),
+      })),
+    ],
   };
 }
 
@@ -375,6 +475,63 @@ export async function enableIndieHackersAction(projectId: string): Promise<AddSo
         productId: product.id,
         type: "INDIEHACKERS",
         name: INDIEHACKERS_SOURCE_NAME,
+        reasoning: "Enabled manually by you.",
+        rank: await nextRank(product.id),
+        selected: true,
+        karmaStatus: "READY",
+      },
+    });
+  }
+
+  revalidatePath(`/projects/${projectId}/sources`);
+  revalidatePath(`/projects/${projectId}/signals`);
+  return { success: true };
+}
+
+// Mirrors enableIndieHackersAction — Ask MetaFilter is also one shared feed
+// with no per-project sub-target, and has no karma/self-promo gate of its
+// own either, so it's created READY the same way.
+export async function enableAskMetaFilterAction(projectId: string): Promise<AddSourceState> {
+  const session = await requireSession();
+  const product = await prisma.product.findFirst({
+    where: { id: projectId, userId: session.user.id },
+  });
+  if (!product) return { error: "Project not found." };
+
+  const monitoredCount = await prisma.source.count({
+    where: { productId: product.id, selected: true },
+  });
+  if (!isExemptFromLimits(session.user.email) && monitoredCount >= MAX_MONITORED_SOURCES) {
+    return {
+      error: `You've reached the ${MAX_MONITORED_SOURCES}-source limit for this project. Stop monitoring one before adding another.`,
+    };
+  }
+
+  const accountMonitoredCount = await countAccountMonitoredSources(session.user.id);
+  if (!isExemptFromLimits(session.user.email) && accountMonitoredCount >= MAX_MONITORED_SOURCES_PER_ACCOUNT) {
+    return {
+      error: `You've reached the ${MAX_MONITORED_SOURCES_PER_ACCOUNT}-source limit across your account. Stop monitoring one somewhere before adding another.`,
+    };
+  }
+
+  const existing = await prisma.source.findUnique({
+    where: { productId_name: { productId: product.id, name: ASKMETAFILTER_SOURCE_NAME } },
+  });
+  if (existing?.selected) {
+    return { error: "Ask MetaFilter is already being monitored." };
+  }
+
+  if (existing) {
+    await prisma.source.update({
+      where: { id: existing.id },
+      data: { selected: true, rank: await nextRank(product.id) },
+    });
+  } else {
+    await prisma.source.create({
+      data: {
+        productId: product.id,
+        type: "ASKMETAFILTER",
+        name: ASKMETAFILTER_SOURCE_NAME,
         reasoning: "Enabled manually by you.",
         rank: await nextRank(product.id),
         selected: true,

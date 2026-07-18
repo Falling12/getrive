@@ -2,7 +2,7 @@
 
 import { useTransition } from "react";
 import Link from "next/link";
-import { Target, Info, CheckCircle2, XCircle, MessageCircle } from "lucide-react";
+import { Target, Info, CheckCircle2, XCircle, MessageCircle, Radar } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatRelativeTime } from "@/lib/format";
 import { dismissSignalAction } from "@/app/(app)/projects/[projectId]/signals/actions";
@@ -18,6 +18,11 @@ export interface SignalCardData {
   postedAt: Date;
   replied: boolean;
   dismissed: boolean;
+  // True when this signal's source is one search-ingestion.service.ts
+  // auto-created (Source.discoveredViaSearch) rather than a community the
+  // founder chose to poll — distinguished in the UI since it came from
+  // actively searching for the pain point, not from a monitored feed.
+  isSearchOrigin?: boolean;
 }
 
 type Tier = "high" | "medium" | "low";
@@ -96,6 +101,12 @@ export function SignalCard({ projectId, signal }: { projectId: string; signal: S
             >
               {signal.sourceLabel}
             </span>
+            {signal.isSearchOrigin && (
+              <span className="flex items-center gap-1 rounded-full border border-accent/30 bg-accent/10 px-1.5 py-0.5 font-mono text-[9px] tracking-wide text-accent">
+                <Radar className="size-2.5" />
+                Search
+              </span>
+            )}
             <span
               className={cn(
                 "font-mono text-[10px]",

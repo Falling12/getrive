@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Sparkles, Plus, Check, Loader2 } from "lucide-react";
+import { Sparkles, Radar, Plus, Check, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   discoverNewSourcesAction,
@@ -34,20 +34,20 @@ export function AiDiscoveryPanel({ projectId }: { projectId: string }) {
     });
   }
 
+  const proven = suggestions?.filter((s) => s.evidence) ?? [];
+  const guessed = suggestions?.filter((s) => !s.evidence) ?? [];
+
   return (
-    <section className="overflow-hidden rounded-xl border border-border bg-background">
-      <header className="flex flex-col gap-3 border-b border-border/60 p-5 md:flex-row md:items-center md:justify-between md:p-6">
-        <div className="flex items-start gap-3">
-          <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded border border-border bg-secondary/20 text-accent">
-            <Sparkles className="size-4" />
-          </span>
-          <div>
-            <h2 className="text-lg font-medium text-foreground">AI discovery</h2>
-            <p className="mt-1 max-w-[68ch] font-mono text-[11px] leading-relaxed text-muted-foreground">
-              Ask Getrive to suggest new channels based on your positioning and ICP — you choose
-              which ones to add.
-            </p>
-          </div>
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h3 className="font-mono text-[11px] tracking-wider text-muted-foreground uppercase">
+            Discover new channels
+          </h3>
+          <p className="mt-1 max-w-[62ch] text-[13px] leading-relaxed text-muted-foreground/80">
+            Scans your positioning and past search results for channels worth monitoring — you
+            choose which ones to add.
+          </p>
         </div>
         <Button
           type="button"
@@ -64,38 +64,76 @@ export function AiDiscoveryPanel({ projectId }: { projectId: string }) {
           ) : (
             <>
               <Sparkles className="size-3.5" />
-              {suggestions ? "Discover again" : "Run AI discovery"}
+              {suggestions ? "Scan again" : "Scan for channels"}
             </>
           )}
         </Button>
-      </header>
+      </div>
 
-      {error && <p className="p-5 font-mono text-xs text-destructive md:p-6">{error}</p>}
+      {error && <p className="font-mono text-xs text-destructive">{error}</p>}
 
       {suggestions && suggestions.length === 0 && !error && (
-        <p className="p-5 font-mono text-xs text-muted-foreground md:p-6">
+        <p className="font-mono text-xs text-muted-foreground">
           No new suggestions beyond what you&apos;re already monitoring.
         </p>
       )}
 
       {suggestions && suggestions.length > 0 && (
-        <div className="divide-y divide-border/60">
-          {suggestions.map((suggestion) => (
-            <SuggestionRow
-              key={suggestionKey(suggestion)}
-              projectId={projectId}
-              suggestion={suggestion}
-              added={addedKeys.has(suggestionKey(suggestion))}
-              onAdded={() => {
-                const next = new Set(getDiscoveryState(projectId).addedKeys);
-                next.add(suggestionKey(suggestion));
-                setDiscoveryState(projectId, { addedKeys: next });
-              }}
-            />
-          ))}
+        <div className="overflow-hidden rounded-lg border border-border">
+          {proven.length > 0 && (
+            <div>
+              <div className="flex items-center gap-1.5 border-b border-border/60 bg-accent/[0.06] px-4 py-2">
+                <Radar className="size-3 text-accent" />
+                <span className="font-mono text-[10px] tracking-widest text-accent uppercase">
+                  Already producing signals
+                </span>
+              </div>
+              <div className="divide-y divide-border/60">
+                {proven.map((suggestion) => (
+                  <SuggestionRow
+                    key={suggestionKey(suggestion)}
+                    projectId={projectId}
+                    suggestion={suggestion}
+                    added={addedKeys.has(suggestionKey(suggestion))}
+                    onAdded={() => {
+                      const next = new Set(getDiscoveryState(projectId).addedKeys);
+                      next.add(suggestionKey(suggestion));
+                      setDiscoveryState(projectId, { addedKeys: next });
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {guessed.length > 0 && (
+            <div>
+              <div className="flex items-center gap-1.5 border-b border-border/60 bg-secondary/10 px-4 py-2">
+                <Sparkles className="size-3 text-muted-foreground" />
+                <span className="font-mono text-[10px] tracking-widest text-muted-foreground uppercase">
+                  AI suggested, unproven
+                </span>
+              </div>
+              <div className="divide-y divide-border/60">
+                {guessed.map((suggestion) => (
+                  <SuggestionRow
+                    key={suggestionKey(suggestion)}
+                    projectId={projectId}
+                    suggestion={suggestion}
+                    added={addedKeys.has(suggestionKey(suggestion))}
+                    onAdded={() => {
+                      const next = new Set(getDiscoveryState(projectId).addedKeys);
+                      next.add(suggestionKey(suggestion));
+                      setDiscoveryState(projectId, { addedKeys: next });
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
-    </section>
+    </div>
   );
 }
 
@@ -128,11 +166,18 @@ function SuggestionRow({
   }
 
   return (
-    <div className="grid gap-4 p-5 md:grid-cols-[minmax(0,1fr)_auto] md:items-center md:p-6">
+    <div className="grid gap-3 p-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
       <div className="min-w-0">
-        <h3 className="text-sm font-medium text-foreground">
-          {formatSourceLabel(suggestion.type, suggestion.name)}
-        </h3>
+        <div className="flex flex-wrap items-center gap-2">
+          <h3 className="text-sm font-medium text-foreground">
+            {formatSourceLabel(suggestion.type, suggestion.name)}
+          </h3>
+          {suggestion.evidence && (
+            <span className="rounded-full border border-accent/30 bg-accent/10 px-2 py-0.5 font-mono text-[10px] tracking-wide text-accent">
+              {suggestion.evidence.signalCount}/{suggestion.evidence.matchCount} signals
+            </span>
+          )}
+        </div>
         <p className="mt-1 max-w-[58ch] text-[13px] leading-relaxed text-muted-foreground/80">
           {suggestion.reasoning}
         </p>

@@ -1,5 +1,24 @@
 import type { SourceType } from "@/generated/prisma/client";
 
+// Most Stack Exchange sites live at <slug>.stackexchange.com, but a handful
+// of the oldest/highest-traffic ones predate that convention and have their
+// own top-level domain instead — these are the ones a founder is actually
+// likely to type (per the onboarding examples: softwarerecs is the regular
+// pattern, superuser/askubuntu are the exceptions). Used for both the
+// human-readable label and the outbound "view source" link, so a wrong
+// guess here would be user-visible in two places, not just cosmetic.
+const STACKEXCHANGE_DOMAIN_OVERRIDES: Record<string, string> = {
+  stackoverflow: "stackoverflow.com",
+  superuser: "superuser.com",
+  askubuntu: "askubuntu.com",
+  serverfault: "serverfault.com",
+  mathoverflow: "mathoverflow.net",
+};
+
+export function stackExchangeSiteDomain(siteSlug: string): string {
+  return STACKEXCHANGE_DOMAIN_OVERRIDES[siteSlug.toLowerCase()] ?? `${siteSlug}.stackexchange.com`;
+}
+
 // Shared by Signal Scoring and Reply Generation prompts, and anywhere the UI
 // needs a human label for a source — one place so "how do we refer to a
 // source of this type" never drifts between call sites.
@@ -11,6 +30,10 @@ export function formatSourceLabel(type: SourceType, name: string): string {
       return "Hacker News";
     case "INDIEHACKERS":
       return "IndieHackers";
+    case "STACKEXCHANGE":
+      return stackExchangeSiteDomain(name);
+    case "ASKMETAFILTER":
+      return "Ask MetaFilter";
   }
 }
 
@@ -22,6 +45,10 @@ export function formatSourceChannel(type: SourceType): string {
       return "Hacker News";
     case "INDIEHACKERS":
       return "IndieHackers";
+    case "STACKEXCHANGE":
+      return "Stack Exchange";
+    case "ASKMETAFILTER":
+      return "Ask MetaFilter";
   }
 }
 
@@ -33,6 +60,10 @@ export function formatSourceChannelDetail(type: SourceType): string {
       return "One public feed, no access gate, high technical density.";
     case "INDIEHACKERS":
       return "One public feed, no access gate, supportive founder-to-founder community.";
+    case "STACKEXCHANGE":
+      return "Per-site listening via the official API — mind each site's strict self-promotion norms when you reply.";
+    case "ASKMETAFILTER":
+      return "One public feed, no access gate, rewards thoughtful and personable answers over quick link-drops.";
   }
 }
 
@@ -52,6 +83,10 @@ export function formatViewOnLabel(type: SourceType): string {
       return "View on Hacker News";
     case "INDIEHACKERS":
       return "View on IndieHackers";
+    case "STACKEXCHANGE":
+      return "View on Stack Exchange";
+    case "ASKMETAFILTER":
+      return "View on Ask MetaFilter";
   }
 }
 
@@ -66,5 +101,9 @@ export function formatReplyUrlPlaceholder(type: SourceType): string {
       return "https://news.ycombinator.com/item?id=...";
     case "INDIEHACKERS":
       return "https://www.indiehackers.com/post/...";
+    case "STACKEXCHANGE":
+      return "https://stackoverflow.com/questions/12345/...";
+    case "ASKMETAFILTER":
+      return "https://ask.metafilter.com/123456/...";
   }
 }

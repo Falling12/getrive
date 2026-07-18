@@ -10,7 +10,13 @@ import { formatSourceChannel, formatSourceChannelDetail } from "@/lib/sources/fo
 
 export const metadata: Metadata = { title: "Sources — Getrive" };
 
-const CHANNEL_ORDER: SourceType[] = ["HACKERNEWS", "INDIEHACKERS", "REDDIT_SUBREDDIT"];
+const CHANNEL_ORDER: SourceType[] = [
+  "HACKERNEWS",
+  "INDIEHACKERS",
+  "ASKMETAFILTER",
+  "REDDIT_SUBREDDIT",
+  "STACKEXCHANGE",
+];
 
 export default async function SourcesPage({
   params,
@@ -32,6 +38,7 @@ export default async function SourcesPage({
 
   const hasHackerNews = sources.some((s) => s.type === "HACKERNEWS");
   const hasIndieHackers = sources.some((s) => s.type === "INDIEHACKERS");
+  const hasAskMetaFilter = sources.some((s) => s.type === "ASKMETAFILTER");
   const grouped = CHANNEL_ORDER.map((type) => ({
     type,
     sources: sources.filter((source) => source.type === type),
@@ -45,19 +52,37 @@ export default async function SourcesPage({
           <p className="mt-1 max-w-[68ch] font-mono text-xs leading-relaxed text-muted-foreground">
             Manage the channel mix Getrive listens on. Every source here is fetched
             automatically — Hacker News is broad and immediate, IndieHackers is founder-focused,
-            Reddit is community-specific.
+            Ask MetaFilter is general-audience and conversational, Reddit and Stack Exchange are
+            community/site-specific.
           </p>
         </header>
 
-        <AiDiscoveryPanel projectId={projectId} />
+        <section
+          data-tour="add-source"
+          className="overflow-hidden rounded-xl border border-border bg-background"
+        >
+          <header className="border-b border-border/60 p-5 md:p-6">
+            <h2 className="text-lg font-medium text-foreground">Add sources</h2>
+            <p className="mt-1 max-w-[68ch] font-mono text-[11px] leading-relaxed text-muted-foreground">
+              Enable a channel or add a specific community. Getrive listens only after a source is
+              active.
+            </p>
+          </header>
 
-        <div data-tour="add-source">
-          <AddSourceForm
-            projectId={projectId}
-            hasHackerNews={hasHackerNews}
-            hasIndieHackers={hasIndieHackers}
-          />
-        </div>
+          <div className="divide-y divide-border/60">
+            <div className="p-5 md:p-6">
+              <AddSourceForm
+                projectId={projectId}
+                hasHackerNews={hasHackerNews}
+                hasIndieHackers={hasIndieHackers}
+                hasAskMetaFilter={hasAskMetaFilter}
+              />
+            </div>
+            <div className="p-5 md:p-6">
+              <AiDiscoveryPanel projectId={projectId} />
+            </div>
+          </div>
+        </section>
 
         <section data-tour="source-list" className="flex flex-col gap-6">
           {sources.length === 0 ? (

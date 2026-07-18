@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useMemo, useState } from "react";
-import { CheckCircle2, Mic, RadioTower, Search, Users } from "lucide-react";
+import { CheckCircle2, Mic, MessageCircleQuestion, RadioTower, Search, Users } from "lucide-react";
 import type { SourceType } from "@/generated/prisma/client";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -25,11 +25,23 @@ const CHANNEL_META: Record<
     icon: Users,
     order: 1,
   },
+  ASKMETAFILTER: {
+    label: "Ask MetaFilter",
+    detail: "Public feed, no access setup, no karma gate. A small, moderated general-audience community — rewards thoughtful, personable answers.",
+    icon: MessageCircleQuestion,
+    order: 2,
+  },
   REDDIT_SUBREDDIT: {
     label: "Reddit communities",
     detail: "Specific communities with stronger fit, but some require karma-building before a founder can safely reply.",
     icon: Search,
-    order: 2,
+    order: 3,
+  },
+  STACKEXCHANGE: {
+    label: "Stack Exchange sites",
+    detail: "Per-site listening via the official API. Strongest when there's a genuine \"which tool should I use\" angle for askers.",
+    icon: Search,
+    order: 4,
   },
 };
 
