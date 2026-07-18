@@ -23,11 +23,11 @@ export function GET() {
 
 ## What it does
 
-Getrive continuously polls the Reddit subreddits, Hacker News feed, and IndieHackers feed a founder chooses, oldest-checked-first. Every post is scored for relevance against that founder's actual product description and positioning (not keyword-matched) — only genuine, high-intent matches surface. For each match, Getrive drafts a specific, honest reply using the product's positioning and the post's own wording, ready for human review. Nothing is posted automatically; the founder remains the final operator on every reply. Signups are traced back to the exact post and channel that produced them via tracked links, so attribution is measured rather than guessed.
+Getrive continuously polls the Reddit subreddits, Hacker News feed, IndieHackers feed, Stack Exchange sites, and Ask MetaFilter feed a founder chooses, oldest-checked-first. Every post is scored for relevance against that founder's actual product description and positioning (not keyword-matched) — only genuine, high-intent matches surface. For each match, Getrive drafts a specific, honest reply using the product's positioning and the post's own wording, ready for human review. Nothing is posted automatically; the founder remains the final operator on every reply. Signups are traced back to the exact post and channel that produced them via tracked links, so attribution is measured rather than guessed.
 
 ## Pricing
 
-Early access, one plan, $0/month. No paid tier yet. Included: Reddit + Hacker News + IndieHackers monitoring, AI relevance scoring, reply & outreach drafting, signup attribution.
+Early access, one plan, $0/month. No paid tier yet. Included: Reddit + Hacker News + IndieHackers + Stack Exchange + Ask MetaFilter monitoring, AI relevance scoring, reply & outreach drafting, signup attribution.
 
 ## FAQ
 

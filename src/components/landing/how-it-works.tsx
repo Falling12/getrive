@@ -6,7 +6,7 @@ const STEPS = [
     number: "1",
     icon: Filter,
     title: "Continuous ingestion",
-    body: "Ears on the ground — real-time polling of the Reddit subreddits, Hacker News feed, and IndieHackers feed you choose, fairly, oldest-checked-first.",
+    body: "Ears on the ground — real-time polling of the Reddit subreddits, Hacker News feed, IndieHackers feed, Stack Exchange sites, and Ask MetaFilter feed you choose, fairly, oldest-checked-first.",
   },
   {
     number: "2",

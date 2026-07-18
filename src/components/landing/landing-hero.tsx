@@ -36,7 +36,7 @@ export function LandingHero() {
           className="animate-[auth-enter_0.8s_cubic-bezier(0.175,0.885,0.32,1)_forwards] max-w-md text-[15px] leading-relaxed font-light text-muted-foreground opacity-0 md:text-xl"
           style={{ animationDelay: "0.1s" }}
         >
-          Getrive watches Reddit, Hacker News, and IndieHackers, flags high-intent posts, and drafts a reply. You
+          Getrive watches Reddit, Hacker News, IndieHackers & more, flags high-intent posts, and drafts a reply. You
           review and hit send.
         </p>
 

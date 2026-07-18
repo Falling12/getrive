@@ -1,7 +1,12 @@
 import { Check, SlidersHorizontal } from "lucide-react";
 import { Reveal } from "@/components/landing/reveal";
 
-const INCLUDED = ["Reddit + Hacker News + IndieHackers monitoring", "AI relevance scoring", "Reply & outreach drafting", "Signup attribution"];
+const INCLUDED = [
+  "Reddit + Hacker News + IndieHackers + Stack Exchange + Ask MetaFilter monitoring",
+  "AI relevance scoring",
+  "Reply & outreach drafting",
+  "Signup attribution",
+];
 
 export function PricingSection() {
   return (
