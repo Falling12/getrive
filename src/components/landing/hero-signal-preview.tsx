@@ -20,7 +20,7 @@ export function HeroSignalPreview() {
   const after = POST.slice(highlightIndex + HIGHLIGHT.length);
 
   return (
-    <div className="w-full overflow-hidden rounded-xl shadow-[inset_0_0_0_1px_var(--border)] backdrop-blur-md bg-background/80">
+    <div className="w-full overflow-hidden rounded-xl bg-background shadow-[inset_0_0_0_1px_var(--border)]">
       <div className="flex items-center justify-between border-b border-border/50 bg-background/90 px-4 py-2.5">
         <div className="flex items-center gap-2 font-mono text-[10px] tracking-widest text-muted-foreground uppercase">
           <span className="relative flex size-1.5">
@@ -69,10 +69,7 @@ export function HeroSignalPreview() {
             not sent
           </span>
         </div>
-        <p
-          className="line-clamp-3 rounded-lg border-l-2 bg-background/90 p-3 text-[12.5px] leading-relaxed font-light text-foreground shadow-[inset_0_0_0_1px_var(--border)]"
-          style={{ borderLeftColor: "var(--accent-glow)" }}
-        >
+        <p className="line-clamp-3 rounded-lg bg-background/90 p-3 text-[12.5px] leading-relaxed font-light text-foreground shadow-[inset_0_0_0_1px_var(--border)]">
           {REPLY}
         </p>
         <div

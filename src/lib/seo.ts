@@ -1,5 +1,3 @@
-import { MONITORED_CHANNEL_NAMES, formatChannelList } from "@/lib/channels";
-
 const FALLBACK_SITE_URL = "http://localhost:3000";
 
 // Every SEO surface (metadataBase, canonical URLs, sitemap.xml, robots.txt)
@@ -13,19 +11,20 @@ export const SITE_NAME = "Getrive";
 export const SITE_TITLE = "Getrive — Find your first users without cold-pitching";
 
 // Kept under ~155 chars so Google doesn't truncate it in the SERP snippet —
-// "HN" instead of "Hacker News" here (unlike everywhere else on the site),
-// and "& more" instead of naming every one of the five channels, is the
-// tradeoff that keeps this within budget.
+// "HN" instead of "Hacker News" here (unlike everywhere else on the site)
+// is the tradeoff that buys room. Names Reddit and HN as recognizable
+// anchors, then "& more" — deliberately generic rather than an exhaustive
+// channel list, so this never needs editing when a channel is added or
+// removed.
 // Used for <meta name="description">, og:description, and twitter:description.
 export const SITE_DESCRIPTION =
-  "Getrive listens on Reddit, HN, IndieHackers & more for people describing your exact problem, then helps you reply authentically. Nothing posts without you.";
+  "Getrive listens on Reddit, HN & more for people describing your exact problem, then helps you reply authentically. Nothing posts without you.";
 
 // Longer form for surfaces without a snippet-length constraint — llms.txt
-// and structured data, where more context helps an LLM cite Getrive
-// accurately rather than optimizing for a SERP pixel width. Names every
-// monitored channel rather than "& more" since there's no length pressure
-// here.
-export const SITE_DESCRIPTION_LONG = `Getrive listens across ${formatChannelList(MONITORED_CHANNEL_NAMES)} for people already describing the exact pain point your product solves, then helps you reply authentically. Nothing posted without you.`;
+// and structured data. Same "Reddit, Hacker News, and more" pattern as
+// SITE_DESCRIPTION, just spelled out rather than abbreviated.
+export const SITE_DESCRIPTION_LONG =
+  "Getrive listens across Reddit, Hacker News, and other public communities for people already describing the exact pain point your product solves, then helps you reply authentically. Nothing posted without you.";
 
 // Route segments that require a session (or are dead ends like verify-email)
 // — kept out of the sitemap and blocked in robots.txt since there's nothing

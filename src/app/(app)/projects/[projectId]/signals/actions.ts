@@ -12,7 +12,7 @@ export async function dismissSignalAction(projectId: string, signalId: string) {
     data: { dismissed: true },
   });
 
-  revalidatePath(`/projects/${projectId}/signals`);
+  revalidatePath(`/projects/${projectId}/home`);
 }
 
 export type UpdateThresholdState = { error?: string; value?: number };
@@ -41,6 +41,6 @@ export async function updateRelevanceThresholdAction(
     return { error: "Something went wrong — please refresh and try again." };
   }
 
-  revalidatePath(`/projects/${projectId}/signals`);
+  revalidatePath(`/projects/${projectId}/home`);
   return { value };
 }

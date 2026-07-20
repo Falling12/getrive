@@ -28,7 +28,7 @@ export async function logSignupAction(
     },
   });
 
-  revalidatePath(`/projects/${projectId}/users`);
+  revalidatePath(`/projects/${projectId}/results`);
   return { success: true };
 }
 
@@ -62,6 +62,6 @@ export async function createTrackedLinkAction(
   });
 
   const url = buildTrackedUrl(product.websiteUrl, link);
-  revalidatePath(`/projects/${projectId}/users`);
+  revalidatePath(`/projects/${projectId}/results`);
   return { url: url ?? undefined };
 }

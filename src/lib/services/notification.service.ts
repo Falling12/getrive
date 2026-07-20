@@ -56,15 +56,14 @@ export async function notifySignalCreated({
 // all-time replies), since the digest is framed as "your week in review".
 //
 // Beyond the stat counts, this also surfaces the actual open work queue —
-// unreplied Signals, Sources that just crossed into postable access, and
-// drafted-but-unsent Outreach messages — the same three query shapes the
-// (now-reverted) This Week page used, re-wired into the digest instead of a
-// standalone page. Unlike the stat counts, these three are current-standing
-// backlog, not "new this week" — an unreplied signal from three weeks ago
-// still belongs in "needs your attention" — except the "just unlocked"
-// nudge, which IS time-windowed to this week specifically (via Source's
-// `updatedAt`), since an account that's been postable for months shouldn't
-// re-announce itself every single digest.
+// unreplied Signals and Sources that just crossed into postable access —
+// the same query shapes the (now-reverted) This Week page used, re-wired
+// into the digest instead of a standalone page. Unlike the stat counts,
+// this is current-standing backlog, not "new this week" — an unreplied
+// signal from three weeks ago still belongs in "needs your attention" —
+// except the "just unlocked" nudge, which IS time-windowed to this week
+// specifically (via Source's `updatedAt`), since an account that's been
+// postable for months shouldn't re-announce itself every single digest.
 export async function sendWeeklyDigests(): Promise<{ usersNotified: number }> {
   const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
@@ -86,65 +85,46 @@ export async function sendWeeklyDigests(): Promise<{ usersNotified: number }> {
           replied: false,
           dismissed: false,
         } as const;
-        const unsentOutreachWhere = {
-          productId: product.id,
-          status: "DRAFT",
-          draftMessage: { not: null },
-        } as const;
 
-        const [
-          signalsThisWeek,
-          repliesSent,
-          usersAcquired,
-          unrepliedSignals,
-          unrepliedSignalsTotal,
-          unsentOutreach,
-          unsentOutreachTotal,
-        ] = await Promise.all([
-          prisma.signal.count({
-            where: {
-              source: { productId: product.id },
-              createdAt: { gte: oneWeekAgo },
-            },
-          }),
-          prisma.signal.count({
-            where: {
-              source: { productId: product.id },
-              replied: true,
-              repliedAt: { gte: oneWeekAgo },
-            },
-          }),
-          prisma.signup.count({
-            where: {
-              productId: product.id,
-              trackedLinkId: { not: null },
-              createdAt: { gte: oneWeekAgo },
-            },
-          }),
-          prisma.signal.findMany({
-            where: unrepliedSignalsWhere,
-            include: { source: true },
-            orderBy: [{ relevanceScore: "desc" }, { postedAt: "desc" }],
-            take: DIGEST_LIST_CAP,
-          }),
-          prisma.signal.count({ where: unrepliedSignalsWhere }),
-          prisma.lead.findMany({
-            where: unsentOutreachWhere,
-            orderBy: { createdAt: "desc" },
-            take: DIGEST_LIST_CAP,
-          }),
-          prisma.lead.count({ where: unsentOutreachWhere }),
-        ]);
+        const [signalsThisWeek, repliesSent, usersAcquired, unrepliedSignals, unrepliedSignalsTotal] =
+          await Promise.all([
+            prisma.signal.count({
+              where: {
+                source: { productId: product.id },
+                createdAt: { gte: oneWeekAgo },
+              },
+            }),
+            prisma.signal.count({
+              where: {
+                source: { productId: product.id },
+                replied: true,
+                repliedAt: { gte: oneWeekAgo },
+              },
+            }),
+            prisma.signup.count({
+              where: {
+                productId: product.id,
+                trackedLinkId: { not: null },
+                createdAt: { gte: oneWeekAgo },
+              },
+            }),
+            prisma.signal.findMany({
+              where: unrepliedSignalsWhere,
+              include: { source: true },
+              orderBy: [{ relevanceScore: "desc" }, { postedAt: "desc" }],
+              take: DIGEST_LIST_CAP,
+            }),
+            prisma.signal.count({ where: unrepliedSignalsWhere }),
+          ]);
 
         return {
           name: product.name,
           signalsThisWeek,
           repliesSent,
           usersAcquired,
-          dashboardUrl: `${appUrl}/projects/${product.id}/dashboard`,
-          signalsUrl: `${appUrl}/projects/${product.id}/signals`,
-          sourcesUrl: `${appUrl}/projects/${product.id}/sources`,
-          outreachUrl: `${appUrl}/projects/${product.id}/outreach`,
+          dashboardUrl: `${appUrl}/projects/${product.id}/home`,
+          signalsUrl: `${appUrl}/projects/${product.id}/home`,
+          sourcesUrl: `${appUrl}/projects/${product.id}/targeting#sources`,
           unrepliedSignals: unrepliedSignals.map((signal) => ({
             title: signal.title,
             sourceLabel: formatSourceLabel(signal.source.type, signal.source.name),
@@ -152,8 +132,6 @@ export async function sendWeeklyDigests(): Promise<{ usersNotified: number }> {
             url: `${appUrl}/projects/${product.id}/signals/${signal.id}`,
           })),
           unrepliedSignalsTotal,
-          unsentOutreach: unsentOutreach.map((lead) => ({ name: lead.name })),
-          unsentOutreachTotal,
         };
       })
     );
@@ -161,12 +139,7 @@ export async function sendWeeklyDigests(): Promise<{ usersNotified: number }> {
     // Skip a wholly-empty week — nothing new AND nothing pending isn't
     // worth the send.
     const hasActivity = projects.some(
-      (p) =>
-        p.signalsThisWeek > 0 ||
-        p.repliesSent > 0 ||
-        p.usersAcquired > 0 ||
-        p.unrepliedSignalsTotal > 0 ||
-        p.unsentOutreachTotal > 0
+      (p) => p.signalsThisWeek > 0 || p.repliesSent > 0 || p.usersAcquired > 0 || p.unrepliedSignalsTotal > 0
     );
     if (!hasActivity) continue;
 

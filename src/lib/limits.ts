@@ -93,25 +93,6 @@ export const DAILY_SCORING_CAP_PER_PROJECT = 100;
 // the account's total blast radius regardless of how many projects exist.
 export const DAILY_SCORING_CAP_PER_ACCOUNT = 200;
 
-// Enforced on manual "add a lead" (src/app/(app)/projects/[projectId]/outreach/actions.ts).
-// Mirrors MAX_MONITORED_SOURCES's per-project/per-account pair: Outreach
-// leads are hand-entered, but each draft/regenerate is still an Anthropic
-// call, so an unbounded lead list is an unbounded AI-spend surface the same
-// way an unbounded source list is.
-export const MAX_OUTREACH_LEADS_PER_PROJECT = 5;
-
-// Account-wide companion to MAX_OUTREACH_LEADS_PER_PROJECT, summed across
-// every project the account owns. Standing/non-resetting, same as
-// MAX_MONITORED_SOURCES_PER_ACCOUNT. With MAX_PROJECTS_PER_ACCOUNT at 1 this
-// can't currently be reached before the per-project cap already applies,
-// but it's here so raising the project cap later doesn't silently reopen
-// the multiply-by-projects gap the way it would for sources without this.
-// NOTE: unlike sources (which can be "un-monitored") or projects (which can
-// be archived), there is currently no way to remove a Lead once created —
-// hitting this cap is permanent for that project. Flagged to the user
-// rather than adding delete-lead as unrequested scope.
-export const MAX_OUTREACH_LEADS_PER_ACCOUNT = 8;
-
 // After this many consecutive failed fetch attempts for one source, surface
 // it as "ingestion failing" (Sources page + Dashboard) rather than letting
 // it look like a quiet source with no new posts. An alert-sensitivity

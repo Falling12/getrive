@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
 import { requireSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
-import { isUnlimitedAccount } from "@/lib/limits";
 import { AppSidebar } from "@/components/app-shell/app-sidebar";
 import { MobileNavDrawer } from "@/components/app-shell/mobile-nav-drawer";
 import { ProductTour } from "@/components/tour/product-tour";
@@ -40,13 +39,6 @@ export default async function ProjectLayout({
 
   if (!project) notFound();
 
-  // The search-intelligence pipeline nav item is allowlist-only (see
-  // lib/limits.ts's UNLIMITED_ACCOUNT_EMAILS) — computed here, server-side,
-  // and passed down as a plain boolean rather than having AppSidebar/
-  // MobileBottomNav import the allowlist themselves, which would ship the
-  // actual email addresses into the client JS bundle for every founder.
-  const showSearchPipeline = isUnlimitedAccount(session.user.email);
-
   return (
     <>
       <ProductTour />
@@ -57,7 +49,6 @@ export default async function ProjectLayout({
         unrepliedSignalCount={unrepliedSignalCount}
         email={session.user.email ?? ""}
         image={session.user.image}
-        showSearchPipeline={showSearchPipeline}
       />
       <div className="flex h-full flex-1 flex-col overflow-hidden">
         <MobileNavDrawer
@@ -67,7 +58,6 @@ export default async function ProjectLayout({
           unrepliedSignalCount={unrepliedSignalCount}
           email={session.user.email ?? ""}
           image={session.user.image}
-          showSearchPipeline={showSearchPipeline}
         />
         <main className="relative z-10 flex-1 overflow-y-auto">{children}</main>
       </div>

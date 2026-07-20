@@ -8,11 +8,11 @@ export function AmbientGlow() {
   return (
     <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
       <div
-        className="absolute -top-52 -left-52 size-[600px] animate-[landing-float_10s_ease-in-out_infinite_alternate] rounded-full opacity-[0.15] blur-[120px]"
+        className="absolute -top-52 -left-52 size-[600px] animate-[landing-float_14s_ease-in-out_infinite_alternate] rounded-full opacity-[0.08] blur-[120px]"
         style={{ backgroundColor: "var(--accent-glow)" }}
       />
       <div
-        className="absolute right-[-300px] bottom-[20%] size-[800px] animate-[landing-float_10s_ease-in-out_infinite_alternate] rounded-full opacity-[0.15] blur-[120px]"
+        className="absolute right-[-300px] bottom-[20%] size-[800px] animate-[landing-float_14s_ease-in-out_infinite_alternate] rounded-full opacity-[0.08] blur-[120px]"
         style={{ backgroundColor: "var(--accent)", animationDelay: "-3s" }}
       />
     </div>

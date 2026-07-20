@@ -41,8 +41,8 @@ export async function unmonitorSourceAction(projectId: string, sourceId: string)
     data: { selected: false },
   });
 
-  revalidatePath(`/projects/${projectId}/sources`);
-  revalidatePath(`/projects/${projectId}/signals`);
+  revalidatePath(`/projects/${projectId}/targeting`);
+  revalidatePath(`/projects/${projectId}/home`);
 }
 
 export type SourceDetailsState = { error?: string; success?: boolean };
@@ -73,7 +73,7 @@ export async function updateSourceDetailsAction(
     },
   });
 
-  revalidatePath(`/projects/${projectId}/sources`);
+  revalidatePath(`/projects/${projectId}/targeting`);
   return { success: true };
 }
 
@@ -155,8 +155,8 @@ export async function addRedditSourceAction(
     });
   }
 
-  revalidatePath(`/projects/${projectId}/sources`);
-  revalidatePath(`/projects/${projectId}/signals`);
+  revalidatePath(`/projects/${projectId}/targeting`);
+  revalidatePath(`/projects/${projectId}/home`);
   return { success: true };
 }
 
@@ -224,8 +224,8 @@ export async function addStackExchangeSourceAction(
     });
   }
 
-  revalidatePath(`/projects/${projectId}/sources`);
-  revalidatePath(`/projects/${projectId}/signals`);
+  revalidatePath(`/projects/${projectId}/targeting`);
+  revalidatePath(`/projects/${projectId}/home`);
   return { success: true };
 }
 
@@ -367,8 +367,8 @@ export async function addDiscoveredSourceAction(
     });
   }
 
-  revalidatePath(`/projects/${projectId}/sources`);
-  revalidatePath(`/projects/${projectId}/signals`);
+  revalidatePath(`/projects/${projectId}/targeting`);
+  revalidatePath(`/projects/${projectId}/home`);
   return { success: true };
 }
 
@@ -426,8 +426,8 @@ export async function enableHackerNewsAction(projectId: string): Promise<AddSour
     });
   }
 
-  revalidatePath(`/projects/${projectId}/sources`);
-  revalidatePath(`/projects/${projectId}/signals`);
+  revalidatePath(`/projects/${projectId}/targeting`);
+  revalidatePath(`/projects/${projectId}/home`);
   return { success: true };
 }
 
@@ -483,8 +483,8 @@ export async function enableIndieHackersAction(projectId: string): Promise<AddSo
     });
   }
 
-  revalidatePath(`/projects/${projectId}/sources`);
-  revalidatePath(`/projects/${projectId}/signals`);
+  revalidatePath(`/projects/${projectId}/targeting`);
+  revalidatePath(`/projects/${projectId}/home`);
   return { success: true };
 }
 
@@ -540,7 +540,7 @@ export async function enableAskMetaFilterAction(projectId: string): Promise<AddS
     });
   }
 
-  revalidatePath(`/projects/${projectId}/sources`);
-  revalidatePath(`/projects/${projectId}/signals`);
+  revalidatePath(`/projects/${projectId}/targeting`);
+  revalidatePath(`/projects/${projectId}/home`);
   return { success: true };
 }

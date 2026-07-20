@@ -10,7 +10,6 @@ export function AppSidebar({
   unrepliedSignalCount,
   email,
   image,
-  showSearchPipeline = false,
 }: {
   projectId: string;
   projectName: string;
@@ -18,7 +17,6 @@ export function AppSidebar({
   unrepliedSignalCount: number;
   email: string;
   image?: string | null;
-  showSearchPipeline?: boolean;
 }) {
   return (
     <aside className="relative z-40 hidden h-full w-[240px] shrink-0 flex-col border-r border-border bg-background/80 backdrop-blur-md md:flex">
@@ -30,11 +28,7 @@ export function AppSidebar({
         <ProjectSwitcher currentProjectId={projectId} currentProjectName={projectName} projects={projects} />
       </div>
 
-      <NavList
-        projectId={projectId}
-        unrepliedSignalCount={unrepliedSignalCount}
-        showSearchPipeline={showSearchPipeline}
-      />
+      <NavList projectId={projectId} unrepliedSignalCount={unrepliedSignalCount} />
 
       <AccountLink email={email} image={image} />
     </aside>

@@ -4,7 +4,6 @@ export type AiTask =
   | "queryGeneration"
   | "signalScoring"
   | "replyGeneration"
-  | "outreachDraft"
   | "websitePrefill";
 
 interface AiTaskModelConfig {
@@ -19,8 +18,8 @@ interface AiTaskModelConfig {
 export const AI_TASK_MODELS: Record<AiTask, AiTaskModelConfig> = {
   // Onboarding (now the step BEFORE channel discovery), regeneratable later
   // from the Positioning page. Strategic reasoning that shapes every
-  // downstream task (sharper Signal Scoring, channel discovery, Outreach
-  // drafts) — prioritize quality over cost.
+  // downstream task (sharper Signal Scoring, channel discovery) —
+  // prioritize quality over cost.
   positioningGeneration: { provider: "anthropic", model: "claude-sonnet-5" },
   // Onboarding, once per founder after Positioning, plus any later "Discover
   // more" reruns — a recommend-only list the founder reviews before adding
@@ -52,11 +51,6 @@ export const AI_TASK_MODELS: Record<AiTask, AiTaskModelConfig> = {
   // product's core promise (authentic-sounding replies) holds up — most
   // worth spending on quality over cost.
   replyGeneration: { provider: "anthropic", model: "claude-sonnet-5" },
-  // Outreach, on demand, once per lead (plus manual regenerates). A cold
-  // first-contact message is higher-stakes per-send than a Signal reply —
-  // there's no existing post to anchor tone to, so getting the opening line
-  // genuinely specific to the lead matters even more. Quality over cost.
-  outreachDraft: { provider: "anthropic", model: "claude-sonnet-5" },
   // Onboarding, once per founder, optional. A mechanical extraction task
   // (pull name/description/targetCustomer out of a fetched web page) —
   // downgraded from Sonnet 5 to gpt-5.4-mini: this isn't open-ended

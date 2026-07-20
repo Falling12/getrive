@@ -66,8 +66,9 @@ export function initPostHog() {
     enable_heatmaps: true,
     session_recording: {
       // Password inputs are masked by rrweb/posthog-js regardless of this
-      // config — this only adds our own sensitive fields on top (outreach
-      // lead name/handle/context; see the `ph-mask` class in those forms).
+      // config — this is the opt-in convention for any other sensitive
+      // field: add the `ph-mask` class to a form element and its text is
+      // excluded from session recordings.
       maskTextSelector: ".ph-mask",
     },
     persistence: "localStorage+cookie",

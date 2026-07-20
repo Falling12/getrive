@@ -13,7 +13,7 @@
 // Every domain table already cascades from Product/User at the database
 // level (see prisma/schema.prisma's onDelete: Cascade), so a single
 // user.delete()/product.delete() removes products, positioning, sources,
-// scored posts, signals, tracked links, leads, and signups automatically.
+// scored posts, signals, tracked links, and signups automatically.
 // The two exceptions are RateLimitAttempt and VerificationToken, which are
 // keyed by plain strings (email/userId/productId embedded in the key, not a
 // real foreign key — see src/lib/rate-limit.ts and
@@ -60,12 +60,11 @@ async function previewAccount(email: string) {
     { identifier: `${RESET_TOKEN_PREFIX}${email}` },
   ];
 
-  const [sources, positionings, trackedLinks, leads, signups, signals, scoredPosts, rateLimitAttempts, verificationTokens] =
+  const [sources, positionings, trackedLinks, signups, signals, scoredPosts, rateLimitAttempts, verificationTokens] =
     await Promise.all([
       prisma.source.count({ where: { productId: { in: productIds } } }),
       prisma.positioning.count({ where: { productId: { in: productIds } } }),
       prisma.trackedLink.count({ where: { productId: { in: productIds } } }),
-      prisma.lead.count({ where: { productId: { in: productIds } } }),
       prisma.signup.count({ where: { productId: { in: productIds } } }),
       prisma.signal.count({ where: { source: { productId: { in: productIds } } } }),
       prisma.scoredPost.count({ where: { source: { productId: { in: productIds } } } }),
@@ -83,7 +82,6 @@ async function previewAccount(email: string) {
       sources,
       positionings,
       trackedLinks,
-      leads,
       signups,
       signals,
       scoredPosts,
@@ -125,21 +123,19 @@ async function previewProject(productId: string) {
   });
   if (!product) return null;
 
-  const [sources, positionings, trackedLinks, leads, signups, signals, scoredPosts, rateLimitAttempts] =
-    await Promise.all([
-      prisma.source.count({ where: { productId } }),
-      prisma.positioning.count({ where: { productId } }),
-      prisma.trackedLink.count({ where: { productId } }),
-      prisma.lead.count({ where: { productId } }),
-      prisma.signup.count({ where: { productId } }),
-      prisma.signal.count({ where: { source: { productId } } }),
-      prisma.scoredPost.count({ where: { source: { productId } } }),
-      prisma.rateLimitAttempt.count({ where: { key: `${POLL_PREFIX}${productId}` } }),
-    ]);
+  const [sources, positionings, trackedLinks, signups, signals, scoredPosts, rateLimitAttempts] = await Promise.all([
+    prisma.source.count({ where: { productId } }),
+    prisma.positioning.count({ where: { productId } }),
+    prisma.trackedLink.count({ where: { productId } }),
+    prisma.signup.count({ where: { productId } }),
+    prisma.signal.count({ where: { source: { productId } } }),
+    prisma.scoredPost.count({ where: { source: { productId } } }),
+    prisma.rateLimitAttempt.count({ where: { key: `${POLL_PREFIX}${productId}` } }),
+  ]);
 
   return {
     product,
-    counts: { sources, positionings, trackedLinks, leads, signups, signals, scoredPosts, rateLimitAttempts },
+    counts: { sources, positionings, trackedLinks, signups, signals, scoredPosts, rateLimitAttempts },
   };
 }
 

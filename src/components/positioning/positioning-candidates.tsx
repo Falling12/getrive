@@ -91,7 +91,7 @@ export function PositioningCandidates({
             B. Who feels this pain most
           </h2>
           <p className="font-mono text-xs text-muted-foreground/70">
-            Pick a primary ICP — it sharpens Signal Scoring and feeds Outreach drafts.
+            Pick a primary ICP — it sharpens Signal Scoring and reply drafts.
           </p>
         </div>
         <div role="radiogroup" aria-label="Primary ICP" className="flex flex-col gap-4">

@@ -12,63 +12,52 @@ interface TourStep {
   // Segment appended to /projects/[projectId] — advancing to a step on a
   // different segment triggers a real navigation before it can highlight
   // anything, so the tour walks the actual product instead of just the
-  // dashboard.
-  segment: "dashboard" | "signals" | "sources";
+  // Home page.
+  segment: "home" | "targeting";
   target: string;
   title: string;
   description: string;
 }
 
-// Targets are `data-tour` attributes on the pages themselves (dashboard,
-// signals, sources) and on both nav implementations (app-sidebar.tsx desktop,
-// mobile-bottom-nav.tsx mobile) — plain DOM selectors rather than refs, since
+// Targets are `data-tour` attributes on the pages themselves (home,
+// targeting) and on both nav implementations (app-sidebar.tsx desktop,
+// mobile-nav-drawer.tsx mobile) — plain DOM selectors rather than refs, since
 // this component looks elements up by querySelector regardless of which
 // component rendered them or which viewport is active.
 const STEPS: TourStep[] = [
   {
-    segment: "dashboard",
-    target: '[data-tour="metric"]',
-    title: "Your one number",
-    description: "Users acquired through Getrive. Everything else on this page exists to move this number.",
-  },
-  {
-    segment: "dashboard",
+    segment: "home",
     target: '[data-tour="stats"]',
-    title: "This week at a glance",
-    description: "Signals caught, replies sent, and Reddit karma tracked across everything you're monitoring.",
+    title: "Your numbers at a glance",
+    description:
+      "Users acquired through Getrive is the one number that matters — signals caught, replies sent, and karma tracked sit next to it. The rest of this page exists to move it.",
   },
   {
-    segment: "dashboard",
-    target: '[data-tour="needs-attention"]',
-    title: "Needs attention",
-    description: "New signals to reply to, and anything else that needs a look, always surface here first.",
-  },
-  {
-    segment: "dashboard",
-    target: '[data-tour="nav-signals"]',
-    title: "Signals",
-    description: "Pain-point posts Getrive found, each with a drafted reply waiting for you. Let's take a look.",
-  },
-  {
-    segment: "signals",
+    segment: "home",
     target: '[data-tour="signal-list"]',
     title: "Review & reply",
     description: "Every post here has a drafted reply ready — open one, tweak it, and send it in a couple clicks.",
   },
   {
-    segment: "signals",
-    target: '[data-tour="nav-sources"]',
-    title: "Sources",
-    description: "The channels behind those signals. Let's see how they're managed.",
+    segment: "home",
+    target: '[data-tour="nav-targeting"]',
+    title: "Targeting",
+    description: "Who you're selling to and where Getrive listens — all the tuning lives on one page. Let's take a look.",
   },
   {
-    segment: "sources",
+    segment: "targeting",
+    target: '[data-tour="positioning"]',
+    title: "Who you're selling to",
+    description: "Your positioning statement and ICP sharpen how every post is scored and how reply drafts sound.",
+  },
+  {
+    segment: "targeting",
     target: '[data-tour="add-source"]',
     title: "Add a source",
     description: "Add more channels anytime — everything here is fetched automatically, no manual setup required.",
   },
   {
-    segment: "sources",
+    segment: "targeting",
     target: '[data-tour="source-list"]',
     title: "Your channel mix",
     description: "Hacker News is broad and immediate, Reddit and Stack Exchange are community/site-specific (mind each one's self-promo rules), and IndieHackers and Ask MetaFilter are more conversational.",

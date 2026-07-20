@@ -50,7 +50,7 @@ export function DangerZone({
         </p>
         <p className="font-mono text-[11px] leading-relaxed text-muted-foreground">
           Want this project permanently and irreversibly deleted instead — including all its
-          signals, sources, outreach leads, and tracked links? Email{" "}
+          signals, sources, and tracked links? Email{" "}
           <a href="mailto:senkcsani@gmail.com" className="text-accent hover:text-foreground">
             senkcsani@gmail.com
           </a>

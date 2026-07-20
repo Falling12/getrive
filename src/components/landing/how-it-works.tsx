@@ -6,7 +6,7 @@ const STEPS = [
     number: "1",
     icon: Filter,
     title: "Continuous ingestion",
-    body: "Ears on the ground — real-time polling of the Reddit subreddits, Hacker News feed, IndieHackers feed, Stack Exchange sites, and Ask MetaFilter feed you choose, fairly, oldest-checked-first.",
+    body: "Ears on the ground — real-time polling of the Reddit subreddits, Hacker News feed, and other channels you choose, fairly, oldest-checked-first.",
   },
   {
     number: "2",
@@ -28,13 +28,7 @@ export function HowItWorks() {
       <div className="mx-auto max-w-[1400px] px-4 lg:px-8">
         <Reveal className="mb-20 flex flex-col items-end justify-between gap-6 md:flex-row">
           <div>
-            <span
-              className="inline-block rounded-full px-3 py-1 font-mono text-[11px] font-medium tracking-widest uppercase"
-              style={{ backgroundColor: "color-mix(in oklch, var(--accent-glow), transparent 90%)", color: "var(--accent-glow)" }}
-            >
-              How it works
-            </span>
-            <h2 className="mt-6 text-4xl font-semibold tracking-tight text-foreground md:text-6xl">
+            <h2 className="text-4xl font-semibold tracking-tight text-foreground md:text-6xl">
               How Getrive finds the conversation.
             </h2>
           </div>
@@ -45,28 +39,16 @@ export function HowItWorks() {
         </Reveal>
 
         <div className="relative grid grid-cols-1 gap-8 md:grid-cols-3">
-          <div className="absolute top-[60px] left-20 z-0 hidden h-[2px] w-[calc(100%-160px)] overflow-hidden rounded-full bg-border/50 md:block">
-            <div
-              className="landing-flow-dot absolute top-0 h-full w-8 rounded-full"
-              style={{ backgroundColor: "var(--accent-glow)", boxShadow: "0 0 15px var(--accent-glow)" }}
-            />
-          </div>
+          <div className="absolute top-[60px] left-20 z-0 hidden h-px w-[calc(100%-160px)] bg-border md:block" />
 
           {STEPS.map((step, index) => (
             <Reveal key={step.number} delayMs={150 * (index + 1)}>
               <div className="landing-panel landing-panel-interactive group relative z-10 p-10 pt-16">
-                <div
-                  className="landing-node-badge absolute top-0 right-10 flex size-14 -translate-y-1/2 items-center justify-center rounded-full border border-border bg-background font-mono text-xl text-muted-foreground/60 shadow-[0_0_20px_rgba(0,0,0,0.5)] transition-colors group-hover:text-[var(--accent-glow)]"
-                  style={{ boxShadow: "0 0 20px rgba(0,0,0,0.5)" }}
-                >
+                <div className="landing-node-badge absolute top-0 right-10 flex size-14 -translate-y-1/2 items-center justify-center rounded-full border border-border bg-background font-mono text-xl text-muted-foreground/60 transition-colors group-hover:text-[var(--accent-glow)]">
                   {step.number}
                 </div>
-                <div className="relative mb-8 text-muted-foreground/40">
-                  <div
-                    className="absolute inset-0 rounded-full opacity-0 blur-xl transition-opacity group-hover:opacity-100"
-                    style={{ backgroundColor: "color-mix(in oklch, var(--accent-glow), transparent 80%)" }}
-                  />
-                  <step.icon className="relative z-10 size-9 transition-transform group-hover:scale-110 group-hover:text-foreground" />
+                <div className="mb-8 text-muted-foreground/40">
+                  <step.icon className="size-9 transition-colors group-hover:text-foreground" />
                 </div>
                 <h3 className="mb-4 text-2xl font-semibold text-foreground transition-colors group-hover:text-[var(--accent-glow)]">
                   {step.title}

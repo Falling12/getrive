@@ -142,7 +142,7 @@ export function InterceptDemo() {
       <div className="absolute -top-10 left-10 hidden h-20 w-px bg-gradient-to-b from-transparent to-[var(--accent-glow)]/50 md:block" />
       <div className="absolute top-1/2 -right-6 hidden h-px w-20 bg-gradient-to-r from-[var(--accent-glow)]/50 to-transparent md:block" />
 
-      <div className="relative flex min-h-[480px] w-full flex-col overflow-hidden rounded-xl border border-border/50 bg-background/70 shadow-[0_20px_40px_-15px_rgba(107,224,164,0.1)] backdrop-blur-md">
+      <div className="relative flex min-h-[480px] w-full flex-col overflow-hidden rounded-xl border border-border/50 bg-background shadow-[0_4px_24px_-8px_rgba(0,0,0,0.2)]">
         <div className="z-20 flex h-12 items-center justify-between border-b border-[color-mix(in_oklch,var(--accent),transparent_90%)] bg-background/90 px-6 backdrop-blur-md">
           <div className="flex items-center gap-3 font-mono text-[11px]">
             <span className="relative flex h-2 w-2">
@@ -184,7 +184,7 @@ export function InterceptDemo() {
           {phase === "scanning" && (
             <div
               aria-hidden
-              className="pointer-events-none absolute inset-x-0 top-0 z-10 h-20 animate-[landing-scan-sweep_1.5s_cubic-bezier(0.25,1,0.5,1)_forwards] border-b-2 border-[var(--accent-glow)] bg-gradient-to-b from-[color-mix(in_oklch,var(--accent-glow),transparent_100%)] via-[color-mix(in_oklch,var(--accent-glow),transparent_80%)] to-[color-mix(in_oklch,var(--accent-glow),transparent_20%)] shadow-[0_10px_20px_rgba(107,224,164,0.2)]"
+              className="pointer-events-none absolute inset-x-0 top-0 z-10 h-20 animate-[landing-scan-sweep_1.5s_cubic-bezier(0.25,1,0.5,1)_forwards] border-b border-[var(--accent-glow)] bg-gradient-to-b from-[color-mix(in_oklch,var(--accent-glow),transparent_100%)] via-[color-mix(in_oklch,var(--accent-glow),transparent_88%)] to-[color-mix(in_oklch,var(--accent-glow),transparent_60%)]"
             />
           )}
 
@@ -255,15 +255,12 @@ export function InterceptDemo() {
                   </span>
                 </div>
 
-                <div
-                  className="relative rounded-lg border-l-2 bg-background/90 p-5 text-[15px] leading-relaxed font-light text-foreground shadow-[inset_0_0_0_1px_var(--border)] backdrop-blur"
-                  style={{ borderLeftColor: "var(--accent-glow)" }}
-                >
+                <div className="relative rounded-lg bg-background/90 p-5 text-[15px] leading-relaxed font-light text-foreground shadow-[inset_0_0_0_1px_var(--border)]">
                   {typedReply}
                   {phase === "typing" && (
                     <span
                       className="ml-1.5 inline-block h-[1.1em] w-[8px] translate-y-[2px] animate-[landing-cursor-blink_0.8s_step-end_infinite]"
-                      style={{ backgroundColor: "var(--accent-glow)", boxShadow: "0 0 8px var(--accent-glow)" }}
+                      style={{ backgroundColor: "var(--accent-glow)" }}
                     />
                   )}
                 </div>
@@ -314,7 +311,6 @@ function HighlightedText({
         style={{
           backgroundColor: "var(--accent-glow)",
           color: "var(--background)",
-          boxShadow: "0 0 12px rgba(107,224,164,0.4)",
         }}
       >
         {phrase}

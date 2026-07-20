@@ -73,32 +73,3 @@ export async function getOrCreateSignalTrackedLink({
     },
   });
 }
-
-// Every Lead gets at most one tracked link, created lazily the first time
-// its detail page is viewed — mirrors getOrCreateSignalTrackedLink above,
-// same reasoning (most leads never get followed up on, no point creating a
-// link for every one up front).
-export async function getOrCreateLeadTrackedLink({
-  productId,
-  leadId,
-  leadName,
-}: {
-  productId: string;
-  leadId: string;
-  leadName: string;
-}): Promise<TrackedLink> {
-  const existing = await prisma.trackedLink.findFirst({ where: { leadId } });
-  if (existing) return existing;
-
-  return prisma.trackedLink.create({
-    data: {
-      slug: generateTrackedLinkSlug(),
-      productId,
-      leadId,
-      label: `Outreach to ${leadName}`,
-      utmSource: "outreach",
-      utmMedium: "dm",
-      utmCampaign: leadName,
-    },
-  });
-}

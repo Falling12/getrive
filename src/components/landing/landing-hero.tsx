@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { Ear } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { InterceptDemo } from "@/components/landing/intercept-demo";
 import { HeroSignalPreview } from "@/components/landing/hero-signal-preview";
@@ -21,12 +20,7 @@ export function LandingHero() {
           style={{ animationDelay: "0.05s" }}
         >
           See who&apos;s asking for{" "}
-          <span
-            className="inline-block bg-clip-text text-transparent"
-            style={{
-              backgroundImage: "linear-gradient(90deg, var(--accent-glow), #a7f3d0, var(--accent-glow))",
-            }}
-          >
+          <span className="inline-block" style={{ color: "var(--accent-glow)" }}>
             your product
           </span>{" "}
           right now.
@@ -36,7 +30,7 @@ export function LandingHero() {
           className="animate-[auth-enter_0.8s_cubic-bezier(0.175,0.885,0.32,1)_forwards] max-w-md text-[15px] leading-relaxed font-light text-muted-foreground opacity-0 md:text-xl"
           style={{ animationDelay: "0.1s" }}
         >
-          Getrive watches Reddit, Hacker News, IndieHackers & more, flags high-intent posts, and drafts a reply. You
+          Getrive watches Reddit, Hacker News & more, flags high-intent posts, and drafts a reply. You
           review and hit send.
         </p>
 
@@ -61,7 +55,6 @@ export function LandingHero() {
             style={{
               backgroundColor: "var(--accent-glow)",
               color: "var(--background)",
-              boxShadow: "0 0 24px rgba(107,224,164,0.4)",
             }}
           >
             Show me who&apos;s asking — free

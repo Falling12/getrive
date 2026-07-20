@@ -49,12 +49,12 @@ export default async function SettingsPage({
                 the description below has changed since your positioning statement and ICP were
                 generated.{" "}
                 <Link
-                  href={`/projects/${projectId}/positioning`}
+                  href={`/projects/${projectId}/targeting#positioning`}
                   className="text-accent underline underline-offset-2 hover:text-foreground"
                 >
                   Review and regenerate it
                 </Link>{" "}
-                so replies, outreach, and signal scoring stay accurate.
+                so replies and signal scoring stay accurate.
               </p>
             </div>
           )}
@@ -165,7 +165,7 @@ export default async function SettingsPage({
             <Button
               variant="outline"
               className="shrink-0 gap-2 rounded-md"
-              render={<Link href={`/projects/${projectId}/dashboard?tour=1`} />}
+              render={<Link href={`/projects/${projectId}/home?tour=1`} />}
               nativeButton={false}
             >
               <Compass className="size-4" />

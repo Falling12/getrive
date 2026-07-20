@@ -70,6 +70,6 @@ export async function markAsRepliedAction(
   });
 
   revalidatePath(`/projects/${projectId}/signals/${signalId}`);
-  revalidatePath(`/projects/${projectId}/signals`);
+  revalidatePath(`/projects/${projectId}/home`);
   return { success: true };
 }

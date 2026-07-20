@@ -2,10 +2,16 @@
 // visible FaqSection and the FAQPage JSON-LD in app/page.tsx read from
 // this array, so the structured data never drifts from what a visitor
 // (or crawler) actually sees on the page. Every answer restates something
-// already said elsewhere on the landing page (how-it-works, trust-section,
-// pricing-section, feature-highlights, social-proof) rather than
+// already said elsewhere on the landing page (how-it-works, the trust strip
+// in problem-section, pricing-section, feature-highlights) rather than
 // introducing new claims.
-import { MONITORED_CHANNEL_NAMES, formatChannelList } from "@/lib/channels";
+//
+// Most answers below name Reddit and Hacker News as recognizable anchors,
+// then "and more"/"or anywhere else" rather than the full channel list —
+// deliberately generic so adding or removing a channel doesn't require
+// another editing pass here. The one exception is "Which platforms does
+// Getrive monitor?" just below: someone asking that exact question wants
+// the real, complete answer, not a vague one.
 
 export interface Faq {
   question: string;
@@ -15,7 +21,8 @@ export interface Faq {
 export const FAQS: Faq[] = [
   {
     question: "What is Getrive?",
-    answer: `Getrive listens across ${formatChannelList(MONITORED_CHANNEL_NAMES)} for people already describing the exact pain point your product solves, then helps you draft an authentic reply. Nothing is posted without you reviewing it first.`,
+    answer:
+      "Getrive listens across Reddit, Hacker News, and other public communities for people already describing the exact pain point your product solves, then helps you draft an authentic reply. Nothing is posted without you reviewing it first.",
   },
   {
     question: "Will replying like this get me banned or called out for self-promotion?",
@@ -24,7 +31,8 @@ export const FAQS: Faq[] = [
   },
   {
     question: "Does Getrive post replies automatically?",
-    answer: `No. Getrive drafts, it doesn't post — every draft sits in front of you before anything happens, and you remain the final human operator on ${formatChannelList([...MONITORED_CHANNEL_NAMES, "anywhere else"], "or")}. Auto-reply systems are disabled by design.`,
+    answer:
+      "No. Getrive drafts, it doesn't post — every draft sits in front of you before anything happens, and you remain the final human operator on Reddit, Hacker News, or anywhere else. Auto-reply systems are disabled by design.",
   },
   {
     question: "Which platforms does Getrive monitor?",
@@ -39,7 +47,7 @@ export const FAQS: Faq[] = [
   {
     question: "How much does Getrive cost?",
     answer:
-      "Getrive is currently in early access on a single free plan ($0) while the team works directly with founders to get it right. It includes Reddit + Hacker News + IndieHackers + Stack Exchange + Ask MetaFilter monitoring, AI relevance scoring, reply & outreach drafting, and signup attribution. There's no paid tier yet.",
+      "Getrive is currently in early access on a single free plan ($0) while the team works directly with founders to get it right. It includes Reddit + Hacker News + more monitoring, AI relevance scoring, reply drafting, and signup attribution. There's no paid tier yet.",
   },
   {
     question: "Can Getrive tell me if a reply actually brought in a signup?",

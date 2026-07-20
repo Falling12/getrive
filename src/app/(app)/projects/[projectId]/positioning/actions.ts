@@ -23,7 +23,7 @@ export async function generateProjectPositioningAction(
 
   try {
     const result = await regeneratePositioningCandidates(product.id);
-    revalidatePath(`/projects/${projectId}/positioning`);
+    revalidatePath(`/projects/${projectId}/targeting`);
     return result;
   } catch (error) {
     console.error("Positioning generation failed", error);
@@ -51,6 +51,6 @@ export async function updateProjectPositioningAction(
     return { error: "Couldn't save your selection — please try again." };
   }
 
-  revalidatePath(`/projects/${projectId}/positioning`);
+  revalidatePath(`/projects/${projectId}/targeting`);
   return {};
 }

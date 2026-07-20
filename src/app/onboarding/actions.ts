@@ -319,12 +319,12 @@ export async function confirmSourcesAction(
   // funnels don't need to treat this step differently from steps 1-2.
   await captureServerEvent(session.user.id, "onboarding_step_completed", { step: "select" });
 
-  // `?tour=1` triggers the one-time dashboard walkthrough (DashboardTour) —
+  // `?tour=1` triggers the one-time product walkthrough (ProductTour) —
   // only true on this exact redirect, never on a normal later visit to the
   // dashboard, since the page strips the param on mount. The dashboard's
   // own AutoFirstScan no longer needs a matching one-shot query param: it
   // derives "has this project ever been scanned" from durable DB state
   // (see dashboard/page.tsx), which survives refreshes/retries/second tabs
   // that a URL param can't.
-  redirect(`/projects/${product.id}/dashboard?tour=1`);
+  redirect(`/projects/${product.id}/home?tour=1`);
 }

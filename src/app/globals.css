@@ -144,19 +144,17 @@
   --radius: 0.535rem;
   --font-sans: var(--font-brand-sans);
   --font-mono: var(--font-brand-mono);
-  /* Brighter accent, landing page only — the marketing surface deliberately
-     runs hotter/more saturated than the muted --accent used everywhere else
-     in the product (confirmed direction after iterating on the AIDesigner
-     landing artifact). Not used by any dashboard/app surface. */
-  --accent-glow: #6be0a4;
-  /* Landing page only — a deliberate spring/overshoot easing (the >1 last
-     param bounces slightly past its end state) used throughout the landing
-     page's card reveals, badge pops, and button interactions. The rest of
-     the product's motion never overshoots (see auth-enter's plain
-     cubic-bezier(...,1)) — this is a confirmed, repeated exception for the
-     marketing surface specifically, after several rounds of the user asking
-     for more energy/bounce/excitement on this one page. */
-  --landing-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  /* Landing-page accent — a lighter, more legible step off the muted
+     --accent used elsewhere in the product (accent alone falls short of
+     4.5:1 on the near-black field at small sizes), but desaturated to the
+     same sage-green family rather than the bright saturated mint this used
+     to be. Keeps the "one accent" rule intact instead of forking a second,
+     hotter hue for marketing. */
+  --accent-glow: #6cac8c;
+  /* Shared easing for landing-page reveals and transitions — quiet
+     deceleration, no overshoot, matching the rest of the product's motion
+     (see auth-enter's plain cubic-bezier(...,1)). */
+  --landing-spring: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 /* Auth motion + background primitives — ported 1:1 from the AIDesigner
@@ -294,116 +292,28 @@
     transform: translateY(-10px);
   }
 }
-@keyframes landing-flow-dot {
-  0% {
-    left: 0%;
-    opacity: 0;
-  }
-  10% {
-    opacity: 1;
-  }
-  90% {
-    opacity: 1;
-  }
-  100% {
-    left: 100%;
-    opacity: 0;
-  }
-}
-@keyframes landing-conveyor {
-  0% {
-    background-position: 0 0;
-  }
-  100% {
-    background-position: 24px 24px;
-  }
-}
 @keyframes landing-radial-drift {
   0% {
     transform: translate(0, 0) scale(1);
   }
   50% {
-    transform: translate(-50px, 30px) scale(1.1);
+    transform: translate(-30px, 20px) scale(1.05);
   }
   100% {
-    transform: translate(30px, -50px) scale(0.9);
-  }
-}
-@keyframes landing-alert-glow {
-  0%,
-  100% {
-    box-shadow:
-      inset 0 0 0 1px rgba(196, 84, 74, 0.2),
-      0 0 15px rgba(196, 84, 74, 0.05);
-  }
-  50% {
-    box-shadow:
-      inset 0 0 0 1px rgba(196, 84, 74, 0.6),
-      0 0 30px rgba(196, 84, 74, 0.2);
-  }
-}
-/* Trust section's "Auto-Reply Systems" toggle — snaps to the disabled
-   position with a red flash the first time it scrolls into view, so the
-   claim "this is physically disabled" reads as a real mechanical event
-   rather than static copy. */
-@keyframes landing-toggle-flash {
-  0%,
-  100% {
-    box-shadow: inset 0 0 0 2px var(--border);
-  }
-  50% {
-    box-shadow: inset 0 0 0 2px var(--destructive);
-    background-color: rgba(196, 84, 74, 0.2);
-  }
-}
-@keyframes landing-badge-pop {
-  0% {
-    transform: scale(1);
-    box-shadow: 0 0 0 rgba(107, 224, 164, 0);
-  }
-  50% {
-    transform: scale(1.2);
-    box-shadow: 0 0 20px rgba(107, 224, 164, 0.5);
-  }
-  100% {
-    transform: scale(1);
-  }
-}
-@keyframes landing-price-flash {
-  0% {
-    box-shadow: 0 0 0 rgba(107, 224, 164, 0);
-    border-color: rgba(74, 106, 94, 0.3);
-  }
-  50% {
-    box-shadow: 0 0 60px rgba(107, 224, 164, 0.3);
-    border-color: rgba(107, 224, 164, 0.8);
-  }
-  100% {
-    box-shadow: 0 0 50px rgba(107, 224, 164, 0.1);
-    border-color: rgba(107, 224, 164, 0.3);
-  }
-}
-@keyframes landing-flow-line {
-  0% {
-    background-position: 100% 0;
-  }
-  100% {
-    background-position: -100% 0;
+    transform: translate(20px, -30px) scale(0.97);
   }
 }
 @keyframes landing-status-blink {
   0%,
   100% {
     opacity: 1;
-    transform: scale(1);
   }
   50% {
-    opacity: 0.3;
-    transform: scale(0.85);
+    opacity: 0.45;
   }
 }
-/* Bigger/brighter variant of onboarding-scan-line for the hero demo's
-   taller viewport and the hotter landing accent color. */
+/* Scan-line sweep used by the hero demo and the "tailored to your product"
+   feature tile — mirrors the real relevance-scanning step, not decoration. */
 @keyframes landing-scan-sweep {
   0% {
     transform: translateY(-100%);
@@ -420,58 +330,16 @@
     opacity: 0;
   }
 }
-@keyframes landing-ripple-burst {
-  0% {
-    box-shadow: 0 0 0 0 rgba(107, 224, 164, 0.6);
-  }
-  70% {
-    box-shadow: 0 0 0 15px rgba(107, 224, 164, 0);
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba(107, 224, 164, 0);
-  }
-}
 
 /* Landing page — utility classes applying the keyframes above. */
-.landing-alert-pulse {
-  animation: landing-alert-glow 3s ease-in-out infinite;
-}
-.landing-flow-dot {
-  animation: landing-flow-dot 3s linear infinite;
-}
-.landing-conveyor {
-  animation: landing-conveyor 6s linear infinite;
-}
 .landing-radial-drift {
-  animation: landing-radial-drift 20s ease-in-out infinite alternate;
-}
-.landing-flow-line {
-  background-image: linear-gradient(90deg, var(--border) 0%, var(--accent-glow) 50%, var(--border) 100%);
-  background-size: 200% 100%;
-  animation: landing-flow-line 3s linear infinite;
+  animation: landing-radial-drift 24s ease-in-out infinite alternate;
 }
 .landing-status-blink {
-  animation: landing-status-blink 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  animation: landing-status-blink 2s ease-in-out infinite;
 }
-.landing-ripple-hover {
-  position: relative;
-}
-.landing-ripple-hover::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  z-index: -1;
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-.landing-ripple-hover:hover::before {
-  opacity: 1;
-  animation: landing-ripple-burst 1.5s infinite;
-}
-/* Diagonal light-sweep on hover — the landing page's default button
-   treatment (Nav, Hero, the demo's Approve/Edit buttons). Distinct from
-   landing-ripple-hover above, which is reserved for the Final CTA only. */
+/* Quiet diagonal sheen on hover — the landing page's default button
+   treatment (Nav, Hero, the demo's Approve/Edit buttons). */
 .landing-btn-glow {
   position: relative;
   z-index: 1;
@@ -485,7 +353,7 @@
   left: -100%;
   width: 50%;
   height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent);
   transform: skewX(-20deg);
   z-index: -1;
   transition: 0.5s;
@@ -495,95 +363,44 @@
 }
 
 /* Landing page — shared card treatment (How It Works nodes, Feature
-   Highlights bento tiles, Social Proof cards, Problem section cards). Ports
-   the artifact's .panel/.panel-interactive/.panel-lift trio exactly rather
-   than the ad-hoc per-component hover styles this had before. */
+   Highlights tiles, Social Proof cards, Problem section cards). Flat by
+   default, matching the product's own DESIGN.md: cards share the page
+   background and are cut into the field by a hairline ring, not lifted off
+   it by a lighter fill or glass blur. */
 .landing-panel {
-  background-color: rgba(10, 18, 17, 0.7);
-  backdrop-filter: blur(12px);
+  background-color: var(--background);
   box-shadow: inset 0 0 0 1px var(--border);
   border-radius: 0.535rem;
   transition:
-    transform 0.4s var(--landing-spring),
-    box-shadow 0.4s var(--landing-spring),
-    background-color 0.4s ease;
+    box-shadow 0.3s var(--landing-spring),
+    background-color 0.3s ease;
 }
-/* Interactive variant — adds the inner radial-glow wash that fades in on
-   hover, on top of the shared lift+ring+bg-shift below. Used for cards that
-   read as "instrument nodes" (How It Works, Feature Highlights).
-   Deliberately no overflow:hidden here (unlike the artifact's version) —
-   How It Works' numbered badge floats half above its card, which
-   overflow:hidden would clip; border-radius:inherit on ::before keeps the
-   glow wash respecting rounded corners without needing to clip the card. */
 .landing-panel-interactive {
   position: relative;
 }
-.landing-panel-interactive::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: radial-gradient(circle at center, rgba(107, 224, 164, 0.1) 0%, transparent 70%);
-  opacity: 0;
-  transition: opacity 0.4s ease;
-  pointer-events: none;
-}
-.landing-panel-interactive:hover::before {
-  opacity: 1;
-}
 .landing-panel-interactive:hover,
 .landing-panel-lift:hover {
-  box-shadow:
-    inset 0 0 0 1px var(--accent-glow),
-    0 10px 30px -10px rgba(107, 224, 164, 0.1);
-  background-color: rgba(14, 26, 24, 0.95);
-  transform: translateY(-6px);
+  box-shadow: inset 0 0 0 1px var(--accent-glow);
+  background-color: color-mix(in oklch, var(--accent-glow), var(--background) 95%);
 }
 
-/* Trust section toggle — snaps into the disabled position + red flash the
-   first time its Reveal wrapper becomes visible. */
+/* Trust section toggle — snaps into the disabled position the first time
+   its Reveal wrapper becomes visible. No flash; the state change itself
+   (and the label next to it) carries the point. */
 .landing-toggle-thumb {
   transform: translateX(0);
   transition:
     transform 0.4s var(--landing-spring),
-    background-color 0.2s,
-    box-shadow 0.2s;
+    background-color 0.3s ease;
 }
 .landing-reveal-visible .landing-toggle-thumb {
   transform: translateX(-1.5rem);
   background-color: var(--destructive);
-  box-shadow: 0 0 10px var(--destructive);
-  transition-delay: 500ms;
+  transition-delay: 300ms;
 }
-.landing-reveal-visible .landing-toggle-track {
-  animation: landing-toggle-flash 0.5s ease 500ms;
-}
-/* How-it-works numbered badges — pop once their card reveals. */
+/* How-it-works numbered badges. */
 .landing-node-badge {
-  transition:
-    transform 0.3s var(--landing-spring),
-    box-shadow 0.3s ease;
-}
-.landing-reveal-visible .landing-node-badge {
-  animation: landing-badge-pop 0.6s var(--landing-spring);
-}
-/* Pricing card — glow flash + corner brackets draw in on reveal. */
-.landing-price-pulse.landing-reveal-visible {
-  animation: landing-price-flash 1s ease-out 300ms forwards;
-}
-.landing-bracket {
-  position: absolute;
-  border-color: var(--accent-glow);
-  transition: all 0.6s var(--landing-spring);
-  width: 0;
-  height: 0;
-  opacity: 0;
-}
-.landing-reveal-visible .landing-bracket {
-  width: 1.5rem;
-  height: 1.5rem;
-  opacity: 1;
-  transition-delay: 500ms;
+  transition: box-shadow 0.3s ease;
 }
 
 @media (prefers-reduced-motion: reduce) {

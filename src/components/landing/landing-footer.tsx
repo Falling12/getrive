@@ -12,7 +12,7 @@ export function LandingFooter() {
         >
           <span
             className="size-1.5 animate-[auth-pulse-slow_3s_ease-in-out_infinite] rounded-full"
-            style={{ backgroundColor: "var(--accent-glow)", boxShadow: "0 0 8px var(--accent-glow)" }}
+            style={{ backgroundColor: "var(--accent-glow)" }}
           />
           Listening now
         </div>

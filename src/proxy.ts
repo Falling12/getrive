@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-// Remembers the Signals page's last-selected status filter across visits.
-// The sidebar/mobile-nav links to /signals with no query string at all, so
+// Remembers the Home feed's last-selected status filter across visits.
+// The sidebar/mobile-nav links to /home with no query string at all, so
 // without this every visit reset back to "All" and the founder had to
-// re-select "Not replied" every single time — see signals/page.tsx, which
+// re-select "Not replied" every single time — see home/page.tsx, which
 // falls back to this cookie only when the incoming URL itself carries no
 // `status` param (a bare nav-link click, not an explicit filter choice).
 // A plain per-request cookie write here, rather than converting the filter
@@ -28,5 +28,5 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: "/projects/:projectId/signals",
+  matcher: "/projects/:projectId/home",
 };

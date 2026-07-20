@@ -64,8 +64,8 @@ export class InvalidPositioningSelectionError extends Error {}
 
 // Denormalizes the chosen ICP onto flat columns (selectedIcpName/Reasoning/
 // Language) rather than just storing an index into icpCandidates, so every
-// other consumer (Signal Scoring's prompt, channel discovery, Outreach
-// later) can read the selection without knowing the candidate-array shape.
+// other consumer (Signal Scoring's prompt, channel discovery) can read the
+// selection without knowing the candidate-array shape.
 export async function selectPositioning({
   productId,
   selectedStatement,
@@ -97,7 +97,7 @@ export async function selectPositioning({
 // Settings since Positioning was last (re)generated from them — nothing else
 // invalidates Positioning automatically (see regeneratePositioningCandidates'
 // sourceDescription/sourceTargetCustomer snapshot), so a stale selectedStatement
-// or ICP can otherwise keep feeding reply/outreach/signal-scoring prompts
+// or ICP can otherwise keep feeding reply/signal-scoring prompts
 // indefinitely without the founder realizing it no longer matches. Only
 // meaningful once a statement has actually been generated — candidates that
 // were never generated aren't "stale," they're just missing.

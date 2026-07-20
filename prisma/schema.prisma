@@ -99,36 +99,36 @@ enum KarmaStatus {
 
 // A founder's product/pitch, captured during onboarding. One per account for the MVP.
 model Product {
-  id                  String    @id @default(cuid())
-  userId              String
-  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name                String
-  description         String
-  targetCustomer      String?
-  currentSignupCount  Int       @default(0)
+  id                         String         @id @default(cuid())
+  userId                     String
+  user                       User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name                       String
+  description                String
+  targetCustomer             String?
+  currentSignupCount         Int            @default(0)
   // A short, qualitative statement of what the founder is going for (e.g.
   // "get to my first 100 real users") — not a numeric target.
-  signupGoal          String?
+  signupGoal                 String?
   // Signal Scoring gate: posts scoring at or above this (0-1) become a
   // visible Signal. Configurable per founder later in Settings.
-  relevanceThreshold  Float     @default(0.7)
+  relevanceThreshold         Float          @default(0.7)
   // Base URL that tracked links (Users/attribution page, Signal Detail's
   // copy-to-clipboard link) append UTM parameters to.
-  websiteUrl          String?
+  websiteUrl                 String?
   // Reddit connection status shown in Settings. Reddit closed self-serve
   // OAuth app registration for new developers (confirmed directly — see
   // src/lib/reddit/fetch-posts.ts), so this can't be wired to a real OAuth
   // flow right now; these fields exist so the UI can honestly show
   // "not connected" rather than faking a working integration.
-  redditUsername      String?
-  redditConnectedAt   DateTime?
+  redditUsername             String?
+  redditConnectedAt          DateTime?
   // Set when a manual "Check for new posts" run starts, cleared when it
   // ends (success, error, or client disconnect) — lets a page refresh
   // mid-poll still show "checking" instead of silently reverting to idle,
   // and stops a second concurrent poll for the same project. Treated as
   // stale after POLL_STALE_MINUTES (see lib/reddit/poll.ts) in case a
   // crashed run left it stuck set.
-  activePollStartedAt DateTime?
+  activePollStartedAt        DateTime?
   // Set the moment this project's very first-ever signal(s) are created and
   // the "your first signals are ready" retention email has been sent for it
   // (see notifyFirstSignals in lib/reddit/poll.ts) — null means that email
@@ -137,21 +137,21 @@ model Product {
   // never both send it, and as the "has this project ever had a signal"
   // check itself, so a project with pre-existing signals at migration time
   // is backfilled to a non-null value rather than retroactively emailed.
-  firstSignalsEmailSentAt DateTime?
+  firstSignalsEmailSentAt    DateTime?
   // Soft-delete: archived projects drop out of the project switcher/picker
   // and onboarding-redirect logic, but their data (signals, subreddits,
   // tracked links) is kept intact and the project's own pages stay
   // reachable by direct URL. There's no hard delete yet — archive is the
   // only "get this out of my way" mechanism for now.
-  archivedAt          DateTime?
+  archivedAt                 DateTime?
   // Set by base-rate classification (see lib/services/base-rate.service.ts)
   // from the trailing-90-day SearchResult count across every platform —
   // ≥30 matches/90d is HIGH, below is LOW. Re-measured monthly, not on every
   // backfill run, so this is a snapshot judgement, not a live count (read
   // baseRateMatchCount for the raw number the classification was based on).
-  baseRateClass       BaseRateClass?
-  baseRateMeasuredAt  DateTime?
-  baseRateMatchCount  Int?
+  baseRateClass              BaseRateClass?
+  baseRateMeasuredAt         DateTime?
+  baseRateMatchCount         Int?
   // Set when a manual measurement run (Phase 1: query generation + backfill
   // search + base-rate classification) starts, cleared when it ends — same
   // in-progress-lock shape as activePollStartedAt above, staleness-bound by
@@ -168,22 +168,21 @@ model Product {
   // (lib/services/search-ingestion.service.ts) so the mapping is direct:
   // matched=matchesEligible, filtered=matchesSkippedResolved,
   // scored=matchesScored, signals=signalsCreated, errors=errors.
-  lastIngestionAt       DateTime?
-  lastIngestionMatched  Int?
-  lastIngestionFiltered Int?
-  lastIngestionScored   Int?
-  lastIngestionSignals  Int?
-  lastIngestionErrors   Int?
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
+  lastIngestionAt            DateTime?
+  lastIngestionMatched       Int?
+  lastIngestionFiltered      Int?
+  lastIngestionScored        Int?
+  lastIngestionSignals       Int?
+  lastIngestionErrors        Int?
+  createdAt                  DateTime       @default(now())
+  updatedAt                  DateTime       @updatedAt
 
-  sources             Source[]
-  trackedLinks        TrackedLink[]
-  signups             Signup[]
-  positioning         Positioning?
-  leads               Lead[]
-  searchQueries       SearchQuery[]
-  searchResults       SearchResult[]
+  sources       Source[]
+  trackedLinks  TrackedLink[]
+  signups       Signup[]
+  positioning   Positioning?
+  searchQueries SearchQuery[]
+  searchResults SearchResult[]
 
   @@index([userId])
   @@map("products")
@@ -194,21 +193,21 @@ model Product {
 // Positioning page. Candidates are stored as JSON since they're AI output
 // the founder picks from, not independently-queried rows; the selected*
 // fields are denormalized flat columns (not just an index into the JSON)
-// so every other consumer (Signal Scoring, Outreach later) can read them
-// without knowing the candidate-array shape.
+// so every other consumer (Signal Scoring) can read them without knowing
+// the candidate-array shape.
 model Positioning {
-  id                   String   @id @default(cuid())
-  productId            String   @unique
-  product              Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  id                        String   @id @default(cuid())
+  productId                 String   @unique
+  product                   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   // string[]
-  statementCandidates  Json
-  selectedStatement    String?
+  statementCandidates       Json
+  selectedStatement         String?
   // { name: string; reasoning: string; audienceLanguage: string[] }[]
-  icpCandidates        Json
-  selectedIcpName      String?
-  selectedIcpReasoning String?
+  icpCandidates             Json
+  selectedIcpName           String?
+  selectedIcpReasoning      String?
   // string[]
-  selectedIcpLanguage  Json?
+  selectedIcpLanguage       Json?
   // AI's own pick from the current candidate batch — drives the default
   // selection + "Recommended" badge in the UI. Persisted (not just returned
   // in-memory from the generation call) so the badge survives a page
@@ -219,12 +218,12 @@ model Positioning {
   // Snapshot of Product.description/targetCustomer at the moment candidates
   // were last generated from them — compared against the live Product
   // fields to detect when a founder has edited the description in Settings
-  // without regenerating Positioning, so consumers (reply/outreach/signal
-  // scoring prompts) can flag that the selected statement/ICP may be stale.
-  sourceDescription     String?
-  sourceTargetCustomer  String?
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+  // without regenerating Positioning, so consumers (reply/signal scoring
+  // prompts) can flag that the selected statement/ICP may be stale.
+  sourceDescription         String?
+  sourceTargetCustomer      String?
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
 
   @@map("positionings")
 }
@@ -256,42 +255,42 @@ enum SourceType {
 // regardless of karma) — the column stays for now to avoid a migration, but
 // nothing surfaces it.
 model Source {
-  id                   String      @id @default(cuid())
-  productId            String
-  product              Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
-  type                 SourceType  @default(REDDIT_SUBREDDIT)
-  name                 String
-  reasoning            String
-  rank                 Int
-  selected             Boolean     @default(false)
-  config               Json?
+  id                     String      @id @default(cuid())
+  productId              String
+  product                Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  type                   SourceType  @default(REDDIT_SUBREDDIT)
+  name                   String
+  reasoning              String
+  rank                   Int
+  selected               Boolean     @default(false)
+  config                 Json?
   // Oldest-first polling order — Reddit's unauthenticated RSS access is
   // rate-limited to roughly one request per minute per IP, globally across
   // every monitored subreddit in the app, so each cron run can only take a
   // small batch. This is how it round-robins fairly across founders/sources.
   // Updated on every attempt, success or failure — see lastSuccessfulPollAt
   // for "is ingestion actually working" instead of just "did we try".
-  lastPolledAt         DateTime?
-  lastSuccessfulPollAt DateTime?
+  lastPolledAt           DateTime?
+  lastSuccessfulPollAt   DateTime?
   // Incremented on each failed fetch, reset to 0 on success — surfaced on
   // the Sources page and Dashboard once it crosses a threshold, so a
   // silently-broken fetch doesn't just look like "a quiet source" with
   // signals mysteriously drying up.
-  consecutiveFailures  Int         @default(0)
+  consecutiveFailures    Int         @default(0)
   // Incremented when a fetch succeeds (no throw) but returns zero posts,
   // reset to 0 the moment a fetch returns at least one post — a healthy
   // HTTP response carrying nothing is a different failure mode than an
   // HTTP error, and consecutiveFailures alone can't see it since it only
   // resets to 0 on any non-throwing fetch, empty or not.
-  consecutiveEmptyPolls Int        @default(0)
+  consecutiveEmptyPolls  Int         @default(0)
   // Unused by the UI now (see the model comment above) — kept only so
   // existing rows don't need a migration.
-  karmaStatus          KarmaStatus @default(WATCH)
-  karmaThreshold       Int?
-  selfPromoNotes       String?
+  karmaStatus            KarmaStatus @default(WATCH)
+  karmaThreshold         Int?
+  selfPromoNotes         String?
   // Manually updated by the founder (no Reddit API access to read it for
   // real — see the redditUsername comment on Product).
-  currentKarma         Int         @default(0)
+  currentKarma           Int         @default(0)
   // True for a Source auto-created by search-ingestion.service.ts's
   // findOrCreateSourceForVenue (one per distinct venue a search match
   // landed in) — never set by any founder-facing add-source flow. Replaces
@@ -301,14 +300,14 @@ model Source {
   // venue mining / addDiscoveredSourceAction), so they never show as
   // "active" and are structurally excluded from polling (poll.ts's source
   // queries all require selected: true).
-  discoveredViaSearch  Boolean     @default(false)
+  discoveredViaSearch    Boolean     @default(false)
   // Set when the founder dismisses this source's venue-mining
   // recommendation (Phase 3A) — excluded from getVenueMiningCandidates
   // from then on, even though it still qualifies on signal count, so a
   // dismissed suggestion doesn't keep reappearing on every page load.
   venueMiningDismissedAt DateTime?
-  createdAt            DateTime    @default(now())
-  updatedAt            DateTime    @updatedAt
+  createdAt              DateTime    @default(now())
+  updatedAt              DateTime    @updatedAt
 
   scoredPosts ScoredPost[]
   signals     Signal[]
@@ -458,9 +457,9 @@ model ScoredPost {
 // A post/item that passed Signal Scoring — this is what the founder
 // actually sees. Raw posts that don't pass never become a Signal at all.
 model Signal {
-  id              String   @id @default(cuid())
+  id              String    @id @default(cuid())
   sourceId        String
-  source          Source   @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  source          Source    @relation(fields: [sourceId], references: [id], onDelete: Cascade)
   externalId      String
   title           String
   body            String
@@ -486,11 +485,10 @@ model Signal {
 }
 
 // A UTM-tagged link. Created either from Signal Detail (tied to the signal
-// whose reply it's inserted into), from Outreach (tied to the lead it was
-// drafted for), or standalone from the Users page's tracked-link generator
-// (both signalId and leadId null). The link shown to founders is the short
-// /r/[slug] redirect (slug is a short random code, not the cuid id — the
-// bare id is too long to paste into a Reddit reply without looking spammy);
+// whose reply it's inserted into), or standalone from the Users page's
+// tracked-link generator (signalId null). The link shown to founders is the
+// short /r/[slug] redirect (slug is a short random code, not the cuid id —
+// the bare id is too long to paste into a Reddit reply without looking spammy);
 // the redirect resolves it, bumps clickCount, and forwards to the real
 // UTM-tagged destination URL. A Signup itself still has to be manually
 // confirmed since Getrive has no visibility into the founder's own
@@ -502,8 +500,6 @@ model TrackedLink {
   product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   signalId    String?
   signal      Signal?  @relation(fields: [signalId], references: [id], onDelete: SetNull)
-  leadId      String?
-  lead        Lead?    @relation(fields: [leadId], references: [id], onDelete: SetNull)
   label       String
   utmSource   String   @default("reddit")
   utmMedium   String   @default("comment")
@@ -515,44 +511,6 @@ model TrackedLink {
 
   @@index([productId])
   @@map("tracked_links")
-}
-
-enum OutreachStatus {
-  DRAFT
-  SENT
-  RESPONDED
-  NO_RESPONSE
-}
-
-// A founder-pasted lead for direct, manual outreach — deliberately lightweight:
-// no lead sourcing/import, just a name and whatever context the founder
-// already has (found via Twitter search, a Reddit profile, wherever). `handle`
-// is optional freeform text (a username/handle) used only for the loose
-// known-lead dedup check (see lib/services/lead-dedup.service.ts) — it isn't
-// validated against any specific platform's format since a lead could come
-// from anywhere. Same draft/copy/mark-done shape as Signal's reply flow:
-// Getrive drafts, the founder copies and sends themselves, then logs what
-// happened. status starts at DRAFT (message may not exist yet, or exists but
-// isn't sent), moves to SENT when the founder confirms they sent it, and
-// RESPONDED/NO_RESPONSE are the founder's own follow-up log entries.
-model Lead {
-  id            String         @id @default(cuid())
-  productId     String
-  product       Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
-  name          String
-  handle        String?
-  context       String
-  draftMessage  String?
-  draftToneNote String?
-  status        OutreachStatus @default(DRAFT)
-  sentAt        DateTime?
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-
-  trackedLinks TrackedLink[]
-
-  @@index([productId])
-  @@map("leads")
 }
 
 enum SignupSource {

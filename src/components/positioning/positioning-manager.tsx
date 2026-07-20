@@ -100,7 +100,7 @@ export function PositioningManager({
       <div className="flex flex-col items-start gap-4 rounded border border-dashed border-border p-6">
         <p className="max-w-md font-mono text-xs leading-relaxed text-muted-foreground">
           Generate a positioning statement and candidate ICPs from your product description.
-          You&apos;ll pick one of each — it sharpens Signal Scoring and feeds Outreach drafts.
+          You&apos;ll pick one of each — it sharpens Signal Scoring and reply drafts.
         </p>
         <Button onClick={handleGenerate} disabled={isPending} className="gap-2 rounded-md">
           <Sparkles className="size-4" />

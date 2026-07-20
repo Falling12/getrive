@@ -3,12 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { LucideIcon } from "lucide-react";
-import { NAV_GROUPS, NAV_ITEMS, SEARCH_NAV_ITEM, SETTINGS_NAV_ITEM } from "@/components/app-shell/nav-items";
+import { NAV_ITEMS, SETTINGS_NAV_ITEM } from "@/components/app-shell/nav-items";
 import { cn } from "@/lib/utils";
-
-const ITEM_BY_SEGMENT = new Map(
-  [...NAV_ITEMS, SEARCH_NAV_ITEM, SETTINGS_NAV_ITEM].map((item) => [item.segment, item])
-);
 
 function NavRow({
   href,
@@ -49,20 +45,17 @@ function NavRow({
   );
 }
 
-// Shared, grouped nav content rendered inside both the desktop sidebar's
-// fixed rail (AppSidebar) and the mobile drawer (MobileNavDrawer), so the
-// two never drift apart and both get the same "Signal ops"/"Growth"
-// grouping (see nav-items.ts). `onNavigate` lets the mobile drawer close
-// itself when a link is clicked.
+// Shared nav content rendered inside both the desktop sidebar's fixed rail
+// (AppSidebar) and the mobile drawer (MobileNavDrawer), so the two never
+// drift apart. `onNavigate` lets the mobile drawer close itself when a link
+// is clicked.
 export function NavList({
   projectId,
   unrepliedSignalCount,
-  showSearchPipeline = false,
   onNavigate,
 }: {
   projectId: string;
   unrepliedSignalCount: number;
-  showSearchPipeline?: boolean;
   onNavigate?: () => void;
 }) {
   const pathname = usePathname();
@@ -70,34 +63,25 @@ export function NavList({
   const settingsHref = `${base}/${SETTINGS_NAV_ITEM.segment}`;
 
   return (
-    <nav className="flex flex-1 flex-col gap-5 px-3">
-      {NAV_GROUPS.map((group) => {
-        const segments = group.segments.filter((segment) => segment !== "search" || showSearchPipeline);
-        if (segments.length === 0) return null;
+    <nav className="flex flex-1 flex-col gap-1 px-3">
+      {NAV_ITEMS.map((item) => {
+        const href = `${base}/${item.segment}`;
+        // Signal detail pages live under the legacy /signals/[id] path but
+        // belong to the Home feed — keep Home lit while reading one.
+        const isActive =
+          pathname.startsWith(href) ||
+          (item.segment === "home" && pathname.startsWith(`${base}/signals`));
         return (
-          <div key={group.label ?? "top"} className="flex flex-col gap-1">
-            {group.label && (
-              <p className="px-3 pb-1 font-mono text-[10px] tracking-widest text-muted-foreground/60 uppercase">
-                {group.label}
-              </p>
-            )}
-            {segments.map((segment) => {
-              const item = ITEM_BY_SEGMENT.get(segment)!;
-              const href = `${base}/${segment}`;
-              return (
-                <NavRow
-                  key={segment}
-                  href={href}
-                  label={item.label}
-                  icon={item.icon}
-                  isActive={pathname.startsWith(href)}
-                  badge={segment === "signals" ? unrepliedSignalCount : undefined}
-                  onNavigate={onNavigate}
-                  dataTour={segment === "signals" || segment === "sources" ? `nav-${segment}` : undefined}
-                />
-              );
-            })}
-          </div>
+          <NavRow
+            key={item.segment}
+            href={href}
+            label={item.label}
+            icon={item.icon}
+            isActive={isActive}
+            badge={item.segment === "home" ? unrepliedSignalCount : undefined}
+            onNavigate={onNavigate}
+            dataTour={item.segment === "targeting" ? "nav-targeting" : undefined}
+          />
         );
       })}
 

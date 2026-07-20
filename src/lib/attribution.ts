@@ -24,7 +24,6 @@ async function loadAttributedSignups(productId: string) {
       trackedLink: {
         include: {
           signal: { include: { source: true } },
-          lead: true,
         },
       },
     },
@@ -47,13 +46,10 @@ export interface SignupChannel {
 }
 
 // The one place that resolves a signup down to "what channel actually got
-// this person" — a real monitored Source, an Outreach lead, or a
-// manually-generated tracked link's own founder-typed utmSource. Shared by
-// the per-source map, the channel breakdown, and the attribution log so
-// they can't drift on what "channel" means for a given signup. Fixes a real
-// bug: previously an Outreach-driven signup (trackedLink.lead set, no
-// signal) fell through to a "REDDIT_SUBREDDIT" type default and rendered as
-// a fake "r/{lead name}" source.
+// this person" — a real monitored Source, or a manually-generated tracked
+// link's own founder-typed utmSource. Shared by the per-source map, the
+// channel breakdown, and the attribution log so they can't drift on what
+// "channel" means for a given signup.
 export function describeSignupChannel(signup: AttributedSignup): SignupChannel | null {
   const link = signup.trackedLink;
   if (!link) return null;
@@ -69,19 +65,9 @@ export function describeSignupChannel(signup: AttributedSignup): SignupChannel |
     };
   }
 
-  if (link.lead) {
-    return {
-      channelKey: "outreach",
-      channelLabel: "Outreach",
-      detailLabel: `Outreach: ${link.lead.name}`,
-      sourceName: null,
-      sourceType: null,
-    };
-  }
-
-  // A standalone link from the Tracked Link Generator, tied to neither a
-  // Signal nor a Lead — grouped by whatever the founder typed into its
-  // "Channel" (utmSource) field rather than assuming Reddit.
+  // A standalone link from the Tracked Link Generator, tied to no Signal —
+  // grouped by whatever the founder typed into its "Channel" (utmSource)
+  // field rather than assuming Reddit.
   const utmSource = link.utmSource || "direct";
   const channelLabel = utmSource.charAt(0).toUpperCase() + utmSource.slice(1);
   return {
@@ -95,8 +81,8 @@ export function describeSignupChannel(signup: AttributedSignup): SignupChannel |
 
 // Per-source-name granularity (e.g. "r/SaaS" vs "r/startups" kept separate)
 // — used by the Sources page to show each monitored source's own acquired
-// count. Only real monitored-source-backed signups belong here; Outreach
-// and manual-link signups have no Source row to attach to.
+// count. Only real monitored-source-backed signups belong here; manual-link
+// signups have no Source row to attach to.
 export async function getSignupsBySource(productId: string): Promise<SourceAttribution> {
   const signups = await loadAttributedSignups(productId);
   const bySource = new Map<string, SourceAttributionEntry>();
@@ -112,7 +98,7 @@ export async function getSignupsBySource(productId: string): Promise<SourceAttri
 }
 
 // Channel-level view for the Users/attribution page: every subreddit
-// collapses into one "Reddit" row alongside Hacker News, Outreach, and any
+// collapses into one "Reddit" row alongside Hacker News and any
 // manually-generated links — this is what "which channel is actually
 // working" should mean, not a flat list of individual subreddits.
 export async function getSignupsByChannel(productId: string): Promise<ChannelAttributionEntry[]> {

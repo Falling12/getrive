@@ -28,7 +28,7 @@ export default async function ProjectsPage() {
   });
 
   if (projects.length === 0) redirect("/onboarding");
-  if (projects.length === 1) redirect(`/projects/${projects[0].id}/dashboard`);
+  if (projects.length === 1) redirect(`/projects/${projects[0].id}/home`);
 
   return (
     <div className="flex w-full flex-col items-center pt-16 pb-16 md:pt-24">
@@ -44,7 +44,7 @@ export default async function ProjectsPage() {
           {projects.map((project) => (
             <Link
               key={project.id}
-              href={`/projects/${project.id}/dashboard`}
+              href={`/projects/${project.id}/home`}
               className="group flex items-center gap-4 rounded-lg border border-border bg-background/80 p-5 transition-colors hover:border-accent/40"
             >
               <span className="flex size-10 shrink-0 items-center justify-center rounded border border-border bg-secondary/40">

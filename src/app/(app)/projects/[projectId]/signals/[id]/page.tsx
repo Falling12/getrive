@@ -32,7 +32,7 @@ export default async function SignalDetailPage({
       <EventOnMount event="first_signal_viewed" properties={{ signal_id: signal.id }} />
       <div className="flex w-full max-w-[800px] flex-col gap-6 px-4 pt-8 md:px-8 md:pt-12">
         <Link
-          href={`/projects/${projectId}/signals`}
+          href={`/projects/${projectId}/home`}
           className="inline-flex items-center gap-2 font-mono text-[11px] tracking-wider text-muted-foreground uppercase transition-colors hover:text-foreground"
         >
           <ArrowLeft className="size-3.5" />

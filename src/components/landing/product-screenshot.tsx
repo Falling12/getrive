@@ -30,7 +30,7 @@ export function ProductScreenshot() {
           >
             <Image
               src={SCREENSHOT_SRC}
-              alt="Getrive's review queue: a flagged Reddit, Hacker News, IndieHackers, Stack Exchange, or Ask MetaFilter post next to its drafted reply, with options to edit, send, or skip."
+              alt="Getrive's review queue: a flagged Reddit or Hacker News post next to its drafted reply, with options to edit, send, or skip."
               fill
               loading="lazy"
               sizes="(min-width: 1024px) 1024px, 100vw"

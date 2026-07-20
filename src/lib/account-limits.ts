@@ -28,11 +28,3 @@ export async function countActiveProjects(userId: string): Promise<number> {
     where: { userId, archivedAt: null, sources: { some: { selected: true } } },
   });
 }
-
-// Total Outreach leads across every project the account owns — the query
-// MAX_OUTREACH_LEADS_PER_ACCOUNT is checked against.
-export async function countAccountOutreachLeads(userId: string): Promise<number> {
-  return prisma.lead.count({
-    where: { product: { userId } },
-  });
-}

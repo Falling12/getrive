@@ -64,7 +64,7 @@ export async function addManualQueryAction(
     });
   }
 
-  revalidatePath(`/projects/${projectId}/search`);
+  revalidatePath(`/projects/${projectId}/targeting`);
   return { success: true };
 }
 
@@ -103,7 +103,7 @@ export async function setQueryActiveAction(
     });
   }
 
-  revalidatePath(`/projects/${projectId}/search`);
+  revalidatePath(`/projects/${projectId}/targeting`);
   return { success: true };
 }
 
@@ -132,7 +132,7 @@ export async function approveProposedQueryAction(projectId: string, queryId: str
     text: query.text,
   });
 
-  revalidatePath(`/projects/${projectId}/search`);
+  revalidatePath(`/projects/${projectId}/targeting`);
   return { success: true };
 }
 
@@ -149,7 +149,7 @@ export async function dismissProposedQueryAction(projectId: string, queryId: str
     data: { status: "RETIRED", retiredReason: "Dismissed by founder." },
   });
 
-  revalidatePath(`/projects/${projectId}/search`);
+  revalidatePath(`/projects/${projectId}/targeting`);
   return { success: true };
 }
 
@@ -182,8 +182,8 @@ export async function runIngestionNowAction(projectId: string): Promise<QueryAct
     await prisma.product.update({ where: { id: product.id }, data: { activeIngestionStartedAt: null } });
   }
 
-  revalidatePath(`/projects/${projectId}/search`);
-  revalidatePath(`/projects/${projectId}/signals`);
+  revalidatePath(`/projects/${projectId}/targeting`);
+  revalidatePath(`/projects/${projectId}/home`);
   return { success: true };
 }
 
@@ -209,7 +209,7 @@ export async function promoteVenueMiningSourceAction(
     source_name: candidate.name,
   });
 
-  revalidatePath(`/projects/${projectId}/search`);
+  revalidatePath(`/projects/${projectId}/targeting`);
   return { success: true };
 }
 
@@ -228,6 +228,6 @@ export async function dismissVenueMiningCandidateAction(
 
   await prisma.source.update({ where: { id: sourceId }, data: { venueMiningDismissedAt: new Date() } });
 
-  revalidatePath(`/projects/${projectId}/search`);
+  revalidatePath(`/projects/${projectId}/targeting`);
   return { success: true };
 }

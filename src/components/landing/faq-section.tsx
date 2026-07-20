@@ -1,42 +1,31 @@
-import { CircleHelp } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { Reveal } from "@/components/landing/reveal";
 import { FAQS } from "@/lib/faq";
 
-// Static (not an accordion) — every answer stays in the initial HTML
-// instead of behind a client-side expand/collapse, so it's readable by any
-// crawler that doesn't execute JS. This also doubles as the visible
-// counterpart to the FAQPage JSON-LD in app/page.tsx (both read from the
-// same FAQS array), which matters because structured data is expected to
-// reflect what's actually on the page, not just live in a hidden script tag.
+// Native <details>/<summary> accordion, not a client-side toggle — every
+// answer still ships in the initial server-rendered HTML (just visually
+// collapsed), so it stays readable by any crawler that doesn't execute JS
+// and keeps matching the FAQPage JSON-LD in app/page.tsx (both read from
+// the same FAQS array). No client component, no JS needed for the toggle.
 export function FaqSection() {
   return (
     <section id="faq" className="relative w-full border-t border-border/60 py-24 md:py-32">
       <div className="mx-auto max-w-[1400px] px-4 lg:px-8">
-        <Reveal className="mb-16 flex flex-col items-center gap-4 text-center">
-          <span
-            className="inline-flex items-center gap-2 rounded-full px-3 py-1 font-mono text-[11px] font-medium tracking-widest uppercase"
-            style={{ backgroundColor: "color-mix(in oklch, var(--accent-glow), transparent 90%)", color: "var(--accent-glow)" }}
-          >
-            <CircleHelp className="size-3.5" />
-            Common questions
-          </span>
-          <h2 className="text-4xl font-semibold tracking-tight text-foreground md:text-6xl">
-            Before you ask.
-          </h2>
+        <Reveal className="mb-16 text-center">
+          <h2 className="text-4xl font-semibold tracking-tight text-foreground md:text-6xl">Before you ask.</h2>
         </Reveal>
 
-        <div className="mx-auto grid max-w-5xl grid-cols-1 gap-6 md:grid-cols-2">
-          {FAQS.map((faq, index) => (
-            <Reveal key={faq.question} delayMs={100 * (index % 2)}>
-              <div className="landing-panel h-full p-8">
-                <h3 className="mb-3 text-lg font-semibold text-foreground">{faq.question}</h3>
-                <p className="text-[15px] leading-relaxed font-light text-muted-foreground">
-                  {faq.answer}
-                </p>
-              </div>
-            </Reveal>
+        <Reveal className="landing-panel mx-auto max-w-3xl divide-y divide-border/60">
+          {FAQS.map((faq) => (
+            <details key={faq.question} className="group px-6 py-6 md:px-8">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-[15px] font-semibold text-foreground [&::-webkit-details-marker]:hidden">
+                {faq.question}
+                <ChevronDown className="size-4 shrink-0 text-muted-foreground transition-transform duration-300 group-open:rotate-180" />
+              </summary>
+              <p className="mt-4 text-[15px] leading-relaxed font-light text-muted-foreground">{faq.answer}</p>
+            </details>
           ))}
-        </div>
+        </Reveal>
       </div>
     </section>
   );

@@ -76,7 +76,7 @@ export function ProjectSwitcher({
             {projects.map((project) => (
               <DropdownMenuItem
                 key={project.id}
-                render={<Link href={`/projects/${project.id}/dashboard`} />}
+                render={<Link href={`/projects/${project.id}/home`} />}
               >
                 <span className="flex-1 truncate">{project.name}</span>
                 {project.id === currentProjectId && <Check className="size-3.5 text-accent" />}

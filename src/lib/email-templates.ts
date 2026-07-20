@@ -221,10 +221,6 @@ export interface DigestSignalItem {
   url: string;
 }
 
-export interface DigestOutreachItem {
-  name: string;
-}
-
 export interface DigestProjectSummary {
   name: string;
   signalsThisWeek: number;
@@ -233,11 +229,8 @@ export interface DigestProjectSummary {
   dashboardUrl: string;
   signalsUrl: string;
   sourcesUrl: string;
-  outreachUrl: string;
   unrepliedSignals: DigestSignalItem[];
   unrepliedSignalsTotal: number;
-  unsentOutreach: DigestOutreachItem[];
-  unsentOutreachTotal: number;
 }
 
 function signalRow(signal: DigestSignalItem): string {
@@ -260,7 +253,7 @@ function sectionLabel(text: string): string {
 // a top-border divider — with more than one project, a plain divider read
 // as one continuous wall of text with faint seams; a real panel per
 // project makes each one scannable on its own. Only built from sections
-// that actually have content, so a project with e.g. no outreach drafts
+// that actually have content, so a project with e.g. no unreplied signals
 // simply omits that sub-section rather than showing an empty heading.
 function projectRow(p: DigestProjectSummary): string {
   const sections: string[] = [];
@@ -279,19 +272,6 @@ function projectRow(p: DigestProjectSummary): string {
     `);
   }
 
-  if (p.unsentOutreach.length > 0) {
-    const more =
-      p.unsentOutreachTotal > p.unsentOutreach.length
-        ? ` +${p.unsentOutreachTotal - p.unsentOutreach.length} more`
-        : "";
-    sections.push(`
-      <div style="margin-top:${SPACE.md}px;">
-        ${sectionLabel("Drafted, not sent")}
-        <p style="margin:${SPACE.sm}px 0 0;font-size:14px;color:${SIGNAL_WHITE};">${p.unsentOutreach.map((o) => o.name).join(", ")}${more}</p>
-      </div>
-    `);
-  }
-
   return `
     <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-top:${SPACE.lg}px;">
       <tr>
@@ -303,7 +283,7 @@ function projectRow(p: DigestProjectSummary): string {
             ${p.usersAcquired} user${p.usersAcquired === 1 ? "" : "s"} acquired
           </p>
           ${sections.join("")}
-          ${button(p.dashboardUrl, "View dashboard")}
+          ${button(p.dashboardUrl, "Open Getrive")}
         </td>
       </tr>
     </table>
@@ -360,7 +340,7 @@ export function firstSignalsEmailTemplate({
       Getrive just scored its first posts for ${productName} — here's what matched:
     </p>
     ${signals.map(signalRow).join("")}
-    ${button(dashboardUrl, "View dashboard")}
+    ${button(dashboardUrl, "View your signals")}
   `,
       "You're getting this because it's the first time Getrive found something for this project.",
       firstSignal ? `${firstSignal.title}${morePreview}` : `Your first signals just came in for ${productName}.`

@@ -26,7 +26,6 @@ export function MobileNavDrawer({
   unrepliedSignalCount,
   email,
   image,
-  showSearchPipeline = false,
 }: {
   projectId: string;
   projectName: string;
@@ -34,7 +33,6 @@ export function MobileNavDrawer({
   unrepliedSignalCount: number;
   email: string;
   image?: string | null;
-  showSearchPipeline?: boolean;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const pathname = usePathname();
@@ -157,7 +155,6 @@ export function MobileNavDrawer({
         <NavList
           projectId={projectId}
           unrepliedSignalCount={unrepliedSignalCount}
-          showSearchPipeline={showSearchPipeline}
           onNavigate={() => setIsOpen(false)}
         />
 

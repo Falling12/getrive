@@ -38,7 +38,7 @@ export default function Image() {
           Find your first users without cold-pitching
         </div>
         <div style={{ display: "flex", fontSize: 30, marginTop: 32, color: "#9aa39e", maxWidth: 880 }}>
-          Listens across Reddit, Hacker News, IndieHackers & more for people already describing your exact problem.
+          Listens across Reddit, Hacker News & more for people already describing your exact problem.
         </div>
       </div>
     ),

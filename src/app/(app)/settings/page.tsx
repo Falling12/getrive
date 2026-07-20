@@ -73,7 +73,7 @@ export default async function AccountSettingsPage() {
           <p className="text-sm text-foreground">
             Export any project&apos;s data from that project&apos;s Settings page. To permanently
             delete a single project or your entire account — including all signals, sources,
-            outreach leads, and tracked links — email{" "}
+            and tracked links — email{" "}
             <a href="mailto:senkcsani@gmail.com" className="text-accent hover:text-foreground">
               senkcsani@gmail.com
             </a>{" "}

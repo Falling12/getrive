@@ -550,7 +550,7 @@ export async function pollAllSources(options?: {
     const { subject, html } = firstSignalsEmailTemplate({
       productName: bucket.productName,
       signals: topSignals,
-      dashboardUrl: `${appUrl}/projects/${bucket.productId}/dashboard`,
+      dashboardUrl: `${appUrl}/projects/${bucket.productId}/home`,
     });
     await sendEmail({ to: bucket.userEmail, subject, html });
   }

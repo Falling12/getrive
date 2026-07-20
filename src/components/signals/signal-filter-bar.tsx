@@ -32,7 +32,7 @@ export function SignalFilterBar({
   activeSource?: string;
   activeStatus: string;
 }) {
-  const basePath = `/projects/${projectId}/signals`;
+  const basePath = `/projects/${projectId}/home`;
 
   function hrefFor(overrides: { source?: string | null; status?: string }) {
     const params = new URLSearchParams();
@@ -105,7 +105,7 @@ export function SignalFilterBar({
           );
         })}
         <Link
-          href={`/projects/${projectId}/sources`}
+          href={`/projects/${projectId}/targeting#sources`}
           className="ml-1 flex shrink-0 items-center gap-1.5 rounded-full border border-dashed border-border/50 px-3 py-1 font-mono text-[10px] whitespace-nowrap text-muted-foreground/50 transition-colors hover:border-muted-foreground/50 hover:text-foreground"
         >
           <Plus className="size-3" /> Add source
