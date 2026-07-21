@@ -17,13 +17,27 @@ export const BROWSER_USER_AGENT =
 // Reddit's multi-subreddit URL syntax (r/sub1+sub2+sub3) works on the .rss
 // endpoint the same way it does on the site — one request returns a single
 // feed interleaving new posts from every listed subreddit. This is what
-// lets lib/reddit/poll.ts fetch every due subreddit in one request instead
-// of one rate-limited request per subreddit (Reddit's unauthenticated RSS
-// access is rate-limited to roughly one request per ~60s, globally per IP).
-// Capped well under any practical URL-length concern; a run with more due
-// subreddits than this just carries the rest into the next run (same
-// stalest-first fairness as any other over-the-cap case).
-export const MAX_SUBREDDITS_PER_BATCH = 40;
+// lets lib/reddit/poll.ts fetch a chunk of due subreddits in one request
+// instead of one rate-limited request per subreddit (Reddit's
+// unauthenticated RSS access is rate-limited to roughly one request per
+// ~60s, globally per IP) — poll.ts loops through multiple chunks of this
+// size per run rather than being limited to just one.
+//
+// Re-run against live Reddit via scripts/verify-reddit-batching.ts on
+// 2026-07-21 (with REDDIT_RSS_LIMIT=100 already in place): representation
+// degrades smoothly with batch size (90% at 10, 80% at 20, 70% at 30,
+// 62.5% at the previous value of 40, 50% at 60) — but the real finding was
+// the correctness spot-check at size 60, where r/startups and
+// r/Entrepreneur came back with ZERO posts in the combined batch despite
+// each independently having a full 100 available solo, and r/SaaS lost 96
+// of its 100. Not degraded visibility — a specific subreddit can be
+// entirely shut out if it shares a batch with a couple of very
+// high-volume ones, since the combined feed still has one shared ~100-
+// entry ceiling regardless of how many subreddits split it. Lowered from
+// 40 to 20 to move away from where that started showing up, trading some
+// per-run breadth (fewer subreddits per request) for not silently zeroing
+// out a specific subreddit a founder is actually monitoring.
+export const MAX_SUBREDDITS_PER_BATCH = 20;
 
 // Confirmed empirically (scripts/verify-reddit-batching.ts): a combined
 // multi-subreddit feed does NOT scale its page size with subreddit count —

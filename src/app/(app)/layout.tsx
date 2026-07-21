@@ -3,6 +3,7 @@ import { requireSession } from "@/lib/session";
 import { brandSans, brandMono } from "@/lib/fonts";
 import { TopoBackdrop } from "@/components/shared/topo-backdrop";
 import { IdentifyUser } from "@/components/analytics/identify-user";
+import { HideCookieUi } from "@/components/analytics/hide-cookie-ui";
 
 // Everything under here requires a session — nothing for a crawler to
 // index behind the login wall, so keep it out of search entirely.
@@ -26,6 +27,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         className="pointer-events-none fixed inset-0 z-0 bg-gradient-to-b from-background/40 to-background/95"
       />
       <IdentifyUser userId={session.user.id} />
+      <HideCookieUi />
       {children}
     </div>
   );

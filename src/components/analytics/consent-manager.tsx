@@ -38,6 +38,7 @@ interface SilktideConsentType {
 
 interface SilktideConfig {
   consentTypes: SilktideConsentType[];
+  icon?: { position?: "bottomLeft" | "bottomRight" };
 }
 
 // PostHog ("analytics") and the signup-attribution capture ("marketing")
@@ -49,6 +50,7 @@ interface SilktideConfig {
 // for a window event from a second component).
 function initConsentManager() {
   window.silktideConsentManager?.init({
+    icon: { position: "bottomRight" },
     consentTypes: [
       {
         id: "essential",

@@ -20,7 +20,7 @@ import { captureServerEvent } from "@/lib/analytics/posthog-server";
 import { describeSelectedIcp } from "@/lib/services/positioning.service";
 import { formatSourceLabel } from "@/lib/sources/format";
 import { appUrl } from "@/lib/config";
-import type { SourceType } from "@/generated/prisma/client";
+import type { Source, Product, User, Positioning, SourceType } from "@/generated/prisma/client";
 
 // This file lives under lib/reddit/ from when Getrive only ingested Reddit;
 // it's now the shared multi-source polling engine (Reddit + Hacker News).
@@ -57,14 +57,23 @@ export const POLL_STALE_MINUTES = 20;
 // run sweeps every due source of these types rather than throttling to a
 // handful per run.
 const MAX_NON_REDDIT_SOURCES_PER_RUN = 100;
-// Reddit sources are also fetched as one shared, batched request per run
-// (see caches.reddit below and MAX_SUBREDDITS_PER_BATCH in fetch-posts.ts) —
-// Reddit's global per-IP rate limit applies per *request*, not per
-// subreddit, so combining every due subreddit into a single request removes
-// the scarcity that used to force a tiny per-run cap here. Matches the
-// batch size so `take` never selects more subreddits than one request can
-// actually combine.
-const MAX_REDDIT_SOURCES_PER_RUN = MAX_SUBREDDITS_PER_BATCH;
+// Reddit sources get their own chunked, rate-limit-spaced pass (see
+// pollRedditSources below) rather than a single combined request — a flat
+// per-run cap equal to one request's batch size meant a project's
+// subreddits only got their turn once every N runs as the platform grew
+// past a few dozen projects, and an infrequent external scheduler (this
+// product has no cron of its own — see the cron route's own comment) made
+// that far worse: a run that only ever touches 40 Reddit sources, running
+// hourly or less, can't keep up with 40+ projects' worth of subreddits.
+// Set to a multiple of MAX_SUBREDDITS_PER_BATCH so it's always "however
+// many whole chunks we select for," not an arbitrary number independent of
+// the chunk size.
+const MAX_REDDIT_SOURCES_PER_RUN = MAX_SUBREDDITS_PER_BATCH * 6;
+// Reddit's unauthenticated RSS access is rate-limited to roughly one
+// request per ~60s, globally per IP (see fetch-posts.ts) — this is that
+// spacing plus a small safety margin, the same figure
+// scripts/verify-reddit-batching.ts uses against live Reddit.
+const REDDIT_REQUEST_SPACING_MS = 62_000;
 // Stack Exchange has no Reddit-style multi-site query syntax (see
 // fetch-stackexchange.ts) — one request per site, and each request spends
 // real, finite daily quota (300/day unauthenticated, 10,000/day with an app
@@ -73,11 +82,15 @@ const MAX_REDDIT_SOURCES_PER_RUN = MAX_SUBREDDITS_PER_BATCH;
 // can't come close to exhausting a whole day's budget by itself.
 const MAX_STACKEXCHANGE_SOURCES_PER_RUN = 20;
 // Soft ceiling on total run time, kept under `maxDuration` (300s on the
-// cron route) so a run that's about to be hard-killed exits early after its
-// current source instead, returning a real (partial) summary. Sources it
-// didn't reach are simply still the stalest candidates next run, since
-// lastPolledAt is only updated for sources actually attempted.
+// cron route) so a run that's about to be hard-killed exits early instead
+// of being cut off mid-request, returning a real (partial) summary.
+// Sources it didn't reach are simply still the stalest candidates next
+// run, since lastPolledAt is only updated for sources actually attempted.
 const RUN_TIME_BUDGET_MS = 270_000;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 interface RawSourcePost {
   id: string;
@@ -88,24 +101,26 @@ interface RawSourcePost {
   createdAt: Date;
 }
 
+type SourceWithProduct = Source & {
+  product: Product & { user: User; positioning: Positioning | null };
+};
+
 // Hacker News, IndieHackers, and Ask MetaFilter are each one shared feed,
 // not a per-project target — `caches.hn`/`caches.ih`/`caches.amf` let every
 // source of that type encountered in a single run reuse one upstream fetch
-// instead of hitting the feed once per project that monitors it.
-// `caches.reddit`/`caches.se` are the same idea applied per-community
-// instead: one combined-subreddit request (fetchNewPostsForSubreddits) or
-// one request-per-site batch (fetchNewQuestionsForSites), each sliced back
-// apart per source below.
-async function fetchForSource(
+// instead of hitting the feed once per project that monitors it. Stack
+// Exchange is the same idea per-site instead: one request-per-site batch
+// (fetchNewQuestionsForSites), sliced back apart per source below. Reddit
+// is handled entirely separately (see pollRedditSources) since it needs
+// rate-limit-spaced chunking that the other three don't.
+async function fetchForNonRedditSource(
   source: { type: SourceType; name: string },
   caches: {
-    reddit: { promise?: Promise<Map<string, RawSourcePost[]>> };
     se: { promise?: Promise<Map<string, RawSourcePost[]>> };
     hn: { promise?: Promise<RawSourcePost[]> };
     ih: { promise?: Promise<RawSourcePost[]> };
     amf: { promise?: Promise<RawSourcePost[]> };
   },
-  redditSubredditNames: string[],
   stackExchangeSiteSlugs: string[]
 ): Promise<RawSourcePost[]> {
   if (source.type === "HACKERNEWS") {
@@ -120,14 +135,9 @@ async function fetchForSource(
     caches.amf.promise ??= fetchNewAskMetaFilterPosts();
     return caches.amf.promise;
   }
-  if (source.type === "STACKEXCHANGE") {
-    caches.se.promise ??= fetchNewQuestionsForSites(stackExchangeSiteSlugs);
-    const postsBySite = await caches.se.promise;
-    return postsBySite.get(source.name.toLowerCase()) ?? [];
-  }
-  caches.reddit.promise ??= fetchNewPostsForSubreddits(redditSubredditNames);
-  const postsByName = await caches.reddit.promise;
-  return postsByName.get(source.name.toLowerCase()) ?? [];
+  caches.se.promise ??= fetchNewQuestionsForSites(stackExchangeSiteSlugs);
+  const postsBySite = await caches.se.promise;
+  return postsBySite.get(source.name.toLowerCase()) ?? [];
 }
 
 // One batch: fetch new posts for the least-recently-polled sources, skip
@@ -143,6 +153,8 @@ export async function pollAllSources(options?: {
   onProgress?: (event: PollProgressEvent) => void;
 }): Promise<PollSummary> {
   const emit = options?.onProgress ?? (() => {});
+  const runStartedAt = Date.now();
+  const timeBudgetExceeded = () => Date.now() - runStartedAt > RUN_TIME_BUDGET_MS;
 
   // Archived projects (see the Danger Zone in project settings) are
   // excluded from every poll trigger — cron batch AND a manual poll of one
@@ -159,10 +171,6 @@ export async function pollAllSources(options?: {
   ];
   const sourceInclude = { product: { include: { user: true, positioning: true } } };
 
-  // Reddit sources no longer need a per-account fairness pass: since every
-  // due subreddit in the run shares one combined request (see caches.reddit
-  // below), including a second source from the same account doesn't cost
-  // any other account a turn the way a dedicated serialized request used to.
   const redditSources = await prisma.source.findMany({
     where: {
       selected: true,
@@ -187,11 +195,6 @@ export async function pollAllSources(options?: {
     take: MAX_NON_REDDIT_SOURCES_PER_RUN,
   });
 
-  // Same fairness reasoning as Reddit's query above no longer applying (see
-  // its comment) doesn't hold for Stack Exchange — each site still costs its
-  // own real request against a finite daily quota (see
-  // MAX_STACKEXCHANGE_SOURCES_PER_RUN), so it gets a dedicated, separately
-  // capped query rather than folding into nonRedditSources.
   const stackExchangeSources = await prisma.source.findMany({
     where: {
       selected: true,
@@ -203,20 +206,6 @@ export async function pollAllSources(options?: {
     orderBy: staleFirst,
     take: MAX_STACKEXCHANGE_SOURCES_PER_RUN,
   });
-
-  // Merged back into one staleness-ordered run for processing/progress-event
-  // order; every Reddit/Stack Exchange source's raw posts still come from a
-  // single shared batch request (see caches.reddit/caches.se below),
-  // regardless of where in this list it ends up.
-  const sources = [...redditSources, ...stackExchangeSources, ...nonRedditSources].sort(
-    (a, b) => (a.lastPolledAt?.getTime() ?? 0) - (b.lastPolledAt?.getTime() ?? 0)
-  );
-  // Computed once up front — every Reddit/Stack Exchange source in the run
-  // is fetched via one combined-subreddit request or one request-per-site
-  // batch keyed to this exact list (see fetchForSource), not discovered
-  // incrementally as the loop encounters them.
-  const redditSubredditNames = redditSources.map((s) => s.name);
-  const stackExchangeSiteSlugs = stackExchangeSources.map((s) => s.name);
 
   const summary: PollSummary = {
     sourcesPolled: 0,
@@ -260,100 +249,31 @@ export async function pollAllSources(options?: {
     return count;
   }
 
-  const caches = {
-    reddit: {} as { promise?: Promise<Map<string, RawSourcePost[]>> },
-    se: {} as { promise?: Promise<Map<string, RawSourcePost[]>> },
-    hn: {} as { promise?: Promise<RawSourcePost[]> },
-    ih: {} as { promise?: Promise<RawSourcePost[]> },
-    amf: {} as { promise?: Promise<RawSourcePost[]> },
-  };
-  const runStartedAt = Date.now();
-
   // Accumulates signals for any product still awaiting its one-time "your
   // first signals are ready" email (sent in the loop over this map, below
   // the main source loop) — gathered across every source of that product
-  // in this run, since a
-  // project can have several sources and its first-ever signals may land
-  // from more than one of them in the same batch. Keyed by productId rather
-  // than sent inline per-signal so the eventual email can pick the
-  // highest-scoring 2-3 across the whole batch, not just whichever source
-  // happened to be processed first.
+  // in this run, since a project can have several sources and its
+  // first-ever signals may land from more than one of them in the same
+  // batch. Keyed by productId rather than sent inline per-signal so the
+  // eventual email can pick the highest-scoring 2-3 across the whole
+  // batch, not just whichever source happened to be processed first.
   const pendingFirstSignalEmails = new Map<
     string,
     { productId: string; productName: string; userEmail: string; signals: DigestSignalItem[] }
   >();
 
-  for (const [index, source] of sources.entries()) {
-    if (Date.now() - runStartedAt > RUN_TIME_BUDGET_MS) {
-      console.warn(
-        `[poll] time budget reached after ${summary.sourcesPolled}/${sources.length} sources — stopping run early, the rest stay stalest-first for next run`
-      );
-      break;
-    }
+  const totalSources = redditSources.length + nonRedditSources.length + stackExchangeSources.length;
+  let processedCount = 0;
 
-    const sourceLabel = formatSourceLabel(source.type, source.name);
-    let signalsCreatedForSource = 0;
-    summary.sourcesPolled += 1;
-    emit({
-      type: "source-start",
-      name: sourceLabel,
-      index: index + 1,
-      total: sources.length,
-    });
-
-    let posts: RawSourcePost[];
-    try {
-      posts = await fetchForSource(source, caches, redditSubredditNames, stackExchangeSiteSlugs);
-      emit({ type: "source-fetched", name: sourceLabel, postCount: posts.length });
-      const updated = await prisma.source.update({
-        where: { id: source.id },
-        data: {
-          lastPolledAt: new Date(),
-          lastSuccessfulPollAt: new Date(),
-          consecutiveFailures: 0,
-          consecutiveEmptyPolls: posts.length === 0 ? { increment: 1 } : 0,
-        },
-      });
-      if (updated.consecutiveEmptyPolls >= CONSECUTIVE_EMPTY_POLL_ALERT_THRESHOLD) {
-        if (updated.consecutiveEmptyPolls === CONSECUTIVE_EMPTY_POLL_ALERT_THRESHOLD) {
-          console.warn(
-            `[poll] ${source.name} has fetched successfully but returned 0 posts ${updated.consecutiveEmptyPolls} polls in a row — likely a silent no-op (wrong endpoint, empty-by-construction query), not just a quiet source`
-          );
-        }
-        emit({
-          type: "ingestion-empty",
-          sourceName: sourceLabel,
-          consecutiveEmptyPolls: updated.consecutiveEmptyPolls,
-        });
-      }
-    } catch (error) {
-      console.error(`[poll] failed to fetch ${source.name}`, error);
-      Sentry.captureException(error, { tags: { source: source.name, sourceType: source.type } });
-      summary.errors += 1;
-      emit({
-        type: "source-error",
-        name: sourceLabel,
-        message: error instanceof Error ? error.message : "Fetch failed",
-      });
-      const updated = await prisma.source.update({
-        where: { id: source.id },
-        data: { lastPolledAt: new Date(), consecutiveFailures: { increment: 1 } },
-      });
-      if (updated.consecutiveFailures >= CONSECUTIVE_FAILURE_ALERT_THRESHOLD) {
-        if (updated.consecutiveFailures === CONSECUTIVE_FAILURE_ALERT_THRESHOLD) {
-          console.warn(
-            `[poll] ${source.name} has failed to fetch ${updated.consecutiveFailures} times in a row — ingestion may be broken for this source`
-          );
-        }
-        emit({
-          type: "ingestion-failing",
-          sourceName: sourceLabel,
-          consecutiveFailures: updated.consecutiveFailures,
-        });
-      }
-      continue;
-    }
+  // Shared by both the Reddit pass and the non-Reddit pass — everything
+  // from "already scored?" dedup through scoring, signal creation,
+  // notification, and first-signal-email bucketing. Fetching (and its own
+  // per-source-type bookkeeping/error handling) happens before this is
+  // called; this only ever sees posts that were already fetched
+  // successfully.
+  async function scoreAndCreateSignals(source: SourceWithProduct, posts: RawSourcePost[], sourceLabel: string) {
     summary.postsFetched += posts.length;
+    let signalsCreatedForSource = 0;
 
     // One query instead of one findUnique per post — the same batching idea
     // as the AI scoring calls below, applied to the dedup check.
@@ -532,6 +452,166 @@ export async function pollAllSources(options?: {
       });
     }
   }
+
+  async function recordFetchSuccess(source: SourceWithProduct, posts: RawSourcePost[], sourceLabel: string) {
+    emit({ type: "source-fetched", name: sourceLabel, postCount: posts.length });
+    const updated = await prisma.source.update({
+      where: { id: source.id },
+      data: {
+        lastPolledAt: new Date(),
+        lastSuccessfulPollAt: new Date(),
+        consecutiveFailures: 0,
+        consecutiveEmptyPolls: posts.length === 0 ? { increment: 1 } : 0,
+      },
+    });
+    if (updated.consecutiveEmptyPolls >= CONSECUTIVE_EMPTY_POLL_ALERT_THRESHOLD) {
+      if (updated.consecutiveEmptyPolls === CONSECUTIVE_EMPTY_POLL_ALERT_THRESHOLD) {
+        console.warn(
+          `[poll] ${source.name} has fetched successfully but returned 0 posts ${updated.consecutiveEmptyPolls} polls in a row — likely a silent no-op (wrong endpoint, empty-by-construction query), not just a quiet source`
+        );
+      }
+      emit({
+        type: "ingestion-empty",
+        sourceName: sourceLabel,
+        consecutiveEmptyPolls: updated.consecutiveEmptyPolls,
+      });
+    }
+  }
+
+  async function recordFetchFailure(source: SourceWithProduct, sourceLabel: string, error: unknown) {
+    console.error(`[poll] failed to fetch ${source.name}`, error);
+    Sentry.captureException(error, { tags: { source: source.name, sourceType: source.type } });
+    summary.errors += 1;
+    emit({
+      type: "source-error",
+      name: sourceLabel,
+      message: error instanceof Error ? error.message : "Fetch failed",
+    });
+    const updated = await prisma.source.update({
+      where: { id: source.id },
+      data: { lastPolledAt: new Date(), consecutiveFailures: { increment: 1 } },
+    });
+    if (updated.consecutiveFailures >= CONSECUTIVE_FAILURE_ALERT_THRESHOLD) {
+      if (updated.consecutiveFailures === CONSECUTIVE_FAILURE_ALERT_THRESHOLD) {
+        console.warn(
+          `[poll] ${source.name} has failed to fetch ${updated.consecutiveFailures} times in a row — ingestion may be broken for this source`
+        );
+      }
+      emit({
+        type: "ingestion-failing",
+        sourceName: sourceLabel,
+        consecutiveFailures: updated.consecutiveFailures,
+      });
+    }
+  }
+
+  // Reddit gets its own pass, chunked into MAX_SUBREDDITS_PER_BATCH-sized,
+  // rate-limit-spaced requests, rather than the old single combined
+  // request for the whole run. A run only starts a new chunk if there's
+  // still time left in the budget; chunks it never reaches are simply
+  // still the stalest candidates next run, same as any other over-budget
+  // source. This is what lets one run cover more than one chunk's worth of
+  // Reddit sources — previously the hard ceiling on Reddit coverage per
+  // run was whatever fit in a single request, regardless of how much of
+  // the time budget went unused.
+  async function pollRedditSources(sources: SourceWithProduct[]) {
+    let lastRequestAt: number | null = null;
+
+    for (let i = 0; i < sources.length; i += MAX_SUBREDDITS_PER_BATCH) {
+      if (timeBudgetExceeded()) {
+        console.warn(
+          `[poll] time budget reached before starting Reddit chunk ${i}-${i + MAX_SUBREDDITS_PER_BATCH} — remaining Reddit sources stay stalest-first for next run`
+        );
+        break;
+      }
+
+      if (lastRequestAt !== null) {
+        const waitMs = REDDIT_REQUEST_SPACING_MS - (Date.now() - lastRequestAt);
+        if (waitMs > 0) await sleep(waitMs);
+      }
+      // Re-check after any wait above — the spacing delay itself can push
+      // a run over budget for a chunk that isn't worth starting anymore.
+      if (timeBudgetExceeded()) break;
+
+      const chunk = sources.slice(i, i + MAX_SUBREDDITS_PER_BATCH);
+      lastRequestAt = Date.now();
+
+      let postsByName: Map<string, RawSourcePost[]>;
+      try {
+        postsByName = await fetchNewPostsForSubreddits(chunk.map((s) => s.name));
+      } catch (error) {
+        // One failed request affects every subreddit combined into it —
+        // each still gets its own consecutiveFailures bookkeeping, same as
+        // if each had failed independently.
+        for (const source of chunk) {
+          const sourceLabel = formatSourceLabel(source.type, source.name);
+          summary.sourcesPolled += 1;
+          processedCount += 1;
+          emit({ type: "source-start", name: sourceLabel, index: processedCount, total: totalSources });
+          await recordFetchFailure(source, sourceLabel, error);
+        }
+        continue;
+      }
+
+      for (const source of chunk) {
+        if (timeBudgetExceeded()) {
+          console.warn(
+            `[poll] time budget reached mid-chunk after ${summary.sourcesPolled}/${totalSources} sources — stopping run early`
+          );
+          return;
+        }
+        const sourceLabel = formatSourceLabel(source.type, source.name);
+        summary.sourcesPolled += 1;
+        processedCount += 1;
+        emit({ type: "source-start", name: sourceLabel, index: processedCount, total: totalSources });
+        const posts = postsByName.get(source.name.toLowerCase()) ?? [];
+        await recordFetchSuccess(source, posts, sourceLabel);
+        await scoreAndCreateSignals(source, posts, sourceLabel);
+      }
+    }
+  }
+
+  async function pollNonRedditSources(sources: SourceWithProduct[], stackExchangeSiteSlugs: string[]) {
+    const caches = {
+      se: {} as { promise?: Promise<Map<string, RawSourcePost[]>> },
+      hn: {} as { promise?: Promise<RawSourcePost[]> },
+      ih: {} as { promise?: Promise<RawSourcePost[]> },
+      amf: {} as { promise?: Promise<RawSourcePost[]> },
+    };
+
+    for (const source of sources) {
+      if (timeBudgetExceeded()) {
+        console.warn(
+          `[poll] time budget reached after ${summary.sourcesPolled}/${totalSources} sources — stopping run early, the rest stay stalest-first for next run`
+        );
+        break;
+      }
+
+      const sourceLabel = formatSourceLabel(source.type, source.name);
+      summary.sourcesPolled += 1;
+      processedCount += 1;
+      emit({ type: "source-start", name: sourceLabel, index: processedCount, total: totalSources });
+
+      let posts: RawSourcePost[];
+      try {
+        posts = await fetchForNonRedditSource(source, caches, stackExchangeSiteSlugs);
+      } catch (error) {
+        await recordFetchFailure(source, sourceLabel, error);
+        continue;
+      }
+      await recordFetchSuccess(source, posts, sourceLabel);
+      await scoreAndCreateSignals(source, posts, sourceLabel);
+    }
+  }
+
+  // Non-Reddit sources first: they're cheap (shared feeds, no rate-limit
+  // spacing) and previously always completed within the time budget, so
+  // running them before Reddit's slower, chunked pass means they're never
+  // starved by Reddit's spacing eating the whole run — Reddit is exactly
+  // the source type designed to gracefully stop early and pick up next run.
+  const stackExchangeSiteSlugs = stackExchangeSources.map((s) => s.name);
+  await pollNonRedditSources([...stackExchangeSources, ...nonRedditSources], stackExchangeSiteSlugs);
+  await pollRedditSources(redditSources);
 
   for (const bucket of pendingFirstSignalEmails.values()) {
     // Conditional update as the atomic claim: if another process (a

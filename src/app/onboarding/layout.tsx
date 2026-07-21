@@ -5,6 +5,7 @@ import { brandSans, brandMono } from "@/lib/fonts";
 import { appUrl } from "@/lib/config";
 import { reportSnippetBodyFor } from "@/lib/tracking-snippet";
 import { IdentifyUser } from "@/components/analytics/identify-user";
+import { HideCookieUi } from "@/components/analytics/hide-cookie-ui";
 
 // Requires a session — nothing here for search engines.
 export const metadata: Metadata = { robots: { index: false, follow: false } };
@@ -25,6 +26,7 @@ export default async function OnboardingLayout({ children }: { children: React.R
           never linked to their pre-signup anonymous activity at all. This
           is the earliest point after signIn() where a real session exists. */}
       <IdentifyUser userId={session.user.id} />
+      <HideCookieUi />
       {children}
       {/* Report half of Getrive's own signup-attribution dogfooding — see
           app/layout.tsx for the capture half and the comment there for the

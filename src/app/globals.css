@@ -158,8 +158,9 @@
 }
 
 /* Retheme for the Silktide Consent Manager banner (components/analytics/
-   consent-manager.tsx) — third-party, loaded from jsDelivr as a plain
-   #stcm-wrapper element the library appends directly to <body>, outside
+   consent-manager.tsx) — third-party, vendored locally at public/vendor/
+   and loaded as a plain #stcm-wrapper element the library appends
+   directly to <body>, outside
    every .theme-getrive-scoped React subtree. Its entire look runs off nine
    CSS custom properties declared on #stcm-wrapper (see the vendored
    silktide-consent-manager.css), so retheming it is just overriding those
@@ -197,11 +198,12 @@ body #stcm-wrapper .stcm-button {
   border-radius: 0.535rem; /* --radius, same out-of-scope literal as above */
 }
 
-/* The floating "reopen preferences" cookie icon (bottom-left) defaults to a
-   60px button with a 38px glyph — oversized next to the rest of Getrive's
-   UI, which favors small icon targets. Shrunk proportionally; the glyph's
-   own width/height attributes (set inline in the library's SVG markup)
-   don't override CSS, so this still wins. */
+/* The floating "reopen preferences" cookie icon (moved to bottom-right via
+   consent-manager.tsx's icon.position config) defaults to a 60px button
+   with a 38px glyph — oversized next to the rest of Getrive's UI, which
+   favors small icon targets. Shrunk proportionally; the glyph's own
+   width/height attributes (set inline in the library's SVG markup) don't
+   override CSS, so this still wins. */
 body #stcm-wrapper #stcm-icon {
   width: 44px;
   height: 44px;
@@ -210,6 +212,20 @@ body #stcm-wrapper #stcm-icon {
 body #stcm-wrapper #stcm-icon svg {
   width: 28px;
   height: 28px;
+}
+
+/* Hides the consent banner/icon while inside the logged-in product
+   (components/analytics/hide-cookie-ui.tsx toggles this class on <body>
+   for the (app) route group and onboarding). The library itself stays
+   mounted and its init() call still runs there — see that component's own
+   comment for why: a consent choice made on the marketing site needs to
+   keep re-arming PostHog on every in-app page load too, this rule only
+   hides the UI, it doesn't stop that. A user who never saw the banner
+   before reaching the product (e.g. arriving straight at /login) simply
+   never gets a chance to consent while inside it — analytics/attribution
+   stay off for them, which is the safe default, not a bug. */
+body.hide-cookie-ui #stcm-wrapper {
+  display: none !important;
 }
 
 /* Auth motion + background primitives — ported 1:1 from the AIDesigner
