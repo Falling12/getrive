@@ -157,6 +157,61 @@
   --landing-spring: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
+/* Retheme for the Silktide Consent Manager banner (components/analytics/
+   consent-manager.tsx) — third-party, loaded from jsDelivr as a plain
+   #stcm-wrapper element the library appends directly to <body>, outside
+   every .theme-getrive-scoped React subtree. Its entire look runs off nine
+   CSS custom properties declared on #stcm-wrapper (see the vendored
+   silktide-consent-manager.css), so retheming it is just overriding those
+   — no selector-by-selector fighting needed. `body #stcm-wrapper` (element
+   + id) beats the library's own bare `#stcm-wrapper` (id only) on
+   specificity, so this wins regardless of which stylesheet loads second.
+   Values are Getrive's brand-kit literals (see .theme-getrive above)
+   rather than var() references, since #stcm-wrapper sits outside that
+   class's scope — duplicated intentionally, not left to drift. */
+body #stcm-wrapper {
+  --fontFamily: var(--font-brand-sans), Helvetica Neue, Segoe UI, Arial, sans-serif;
+  --primaryColor: #6cac8c; /* --accent-glow */
+  /* --background (#0a1211) is near-black and the banner sits directly on
+     the page background, so using it here made the banner invisible as a
+     surface — no edge, no lift. --secondary/--muted (#2a413a) is the
+     app's actual "elevated surface" tone (cards, badges) for exactly this
+     reason; using it here instead is what makes the panel read as a panel. */
+  --backgroundColor: #2a413a; /* --secondary / --muted */
+  --textColor: #eae7e0; /* --foreground */
+  --backdropBackgroundColor: rgba(10, 18, 17, 0.72); /* --background, tinted */
+  --backdropBackgroundBlur: 6px;
+  --iconColor: #2a413a; /* --secondary — cookie icon's circular button, same reasoning as above */
+  --iconBackgroundColor: #6cac8c; /* --accent-glow — the icon glyph itself */
+}
+
+/* Buttons get Getrive's CTA treatment (font-mono, tracking-widest,
+   uppercase — see landing-nav's "Get started") rather than the library's
+   plain sans-serif label, plus a radius matched to the app's own
+   `rounded-lg` buttons instead of the library's tighter default. */
+body #stcm-wrapper .stcm-button {
+  font-family: var(--font-brand-mono), monospace;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border-radius: 0.535rem; /* --radius, same out-of-scope literal as above */
+}
+
+/* The floating "reopen preferences" cookie icon (bottom-left) defaults to a
+   60px button with a 38px glyph — oversized next to the rest of Getrive's
+   UI, which favors small icon targets. Shrunk proportionally; the glyph's
+   own width/height attributes (set inline in the library's SVG markup)
+   don't override CSS, so this still wins. */
+body #stcm-wrapper #stcm-icon {
+  width: 44px;
+  height: 44px;
+}
+
+body #stcm-wrapper #stcm-icon svg {
+  width: 28px;
+  height: 28px;
+}
+
 /* Auth motion + background primitives — ported 1:1 from the AIDesigner
    artifact (topographic contour field, spring-in card entrance, drift,
    pulse, button shimmer). Prefixed to avoid clashing with other sections. */

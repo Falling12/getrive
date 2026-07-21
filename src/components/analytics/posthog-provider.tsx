@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
-import { capturePageview, initPostHog } from "@/lib/analytics/posthog-client";
+import { capturePageview } from "@/lib/analytics/posthog-client";
 
 function PostHogPageView() {
   const pathname = usePathname();
@@ -17,19 +17,15 @@ function PostHogPageView() {
   return null;
 }
 
-// Mounted once in the root layout, first among its siblings. The
-// initPostHog() call below happens directly in the render body — not in an
-// effect — specifically so it runs during React's render phase, which
-// completes for the *entire tree* before any component's effects fire.
-// That guarantees PostHog is ready before sibling effects elsewhere (e.g.
-// LandingAnalytics's homepage_viewed) that would otherwise race it. Safe to
-// call unconditionally: initPostHog() no-ops on the server (and outside a
-// tracking environment — see isTrackingEnvironment in posthog-client.ts),
-// and this component's JSX output never depends on it, so there's no
-// hydration mismatch. Idempotent either way.
+// Mounted once in the root layout. initPostHog() itself is no longer
+// called from here — it's wired as the "analytics" category's onAccept
+// callback in components/analytics/consent-manager.tsx, since that's the
+// one place that already knows when consent was actually granted (both on
+// a fresh Accept and on every later page load for a returning visitor with
+// consent already on file). This component only owns pageview capture,
+// which is itself a no-op (see capturePageview in posthog-client.ts) until
+// PostHog has actually been initialized by that callback.
 export function PostHogProvider() {
-  initPostHog();
-
   return (
     <Suspense fallback={null}>
       <PostHogPageView />

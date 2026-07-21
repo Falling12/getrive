@@ -66,6 +66,32 @@ export function captureSnippetBody(): string {
   return CAPTURE_SNIPPET_BODY;
 }
 
+// Same logic as CAPTURE_SNIPPET_BODY above, as a real TS function instead
+// of a string — used by components/analytics/attribution-capture.tsx,
+// which (unlike the founder-facing snippet or Getrive's own pre-Cookiebot
+// beforeInteractive script) runs after hydration, gated on Cookiebot
+// marketing consent. Kept as a separate implementation rather than
+// stringifying this at runtime: CAPTURE_SNIPPET_BODY has to stay a plain,
+// dependency-free JS string a founder can paste onto any (non-React) site,
+// so it can't be generated from this.
+export function runCaptureNatively(): void {
+  const params = new URLSearchParams(window.location.search);
+  const linkId = params.get("utm_content");
+  if (!linkId) return;
+  const KEY = "getrive_attr";
+  try {
+    const existing = JSON.parse(localStorage.getItem(KEY) || "null");
+    if (existing && existing.l === linkId) return;
+  } catch {
+    // Ignore malformed localStorage content.
+  }
+  const token =
+    typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random()}`;
+  localStorage.setItem(KEY, JSON.stringify({ l: linkId, t: token }));
+}
+
 export function reportSnippetBodyFor(appUrl: string): string {
   return reportSnippetBody();
 }

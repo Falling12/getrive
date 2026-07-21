@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { ChevronDown } from "lucide-react";
 import { Reveal } from "@/components/landing/reveal";
 import { FAQS } from "@/lib/faq";
@@ -26,6 +27,17 @@ export function FaqSection() {
             </details>
           ))}
         </Reveal>
+
+        {/* Homepage's only in-body link to /guides — otherwise reachable
+            just from the footer, which meant neither a crawler nor a
+            first-time visitor had a reason to notice the content exists. */}
+        <p className="mt-8 text-center text-[15px] text-muted-foreground">
+          Want the deeper playbook?{" "}
+          <Link href="/guides" className="text-foreground underline underline-offset-4 hover:text-[var(--accent-glow)]">
+            Read our guides
+          </Link>{" "}
+          on finding your first users.
+        </p>
       </div>
     </section>
   );

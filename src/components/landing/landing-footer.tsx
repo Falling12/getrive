@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AuthMark } from "@/components/auth/auth-mark";
+import { CookieSettingsLink } from "@/components/analytics/cookie-settings-link";
 
 export function LandingFooter() {
   return (
@@ -17,12 +18,16 @@ export function LandingFooter() {
           Listening now
         </div>
         <div className="flex gap-6 font-mono text-[11px] tracking-widest text-muted-foreground uppercase">
+          <Link href="/guides" className="transition-colors hover:text-[var(--accent-glow)]">
+            Guides
+          </Link>
           <Link href="/terms" className="transition-colors hover:text-[var(--accent-glow)]">
             Terms
           </Link>
           <Link href="/privacy" className="transition-colors hover:text-[var(--accent-glow)]">
             Privacy
           </Link>
+          <CookieSettingsLink className="transition-colors hover:text-[var(--accent-glow)]" />
           <Link href="/login" className="transition-colors hover:text-[var(--accent-glow)]">
             Sign in
           </Link>

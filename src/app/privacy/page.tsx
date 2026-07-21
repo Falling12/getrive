@@ -67,6 +67,12 @@ export default function PrivacyPage() {
         password, or full name as event data — only your internal account id and category-level
         properties (e.g. which button you clicked, which onboarding step you completed).
       </p>
+      <p>
+        PostHog only starts once you accept analytics cookies in the consent banner (powered by
+        Silktide Consent Manager, an open-source tool) — nothing is tracked before that choice. The
+        same banner gates the signup-attribution capture described below. You can change your choice
+        at any time via the &ldquo;Cookie settings&rdquo; link in the footer.
+      </p>
 
       <h2>Website tracking (optional, your choice)</h2>
       <p>

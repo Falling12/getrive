@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AuthMark } from "@/components/auth/auth-mark";
+import { CookieSettingsLink } from "@/components/analytics/cookie-settings-link";
 import { brandSans, brandMono } from "@/lib/fonts";
 
 // Shared wrapper for standalone public pages (Terms, Privacy) — reachable
@@ -40,6 +41,7 @@ export function LegalPageShell({
           <Link href="/privacy" className="transition-colors hover:text-foreground">
             Privacy
           </Link>
+          <CookieSettingsLink className="transition-colors hover:text-foreground" />
           <Link href="/" className="ml-auto transition-colors hover:text-foreground">
             Back to Getrive
           </Link>
