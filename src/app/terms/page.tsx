@@ -83,8 +83,10 @@ export default function TermsPage() {
 
       <h2>Governing law</h2>
       <p>
-        These Terms are governed by the laws of the founder&apos;s home jurisdiction, to be specified
-        here once formalized with legal counsel.
+        These Terms are governed by the laws of Hungary, without regard to its conflict-of-law
+        rules, reflecting the founder&apos;s home jurisdiction. This doesn&apos;t remove any
+        mandatory consumer-protection rights you have under the law of your own country of
+        residence, where applicable.
       </p>
 
       <h2>Contact</h2>
