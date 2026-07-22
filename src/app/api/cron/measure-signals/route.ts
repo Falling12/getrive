@@ -2,8 +2,11 @@ import { runMeasurementSweep } from "@/lib/services/measurement-run.service";
 
 // A single product's Reddit-throttled backfill can exceed this on its own
 // (see measurement-run.service.ts) — Vercel's own hard timeout is the
-// accepted safety net there, not something this route works around.
-export const maxDuration = 300;
+// accepted safety net there, not something this route works around. Raised
+// from 300s to 800s (Vercel Pro's GA maximum) so a sweep covers meaningfully
+// more products before hitting that ceiling — see
+// measurement-run.service.ts's RUN_TIME_BUDGET_MS, scaled to match.
+export const maxDuration = 800;
 
 // Invoked by an external scheduler (Vercel Cron, a GitHub Action, a plain
 // cron job hitting this URL, etc.) with:

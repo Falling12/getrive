@@ -13,7 +13,8 @@ import { captureServerEvent } from "@/lib/analytics/posthog-server";
 //
 // Reddit's real ~75s/query throttle (backfill-search.service.ts) means a
 // single product with several Reddit queries can exceed this budget (and
-// even Vercel's 300s maxDuration) on its own — that's an accepted
+// even Vercel's 800s maxDuration, raised from 300s — see
+// cron/measure-signals/route.ts) on its own — that's an accepted
 // limitation of running a rate-limited external fetch inside one function
 // invocation, not something this sweep tries to checkpoint mid-product.
 // Vercel's own hard timeout is the safety net: everything already written
@@ -21,7 +22,7 @@ import { captureServerEvent } from "@/lib/analytics/posthog-server";
 // kill just means that product's baseRateMeasuredAt isn't updated this
 // run, which keeps it stalest-first (and tried again first) next time.
 //
-const RUN_TIME_BUDGET_MS = 270_000;
+const RUN_TIME_BUDGET_MS = 770_000;
 
 // Hard ceiling on how long a single product's backfill (the sequential,
 // Reddit-throttled leg — see backfill-search.service.ts) gets before this
@@ -29,15 +30,22 @@ const RUN_TIME_BUDGET_MS = 270_000;
 // under RUN_TIME_BUDGET_MS/maxDuration, not derived from either: a product
 // sitting at or near MAX_ACTIVE_QUERIES_PER_PLATFORM Reddit queries would
 // otherwise take up to ~19 minutes (15 queries * ~75s) to finish on its
-// own, which the 300s route ceiling can't accommodate regardless of how
-// many other products are in the sweep — Vercel kills the function outright
-// mid-run, skipping classifyBaseRate (so baseRateMeasuredAt never updates)
-// and the route's own cleanup/`done` event (so the client-side stream looks
-// stuck — see use-measure-stream.ts). Capping backfill's own wall time
-// guarantees classifyBaseRate and the `done` event are always reached;
-// backfill-search.service.ts's stalest-lastRunAt-first ordering means a
-// product with more queries than fit in one budget just rotates through the
-// rest on its next measurement run instead of never finishing this one.
+// own, which even the 800s route ceiling can't always accommodate depending
+// on how many other products are in the sweep — Vercel kills the function
+// outright mid-run in that case, skipping classifyBaseRate (so
+// baseRateMeasuredAt never updates) and the route's own cleanup/`done`
+// event (so the client-side stream looks stuck — see use-measure-stream.ts).
+// Capping backfill's own wall time guarantees classifyBaseRate and the
+// `done` event are usually still reached; backfill-search.service.ts's
+// stalest-lastRunAt-first ordering means a product with more queries than
+// fit in one budget just rotates through the rest on its next measurement
+// run instead of never finishing this one.
+//
+// Left unchanged when RUN_TIME_BUDGET_MS/maxDuration were raised — this
+// value was already "not derived from" the route ceiling, and the extra
+// sweep headroom is better spent letting more distinct products each get a
+// full slice per sweep (RUN_TIME_BUDGET_MS's job) than growing how much of
+// the sweep a single query-heavy product can consume.
 const PER_PRODUCT_BACKFILL_BUDGET_MS = 150_000;
 
 export type MeasurementProgressEvent =

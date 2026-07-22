@@ -6,8 +6,11 @@ import { isExemptFromLimits, MANUAL_MEASUREMENT_RATE_LIMIT } from "@/lib/limits"
 
 // Same rationale as api/poll-stream/route.ts: measurement can run for
 // minutes (Reddit's rate limit — see measurement-run.service.ts), and
-// Server Actions can't stream a response back incrementally.
-export const maxDuration = 300;
+// Server Actions can't stream a response back incrementally. Raised from
+// 300s to 800s (Vercel Pro's GA maximum) — see
+// cron/measure-signals/route.ts's matching change and
+// measurement-run.service.ts's RUN_TIME_BUDGET_MS.
+export const maxDuration = 800;
 
 // Same in-progress-lock staleness bound as POLL_STALE_MINUTES
 // (lib/reddit/poll.ts), applied to activeMeasurementStartedAt instead of

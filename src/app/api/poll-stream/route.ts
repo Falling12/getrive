@@ -8,8 +8,10 @@ import { isExemptFromLimits, MANUAL_POLL_RATE_LIMIT } from "@/lib/limits";
 // Reddit's rate limit forces spacing between subreddits in a batch (see
 // lib/reddit/poll.ts) — a few minutes of wall-clock time per run.
 // Search-mode ingestion (chained after polling completes, below) adds
-// little to this — it has no external rate limit of its own.
-export const maxDuration = 300;
+// little to this — it has no external rate limit of its own. Raised from
+// 300s to 800s (Vercel Pro's GA maximum) — see cron/poll-signals/route.ts's
+// matching change and poll.ts's RUN_TIME_BUDGET_MS.
+export const maxDuration = 800;
 
 // Streams live progress from a manual "Check for new posts" run as
 // Server-Sent Events, instead of the founder staring at a static "please

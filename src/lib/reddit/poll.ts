@@ -81,17 +81,22 @@ const REDDIT_REQUEST_SPACING_MS = 62_000;
 // under even the unauthenticated quota so one run monitoring several sites
 // can't come close to exhausting a whole day's budget by itself.
 const MAX_STACKEXCHANGE_SOURCES_PER_RUN = 20;
-// Soft ceiling on total run time, kept under `maxDuration` (300s on the
-// cron route) so a run that's about to be hard-killed exits early instead
-// of being cut off mid-request, returning a real (partial) summary.
-// Sources it didn't reach are simply still the stalest candidates next
-// run, since lastPolledAt is only updated for sources actually attempted.
+// Soft ceiling on total run time, kept under `maxDuration` (800s on the
+// cron route, since Vercel Pro's GA maximum was raised from 300s — see
+// cron/poll-signals/route.ts) so a run that's about to be hard-killed exits
+// early instead of being cut off mid-request, returning a real (partial)
+// summary. Sources it didn't reach are simply still the stalest candidates
+// next run, since lastPolledAt is only updated for sources actually
+// attempted.
 //
-// Trimmed from 270s to leave headroom for search-mode ingestion, which now
-// runs right after this in the same invocation (see
-// cron/poll-signals/route.ts and api/poll-stream/route.ts) and has no
-// time-budget cutoff of its own.
-const RUN_TIME_BUDGET_MS = 200_000;
+// Leaves a fixed ~100s margin (not a proportional fraction of maxDuration)
+// for search-mode ingestion, which runs right after this in the same
+// invocation (see cron/poll-signals/route.ts and api/poll-stream/route.ts)
+// and has no time-budget cutoff of its own — ingestion's own wall time is
+// driven by real match/scoring volume, not by how much time polling used,
+// so the reserved margin doesn't need to scale with maxDuration the way
+// this budget itself does.
+const RUN_TIME_BUDGET_MS = 700_000;
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));

@@ -3,8 +3,12 @@ import { runIngestionSweep } from "@/lib/services/ingestion-run.service";
 
 // Reddit's rate limit forces ~1 minute of spacing per Reddit source in the
 // batch (see poll.ts) — a few minutes of wall-clock time per run, well past
-// most serverless defaults.
-export const maxDuration = 300;
+// most serverless defaults. Raised from 300s to 800s (Vercel Pro's GA
+// maximum, see https://vercel.com/docs/functions/configuring-functions/duration#duration-limits)
+// so a sweep spends far less time getting cut off mid-run and rotating
+// leftover sources to the next invocation — see poll.ts's own
+// RUN_TIME_BUDGET_MS, scaled to match.
+export const maxDuration = 800;
 
 // Invoked by an external scheduler (Vercel Cron, a GitHub Action, a plain
 // cron job hitting this URL, etc.) with:
