@@ -151,6 +151,36 @@ async function storeMatches({
   return newCount;
 }
 
+// Success resets consecutiveFailures and stamps lastSuccessfulRunAt
+// separately from lastRunAt (bumped here too, but also on failure below) —
+// mirrors Source's lastPolledAt/lastSuccessfulPollAt/consecutiveFailures
+// split, so a chronically-failing query's staleness is visible even though
+// lastRunAt itself keeps advancing on every attempt.
+async function recordQuerySuccess(queryId: string, newMatches: number): Promise<void> {
+  await prisma.searchQuery.update({
+    where: { id: queryId },
+    data: {
+      matchCount: { increment: newMatches },
+      lastRunAt: new Date(),
+      lastSuccessfulRunAt: new Date(),
+      consecutiveFailures: 0,
+    },
+  });
+}
+
+// Own try/catch: a failure to record a failure shouldn't throw past the
+// caller's outer catch and get double-logged/swallowed.
+async function recordQueryFailure(queryId: string): Promise<void> {
+  try {
+    await prisma.searchQuery.update({
+      where: { id: queryId },
+      data: { lastRunAt: new Date(), consecutiveFailures: { increment: 1 } },
+    });
+  } catch (error) {
+    console.error(`[backfill-search] failed to record failure for query ${queryId}`, error);
+  }
+}
+
 async function runRedditQuery(
   productId: string,
   query: { id: string; text: string; lastRunAt: Date | null },
@@ -194,10 +224,7 @@ async function runRedditQuery(
       })),
     });
     summary.matchesStored += matches.length;
-    await prisma.searchQuery.update({
-      where: { id: query.id },
-      data: { matchCount: { increment: newCount }, lastRunAt: new Date() },
-    });
+    await recordQuerySuccess(query.id, newCount);
     summary.queriesRun += 1;
   } catch (error) {
     summary.errors.push({
@@ -205,6 +232,7 @@ async function runRedditQuery(
       platform: "REDDIT",
       message: error instanceof Error ? error.message : String(error),
     });
+    await recordQueryFailure(query.id);
   }
 }
 
@@ -268,10 +296,7 @@ async function runStackExchangeQuery(
       }
     }
     summary.matchesStored += totalMatches;
-    await prisma.searchQuery.update({
-      where: { id: query.id },
-      data: { matchCount: { increment: newMatches }, lastRunAt: new Date() },
-    });
+    await recordQuerySuccess(query.id, newMatches);
     summary.queriesRun += 1;
   } catch (error) {
     summary.errors.push({
@@ -279,6 +304,7 @@ async function runStackExchangeQuery(
       platform: "STACKEXCHANGE",
       message: error instanceof Error ? error.message : String(error),
     });
+    await recordQueryFailure(query.id);
   }
 }
 
@@ -310,10 +336,7 @@ async function runHackerNewsQuery(
       })),
     });
     summary.matchesStored += matches.length;
-    await prisma.searchQuery.update({
-      where: { id: query.id },
-      data: { matchCount: { increment: newCount }, lastRunAt: new Date() },
-    });
+    await recordQuerySuccess(query.id, newCount);
     summary.queriesRun += 1;
   } catch (error) {
     summary.errors.push({
@@ -321,6 +344,7 @@ async function runHackerNewsQuery(
       platform: "HACKERNEWS",
       message: error instanceof Error ? error.message : String(error),
     });
+    await recordQueryFailure(query.id);
   }
 }
 

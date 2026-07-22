@@ -21,6 +21,8 @@ export interface QueryRowData {
   passCount: number;
   avgMatchScore: number | null;
   retiredReason: string | null;
+  consecutiveFailures: number;
+  lastSuccessfulRunAt: Date | null;
 }
 
 const PLATFORM_OPTIONS: SearchPlatform[] = ["REDDIT", "STACKEXCHANGE", "HACKERNEWS"];

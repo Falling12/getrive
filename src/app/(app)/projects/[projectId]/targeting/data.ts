@@ -56,6 +56,8 @@ export async function getTargetingData(projectId: string) {
       passCount: q.passCount,
       avgMatchScore: q.avgMatchScore,
       retiredReason: q.retiredReason,
+      consecutiveFailures: q.consecutiveFailures,
+      lastSuccessfulRunAt: q.lastSuccessfulRunAt,
     };
   }
 

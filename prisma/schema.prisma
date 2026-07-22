@@ -367,20 +367,33 @@ enum QueryStatus {
 // feedback loop (2C) can judge a query's lifetime performance rather than
 // reacting to one noisy run.
 model SearchQuery {
-  id            String           @id @default(cuid())
-  productId     String
-  product       Product          @relation(fields: [productId], references: [id], onDelete: Cascade)
-  text          String
-  platform      SearchPlatform
-  variantType   QueryVariantType
-  status        QueryStatus      @default(ACTIVE)
-  retiredReason String?
-  matchCount    Int              @default(0)
-  passCount     Int              @default(0)
-  avgMatchScore Float?
-  lastRunAt     DateTime?
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
+  id                  String           @id @default(cuid())
+  productId           String
+  product             Product          @relation(fields: [productId], references: [id], onDelete: Cascade)
+  text                String
+  platform            SearchPlatform
+  variantType         QueryVariantType
+  status              QueryStatus      @default(ACTIVE)
+  retiredReason       String?
+  matchCount          Int              @default(0)
+  passCount           Int              @default(0)
+  avgMatchScore       Float?
+  // Last *attempted* run, success or failure — matches Source.lastPolledAt.
+  // Also the "resume where it left off" cursor backfill-search.service.ts
+  // orders ACTIVE queries by, and (since a recent fix) the floor a repeat
+  // run searches since.
+  lastRunAt           DateTime?
+  // Incremented on each failed backfill-search attempt, reset to 0 on
+  // success — mirrors Source.consecutiveFailures, surfaced once it crosses
+  // CONSECUTIVE_FAILURE_ALERT_THRESHOLD so a query erroring on every run
+  // doesn't look identical to one legitimately finding nothing.
+  consecutiveFailures Int              @default(0)
+  // Last run that actually completed without throwing. Distinct from
+  // lastRunAt so a chronically-failing query's staleness is visible even
+  // though lastRunAt keeps advancing on every attempt.
+  lastSuccessfulRunAt DateTime?
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
 
   searchResults SearchResult[]
 

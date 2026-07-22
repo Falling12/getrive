@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useTransition, type FormEvent, type ReactNode } from "react";
-import { Check, Power, X, Trash2 } from "lucide-react";
+import { AlertTriangle, Check, Power, X, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { formatRelativeTime } from "@/lib/format";
 import { useMeasureStream } from "@/lib/hooks/use-measure-stream";
+import { CONSECUTIVE_FAILURE_ALERT_THRESHOLD } from "@/lib/limits";
 import {
   addManualQueryAction,
   setQueryActiveAction,
@@ -25,6 +26,8 @@ export interface TargetingQueryRow {
   passCount: number;
   avgMatchScore: number | null;
   retiredReason: string | null;
+  consecutiveFailures: number;
+  lastSuccessfulRunAt: Date | null;
 }
 
 export interface TargetingSearchData {
@@ -292,6 +295,7 @@ function QueryTableRow({
   const [error, setError] = useState<string | null>(null);
   const [resolved, setResolved] = useState(false);
   if (resolved) return null;
+  const isFailing = query.consecutiveFailures >= CONSECUTIVE_FAILURE_ALERT_THRESHOLD;
 
   function run(action: () => Promise<{ error?: string; success?: boolean }>, onSuccess?: () => void) {
     startTransition(async () => {
@@ -311,6 +315,12 @@ function QueryTableRow({
         {error && <p className="text-xs text-destructive">{error}</p>}
         {kind === "retired" && query.retiredReason && (
           <p className="text-[11px] text-muted-foreground/50">{query.retiredReason}</p>
+        )}
+        {isFailing && (
+          <p className="flex items-center gap-1 text-[11px] text-destructive">
+            <AlertTriangle className="size-3 shrink-0" />
+            {query.consecutiveFailures} failed runs in a row
+          </p>
         )}
       </td>
       <td className="py-2 pr-3 text-right font-mono text-xs tabular-nums text-muted-foreground">{query.matchCount}</td>
