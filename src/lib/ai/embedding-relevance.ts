@@ -14,11 +14,28 @@ import { getEmbeddingModel } from "@/lib/ai/provider";
 // real usage surfaces cases of matches wrongly kept or dropped.
 const RELEVANCE_SIMILARITY_THRESHOLD = 0.5;
 
+// text-embedding-3-small hard-rejects inputs over 8192 tokens — confirmed
+// in production against long-form Reddit posts (fan-fiction-length text
+// posts, 20k+ characters) that otherwise passed the keyword backstop and
+// hit this ceiling on every call, silently falling back to keyword-only
+// every time (caller degrades gracefully on any embed() failure, so this
+// wasn't crashing, just quietly providing zero signal for every long post).
+// A rough 4 chars/token average for English puts 8192 tokens around 32k
+// characters, but URLs and non-English text tokenize far less efficiently
+// — truncating well under that (a backstop only needs enough of the text to
+// judge topical relevance, not the full body) avoids the failure case
+// entirely rather than just degrading through it.
+const MAX_EMBEDDING_INPUT_CHARS = 6000;
+
+function truncateForEmbedding(text: string): string {
+  return text.length > MAX_EMBEDDING_INPUT_CHARS ? text.slice(0, MAX_EMBEDDING_INPUT_CHARS) : text;
+}
+
 export async function isSemanticallyRelevant(queryText: string, candidateText: string): Promise<boolean> {
   const model = getEmbeddingModel("matchRelevance");
   const [{ embedding: queryEmbedding }, { embedding: candidateEmbedding }] = await Promise.all([
-    embed({ model, value: queryText }),
-    embed({ model, value: candidateText }),
+    embed({ model, value: truncateForEmbedding(queryText) }),
+    embed({ model, value: truncateForEmbedding(candidateText) }),
   ]);
   return cosineSimilarity(queryEmbedding, candidateEmbedding) >= RELEVANCE_SIMILARITY_THRESHOLD;
 }
