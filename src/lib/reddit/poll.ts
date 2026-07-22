@@ -175,8 +175,24 @@ export async function pollAllSources(options?: {
     archivedAt: null,
     ...(options?.userId ? { userId: options.userId } : {}),
   };
+  // Four-key priority, in order: (1) never-polled sources first (existing);
+  // (2) within either the never-polled or already-polled group, sources
+  // belonging to a product that hasn't gotten its first-ever Signal yet
+  // (Product.firstSignalsEmailSentAt null — see that field's own comment:
+  // it doubles as "has this project ever had a signal") sort ahead of
+  // already-satisfied products — mirrors measurement-run.service.ts's
+  // never-measured/zero-progress prioritization, so a founder who polled
+  // once and got nothing keeps priority over an established product on
+  // every subsequent run, not just their very first; (3) healthier sources
+  // (fewer consecutiveFailures) tiebreak ahead of failing ones — a pure
+  // tiebreaker, deliberately ranked below staleness/first-signal fairness
+  // so a failing source still gets retried in its normal turn rather than
+  // being pushed into a permanent penalty box; (4) createdAt (existing,
+  // final tiebreaker).
   const staleFirst = [
     { lastPolledAt: { sort: "asc" as const, nulls: "first" as const } },
+    { product: { firstSignalsEmailSentAt: { sort: "asc" as const, nulls: "first" as const } } },
+    { consecutiveFailures: "asc" as const },
     { createdAt: "asc" as const },
   ];
   const sourceInclude = { product: { include: { user: true, positioning: true } } };
