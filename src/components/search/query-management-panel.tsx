@@ -23,7 +23,7 @@ export interface QueryRowData {
   retiredReason: string | null;
 }
 
-const PLATFORM_OPTIONS: SearchPlatform[] = ["REDDIT", "STACKEXCHANGE"];
+const PLATFORM_OPTIONS: SearchPlatform[] = ["REDDIT", "STACKEXCHANGE", "HACKERNEWS"];
 const VARIANT_OPTIONS: QueryVariantType[] = ["LITERAL", "COLLOQUIAL", "PLATFORM_IDIOMATIC"];
 
 function StatRow({ query }: { query: QueryRowData }) {

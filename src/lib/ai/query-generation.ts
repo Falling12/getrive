@@ -67,6 +67,17 @@ const querySetSchema = z.object({
         "include one if a real SE tag like that plausibly exists. LITERAL/COLLOQUIAL entries are free-text " +
         "\"which tool/app should I use for X\" style questions, matching how SE's Q&A culture actually asks."
     ),
+  hackerNewsQueries: z
+    .array(queryItemSchema)
+    .min(3)
+    .max(MAX_QUERIES_PER_PLATFORM)
+    .describe(
+      "3-6 Hacker News search queries (run against HN's search, scoped to Ask HN/Show HN submissions). " +
+        "PLATFORM_IDIOMATIC entries here should reflect how someone would phrase a genuine \"Ask HN\" or " +
+        "\"Show HN\" post about this pain point — technical, direct, skeptical of hype/marketing language " +
+        "— rather than an SE tag slug or Reddit phrasing convention. LITERAL/COLLOQUIAL entries are the " +
+        "same underlying pain point phrased for a technically sophisticated audience."
+    ),
 });
 
 export interface QueryItem {
@@ -77,6 +88,7 @@ export interface QueryItem {
 export interface QuerySet {
   redditQueries: QueryItem[];
   stackExchangeQueries: QueryItem[];
+  hackerNewsQueries: QueryItem[];
 }
 
 export async function generateQuerySet({
@@ -105,13 +117,14 @@ export async function generateQuerySet({
           "itself): " + icpContext
         : null,
       "",
-      "Generate query sets for Reddit and Stack Exchange search. For each platform, mix three kinds of",
-      "phrasing:",
+      "Generate query sets for Reddit, Stack Exchange, and Hacker News search. For each platform, mix",
+      "three kinds of phrasing:",
       "1. LITERAL — stated the way the product description/positioning would state it.",
       "2. COLLOQUIAL — how a real person actually asks in public: informal, pain-first, specific. Prefer",
       "   this style overall — it's what actually surfaces in search, not marketing language.",
       "3. PLATFORM_IDIOMATIC — a form idiomatic to that platform (a real-sounding Stack Exchange tag for",
-      "   SE, a Reddit-style phrasing convention for Reddit).",
+      "   SE, a Reddit-style phrasing convention for Reddit, an Ask HN/Show HN-style phrasing for Hacker",
+      "   News).",
       "",
       "Every query must be specific enough to plausibly find someone with this exact pain point, not so",
       "broad it would match unrelated content. Do not force a query variant that doesn't genuinely fit —",

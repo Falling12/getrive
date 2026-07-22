@@ -48,11 +48,14 @@ const SEARCH_DISCOVERED_SOURCE_RANK = 9999;
 // content is a perfect topical match.
 const RESOLVED_SE_THREAD_STATES = new Set(["closed"]);
 
-// Reddit has no closed/resolved concept the way Stack Exchange does, so its
-// bucketing rule is age-based instead: a months-old thread is unlikely to
-// still be checked by its author, so replying is low value even for a
-// strong topical match. A judgment call, not a platform constraint —
-// revisit if this turns out to filter out real value.
+// Reddit and Hacker News have no closed/resolved concept the way Stack
+// Exchange does, so their bucketing rule is age-based instead: a months-old
+// thread is unlikely to still be checked by its author, so replying is low
+// value even for a strong topical match. A judgment call, not a platform
+// constraint — revisit if this turns out to filter out real value. Applied
+// to both platforms with the same threshold for now — HN threads arguably
+// go stale even faster than Reddit's given the front page's faster
+// turnover, but there's no evidence yet to justify a tighter number.
 const MAX_REDDIT_MATCH_AGE_DAYS = 30;
 
 // Exported for the Signals page's "historical mentions" section — an
@@ -74,7 +77,14 @@ export function isEligibleForScoring(result: SearchResult): boolean {
 }
 
 function sourceTypeForPlatform(platform: SearchPlatform): SourceType {
-  return platform === "REDDIT" ? "REDDIT_SUBREDDIT" : "STACKEXCHANGE";
+  switch (platform) {
+    case "REDDIT":
+      return "REDDIT_SUBREDDIT";
+    case "STACKEXCHANGE":
+      return "STACKEXCHANGE";
+    case "HACKERNEWS":
+      return "HACKERNEWS";
+  }
 }
 
 async function findOrCreateSourceForVenue(

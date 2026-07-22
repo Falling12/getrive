@@ -23,6 +23,7 @@ export async function generateAndStoreQuerySet(productId: string): Promise<void>
   const rows: { platform: SearchPlatform; item: QueryItem }[] = [
     ...querySet.redditQueries.map((item) => ({ platform: "REDDIT" as const, item })),
     ...querySet.stackExchangeQueries.map((item) => ({ platform: "STACKEXCHANGE" as const, item })),
+    ...querySet.hackerNewsQueries.map((item) => ({ platform: "HACKERNEWS" as const, item })),
   ];
 
   for (const { platform, item } of rows) {

@@ -329,6 +329,7 @@ enum BaseRateClass {
 enum SearchPlatform {
   REDDIT
   STACKEXCHANGE
+  HACKERNEWS
 }
 
 enum QueryVariantType {

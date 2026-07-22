@@ -50,6 +50,7 @@ const inputClass =
 const PLATFORM_LABELS: Record<SearchPlatform, string> = {
   REDDIT: "Reddit",
   STACKEXCHANGE: "Stack Exchange",
+  HACKERNEWS: "Hacker News",
 };
 
 // Plain-language stand-ins for the DB enum — "how the phrase is worded",

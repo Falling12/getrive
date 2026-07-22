@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { fetchRedditSearchMatches } from "@/lib/reddit/search-reddit";
 import { searchStackExchangeSite } from "@/lib/stackexchange/search-stackexchange";
+import { searchHackerNews } from "@/lib/hackernews/search-hackernews";
 import { SE_QUOTA_LOW_THRESHOLD } from "@/lib/limits";
 import type { SearchPlatform } from "@/generated/prisma/client";
 
@@ -281,6 +282,48 @@ async function runStackExchangeQuery(
   }
 }
 
+async function runHackerNewsQuery(
+  productId: string,
+  query: { id: string; text: string; lastRunAt: Date | null },
+  windowFloor: Date,
+  summary: BackfillSummary
+): Promise<void> {
+  try {
+    // See runRedditQuery's effectiveSince comment. No per-IP throttle here
+    // (unlike Reddit) — HN's Algolia search API has no documented
+    // rate-limit-by-IP concern, so queries just run one after another with
+    // no spacing.
+    const effectiveSince = query.lastRunAt ?? windowFloor;
+    const { matches } = await searchHackerNews({ text: query.text, sinceDate: effectiveSince });
+    const newCount = await storeMatches({
+      productId,
+      queryId: query.id,
+      platform: "HACKERNEWS",
+      matches: matches.map((m) => ({
+        externalId: m.id,
+        title: m.title,
+        body: m.selftext,
+        permalink: m.permalink,
+        author: m.author,
+        postedAt: m.createdAt,
+        venue: m.venue,
+      })),
+    });
+    summary.matchesStored += matches.length;
+    await prisma.searchQuery.update({
+      where: { id: query.id },
+      data: { matchCount: { increment: newCount }, lastRunAt: new Date() },
+    });
+    summary.queriesRun += 1;
+  } catch (error) {
+    summary.errors.push({
+      query: query.text,
+      platform: "HACKERNEWS",
+      message: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
 // Runs every ACTIVE SearchQuery for one product. Callers spanning multiple
 // products (e.g. scripts/run-phase1-diagnostic.ts) should call this
 // sequentially per product, not in parallel — the Reddit spacing above is
@@ -329,6 +372,7 @@ export async function runBackfillSearchForProduct(
 
   const redditQueries = queries.filter((q) => q.platform === "REDDIT");
   const seQueries = queries.filter((q) => q.platform === "STACKEXCHANGE");
+  const hackerNewsQueries = queries.filter((q) => q.platform === "HACKERNEWS");
 
   await Promise.all([
     (async () => {
@@ -341,6 +385,12 @@ export async function runBackfillSearchForProduct(
       for (const query of seQueries) {
         if (Date.now() >= deadline || seQuotaState.exhausted) break;
         await runStackExchangeQuery(productId, query, seSites, windowFloor, summary, seQuotaState);
+      }
+    })(),
+    (async () => {
+      for (const query of hackerNewsQueries) {
+        if (Date.now() >= deadline) break;
+        await runHackerNewsQuery(productId, query, windowFloor, summary);
       }
     })(),
   ]);
