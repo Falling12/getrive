@@ -6,6 +6,7 @@ import {
   BROWSER_USER_AGENT,
   type AtomEntry,
 } from "@/lib/reddit/fetch-posts";
+import { isSemanticallyRelevant } from "@/lib/ai/embedding-relevance";
 
 // Phase 1 backfill search (AGENTS.md 1B) — unlike fetch-posts.ts, which
 // polls specific subreddits a founder has selected, this searches sitewide
@@ -46,28 +47,35 @@ export function significantWords(text: string): string[] {
   );
 }
 
-// Reddit's search.rss, run with sort=new (chosen elsewhere to maximize how
-// far back into the backfill window the capped 100-result feed reaches —
-// see fetchRedditSearchMatches), returns loosely/OR-matched results ranked
-// purely by recency rather than relevance. For generic multi-word queries
-// this surfaces near-random recent posts sharing no real connection to the
-// query (confirmed empirically: e.g. "promoting my startup without getting
-// banned" returned a CPAP-machine post and a flood-conspiracy post — no
-// query word appeared in either).
-//
-// A single shared word is not enough of a backstop — confirmed empirically
-// that "no audience no list to launch" still passed a single-word check by
-// matching a video-game "Launch Trailer" post on the word "launch" alone,
-// and "how do I get my first users" matched unrelated dating-advice posts
-// on "first" alone. Requiring at least two overlapping significant words
-// (or all of them, for a query left with only one after stopword removal)
-// is a much stronger signal that the match is real rather than coincidental
-// single-word overlap.
+// Reddit's search.rss, run with sort=relevance (see fetchRedditSearchMatches
+// for why), can still loosely/OR-match on a single shared word — confirmed
+// empirically that "no audience no list to launch" still passed a
+// single-word check by matching a video-game "Launch Trailer" post on the
+// word "launch" alone, and "how do I get my first users" matched unrelated
+// dating-advice posts on "first" alone. Requiring at least two overlapping
+// significant words (or all of them, for a query left with only one after
+// stopword removal) is a much stronger signal that the match is real rather
+// than coincidental single-word overlap.
 function isRelevantMatch(queryWords: string[], title: string, body: string): boolean {
   if (queryWords.length === 0) return true;
   const haystack = `${title} ${body}`.toLowerCase();
   const overlap = queryWords.filter((word) => new RegExp(`\\b${word}\\b`).test(haystack)).length;
   return overlap >= Math.min(2, queryWords.length);
+}
+
+// Secondary backstop on top of isRelevantMatch, only run on candidates that
+// already passed it (see lib/ai/embedding-relevance.ts) — bounds the added
+// AI cost/latency to the subset that already cleared the cheap keyword
+// filter instead of every raw candidate. Degrades to "keep the match" on
+// any embedding-call failure, since it already passed the keyword backstop
+// and shouldn't be dropped just because this secondary check errored.
+async function passesSemanticBackstop(query: string, title: string, body: string): Promise<boolean> {
+  try {
+    return await isSemanticallyRelevant(query, `${title} ${body}`);
+  } catch (error) {
+    console.error("[search-reddit] embedding relevance check failed, falling back to keyword match", error);
+    return true;
+  }
 }
 
 export interface RawRedditSearchMatch {
@@ -143,6 +151,7 @@ export async function fetchRedditSearchMatches(
     const title = entry.title;
     const selftext = extractSelftext(textOf(entry.content));
     if (!isRelevantMatch(queryWords, title, selftext)) continue;
+    if (!(await passesSemanticBackstop(query, title, selftext))) continue;
 
     matches.push({
       id: entry.id.replace(/^t3_/, ""),

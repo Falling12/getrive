@@ -58,3 +58,20 @@ export const AI_TASK_MODELS: Record<AiTask, AiTaskModelConfig> = {
   // extraction from real page content, which a mid-tier model handles fine.
   websitePrefill: { provider: "openai", model: "gpt-5.4-mini" },
 };
+
+// Embedding models aren't LanguageModels, so they don't fit AiTask/
+// AI_TASK_MODELS above — kept as their own small map rather than folded in.
+export type AiEmbeddingTask = "matchRelevance";
+
+interface AiEmbeddingTaskModelConfig {
+  provider: "openai";
+  model: string;
+}
+
+export const AI_EMBEDDING_MODELS: Record<AiEmbeddingTask, AiEmbeddingTaskModelConfig> = {
+  // Secondary relevance signal for search-reddit.ts's keyword backstop (see
+  // lib/ai/embedding-relevance.ts) — text-embedding-3-small is OpenAI's
+  // cheapest embedding tier, adequate for a coarse similarity backstop
+  // rather than a primary ranking signal.
+  matchRelevance: { provider: "openai", model: "text-embedding-3-small" },
+};

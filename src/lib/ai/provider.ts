@@ -1,7 +1,7 @@
 import { anthropic } from "@ai-sdk/anthropic";
 import { openai } from "@ai-sdk/openai";
-import type { LanguageModel } from "ai";
-import { AI_TASK_MODELS, type AiTask } from "@/lib/ai/config";
+import type { EmbeddingModel, LanguageModel } from "ai";
+import { AI_EMBEDDING_MODELS, AI_TASK_MODELS, type AiEmbeddingTask, type AiTask } from "@/lib/ai/config";
 
 // The only place in the app that imports a vendor SDK directly. Every AI
 // call site asks for a model by task name and gets back a provider-agnostic
@@ -16,4 +16,11 @@ export function getModel(task: AiTask): LanguageModel {
     case "openai":
       return openai(model);
   }
+}
+
+// Same one-place-per-vendor-SDK convention as getModel above, for
+// embeddings (a distinct model type from LanguageModel in the AI SDK).
+export function getEmbeddingModel(task: AiEmbeddingTask): EmbeddingModel {
+  const { model } = AI_EMBEDDING_MODELS[task];
+  return openai.textEmbeddingModel(model);
 }
