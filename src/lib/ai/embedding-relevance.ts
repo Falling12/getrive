@@ -31,11 +31,31 @@ function truncateForEmbedding(text: string): string {
   return text.length > MAX_EMBEDDING_INPUT_CHARS ? text.slice(0, MAX_EMBEDDING_INPUT_CHARS) : text;
 }
 
+// Bounds worst-case latency per call — this is a backstop callers already
+// degrade gracefully on failure for, so a slow/hanging request should fail
+// fast rather than exhaust the AI SDK's default retry/backoff schedule.
+// Directly implicated in a production maxDuration timeout on measure-signals:
+// search-reddit.ts originally ran this per-match sequentially with no
+// timeout, so one slow embeddings call could stall an entire Reddit search
+// query (and, transitively, the whole measurement sweep) for far longer
+// than its per-product time budget accounted for.
+const EMBEDDING_TIMEOUT_MS = 8_000;
+
 export async function isSemanticallyRelevant(queryText: string, candidateText: string): Promise<boolean> {
   const model = getEmbeddingModel("matchRelevance");
   const [{ embedding: queryEmbedding }, { embedding: candidateEmbedding }] = await Promise.all([
-    embed({ model, value: truncateForEmbedding(queryText) }),
-    embed({ model, value: truncateForEmbedding(candidateText) }),
+    embed({
+      model,
+      value: truncateForEmbedding(queryText),
+      maxRetries: 0,
+      abortSignal: AbortSignal.timeout(EMBEDDING_TIMEOUT_MS),
+    }),
+    embed({
+      model,
+      value: truncateForEmbedding(candidateText),
+      maxRetries: 0,
+      abortSignal: AbortSignal.timeout(EMBEDDING_TIMEOUT_MS),
+    }),
   ]);
   return cosineSimilarity(queryEmbedding, candidateEmbedding) >= RELEVANCE_SIMILARITY_THRESHOLD;
 }

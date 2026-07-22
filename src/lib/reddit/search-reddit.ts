@@ -133,9 +133,12 @@ export async function fetchRedditSearchMatches(
   if (!rawEntries) return [];
 
   const entries = Array.isArray(rawEntries) ? rawEntries : [rawEntries];
-  const matches: RawRedditSearchMatch[] = [];
   const queryWords = significantWords(query);
 
+  // Cheap, synchronous keyword-backstop pass first — narrows however many
+  // of Reddit's up-to-100 raw entries down to the (usually much smaller)
+  // set that needs an embedding check at all.
+  const candidates: RawRedditSearchMatch[] = [];
   for (const entry of entries) {
     // Reddit's sitewide search feed can return subreddits themselves as
     // hits (id prefix "t5_", no <published>, permalink like
@@ -151,9 +154,8 @@ export async function fetchRedditSearchMatches(
     const title = entry.title;
     const selftext = extractSelftext(textOf(entry.content));
     if (!isRelevantMatch(queryWords, title, selftext)) continue;
-    if (!(await passesSemanticBackstop(query, title, selftext))) continue;
 
-    matches.push({
+    candidates.push({
       id: entry.id.replace(/^t3_/, ""),
       title,
       selftext,
@@ -164,5 +166,15 @@ export async function fetchRedditSearchMatches(
     });
   }
 
-  return matches;
+  // Embedding backstop runs in parallel across every keyword-passing
+  // candidate, not sequentially — a sequential per-match loop here
+  // previously let one query's total wall time scale directly with how
+  // many matches passed the keyword filter, with no bound, and stalled a
+  // whole measurement sweep past its time budget in production as a
+  // result (see embedding-relevance.ts's per-call timeout, added
+  // alongside this fix).
+  const isRelevant = await Promise.all(
+    candidates.map((match) => passesSemanticBackstop(query, match.title, match.selftext))
+  );
+  return candidates.filter((_, index) => isRelevant[index]);
 }
