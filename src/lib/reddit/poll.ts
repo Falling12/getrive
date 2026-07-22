@@ -7,8 +7,8 @@ import { fetchNewQuestionsForSites } from "@/lib/stackexchange/fetch-stackexchan
 import { fetchNewAskMetaFilterPosts } from "@/lib/askmetafilter/fetch-askmetafilter";
 import { MAX_POSTS_PER_SCORING_BATCH } from "@/lib/ai/signal-scoring";
 import {
-  DAILY_SCORING_CAP_PER_PROJECT,
-  DAILY_SCORING_CAP_PER_ACCOUNT,
+  DAILY_SCORING_CAP_PER_PROJECT_POLL,
+  DAILY_SCORING_CAP_PER_ACCOUNT_POLL,
   CONSECUTIVE_FAILURE_ALERT_THRESHOLD,
   CONSECUTIVE_EMPTY_POLL_ALERT_THRESHOLD,
   isExemptFromLimits,
@@ -223,7 +223,10 @@ export async function pollAllSources(options?: {
   // Soft daily cap on Signal Scoring calls, per project — covers every
   // source type combined (it counts ScoredPost rows by productId, not by
   // source), cached per run so repeated checks within the same batch don't
-  // re-query on every post.
+  // re-query on every post. Filtered to viaSearch: false so this pathway's
+  // own cap only ever counts its own usage — search-ingestion.service.ts's
+  // rows are invisible here, and vice versa (see limits.ts's
+  // DAILY_SCORING_CAP_PER_PROJECT_POLL comment for why).
   const scoredTodayByProduct = new Map<string, number>();
   async function scoredTodayFor(productId: string): Promise<number> {
     const cached = scoredTodayByProduct.get(productId);
@@ -231,7 +234,7 @@ export async function pollAllSources(options?: {
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
     const count = await prisma.scoredPost.count({
-      where: { source: { productId }, scoredAt: { gte: todayStart } },
+      where: { source: { productId }, scoredAt: { gte: todayStart }, viaSearch: false },
     });
     scoredTodayByProduct.set(productId, count);
     return count;
@@ -248,7 +251,7 @@ export async function pollAllSources(options?: {
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
     const count = await prisma.scoredPost.count({
-      where: { source: { product: { userId } }, scoredAt: { gte: todayStart } },
+      where: { source: { product: { userId } }, scoredAt: { gte: todayStart }, viaSearch: false },
     });
     scoredTodayByAccount.set(userId, count);
     return count;
@@ -293,19 +296,19 @@ export async function pollAllSources(options?: {
       const scoredToday = await scoredTodayFor(source.product.id);
       const scoredTodayAccount = await scoredTodayForAccount(source.product.userId);
       const exempt = isExemptFromLimits(source.product.user.email);
-      const projectHeadroom = exempt ? Infinity : DAILY_SCORING_CAP_PER_PROJECT - scoredToday;
-      const accountHeadroom = exempt ? Infinity : DAILY_SCORING_CAP_PER_ACCOUNT - scoredTodayAccount;
+      const projectHeadroom = exempt ? Infinity : DAILY_SCORING_CAP_PER_PROJECT_POLL - scoredToday;
+      const accountHeadroom = exempt ? Infinity : DAILY_SCORING_CAP_PER_ACCOUNT_POLL - scoredTodayAccount;
 
       if (projectHeadroom <= 0) {
         console.warn(
-          `[poll] daily Signal Scoring cap (${DAILY_SCORING_CAP_PER_PROJECT}) reached for product ${source.product.id} — pausing scoring for its sources until tomorrow`
+          `[poll] daily Signal Scoring cap (${DAILY_SCORING_CAP_PER_PROJECT_POLL}) reached for product ${source.product.id} — pausing scoring for its sources until tomorrow`
         );
         emit({ type: "daily-cap-reached", sourceName: sourceLabel });
         break;
       }
       if (accountHeadroom <= 0) {
         console.warn(
-          `[poll] daily Signal Scoring cap (${DAILY_SCORING_CAP_PER_ACCOUNT}) reached for account ${source.product.userId} — pausing scoring for all its projects until tomorrow`
+          `[poll] daily Signal Scoring cap (${DAILY_SCORING_CAP_PER_ACCOUNT_POLL}) reached for account ${source.product.userId} — pausing scoring for all its projects until tomorrow`
         );
         emit({ type: "daily-cap-reached", sourceName: sourceLabel });
         break;
@@ -333,6 +336,7 @@ export async function pollAllSources(options?: {
           author: post.author,
           postedAt: post.createdAt,
         })),
+        false,
         pendingFirstSignalEmails,
         {
           onScored: (index, relevanceScore, passed) => {

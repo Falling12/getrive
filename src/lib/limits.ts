@@ -50,16 +50,17 @@ export const MAX_PROJECTS_PER_ACCOUNT = 1;
 // project.
 export const MAX_MONITORED_SOURCES = 5;
 
-// Account-wide companion to MAX_MONITORED_SOURCES, the same way
-// DAILY_SCORING_CAP_PER_ACCOUNT backstops DAILY_SCORING_CAP_PER_PROJECT: the
-// per-project cap alone does nothing to stop one account multiplying its
-// total monitored-source count (and therefore scoring volume) by creating
-// more projects. Summed across every project the account owns, checked
-// everywhere a source flips to selected: true — manual add (sources/actions.ts)
-// and onboarding's confirm-sources step (onboarding/actions.ts). This is a
-// lifetime/standing cap, not a rolling window like the daily scoring caps
-// below — it does not reset on any schedule, only by the founder
-// un-monitoring an existing source to free a slot.
+// Account-wide companion to MAX_MONITORED_SOURCES, the same way the
+// DAILY_SCORING_CAP_PER_*_ACCOUNT caps below backstop their per-project
+// counterparts: the per-project cap alone does nothing to stop one account
+// multiplying its total monitored-source count (and therefore scoring
+// volume) by creating more projects. Summed across every project the
+// account owns, checked everywhere a source flips to selected: true —
+// manual add (sources/actions.ts) and onboarding's confirm-sources step
+// (onboarding/actions.ts). This is a lifetime/standing cap, not a rolling
+// window like the daily scoring caps below — it does not reset on any
+// schedule, only by the founder un-monitoring an existing source to free a
+// slot.
 export const MAX_MONITORED_SOURCES_PER_ACCOUNT = 8;
 
 // Enforced in /api/poll-stream — separate from the existing per-project
@@ -74,21 +75,34 @@ export const MANUAL_POLL_RATE_LIMIT = { max: 3, windowMinutes: 15 };
 // low-volume anymore.
 export const MANUAL_MEASUREMENT_RATE_LIMIT = { max: 3, windowMinutes: 15 };
 
-// Soft cap on Signal Scoring calls per project per day (lib/reddit/poll.ts),
-// covering all source types combined. Hitting this pauses scoring for that
-// project until the window rolls over; already-fetched-but-unscored posts
-// are simply re-attempted on a later poll (ScoredPost dedup only records
-// posts actually scored).
-export const DAILY_SCORING_CAP_PER_PROJECT = 100;
+// Soft cap on Signal Scoring calls per project per day, split into an
+// independent sub-cap per ingestion pathway (poll = lib/reddit/poll.ts,
+// search = search-ingestion.service.ts) rather than one shared pool. Both
+// pathways can run in the same invocation (cron/poll-signals/route.ts runs
+// poll, then search-mode ingestion, in that order) — a single shared cap
+// meant whichever pathway's code happened to run first could exhaust it
+// before the other got a turn, and reordering wouldn't fix that, just flip
+// who starves on a given day. Each pathway counts only its own
+// ScoredPost.viaSearch-tagged rows against its own sub-cap (see
+// scoring-pipeline.service.ts), so neither can ever reduce the other to 0
+// headroom. Split 50/50 for now — a starting judgment call, not
+// data-driven (no usage history yet to justify skewing either way); revisit
+// once real volume from both pathways exists. Hitting either sub-cap pauses
+// that pathway's scoring for that project until the window rolls over;
+// already-fetched-but-unscored posts are simply re-attempted next run
+// (ScoredPost dedup only records posts actually scored).
+export const DAILY_SCORING_CAP_PER_PROJECT_POLL = 50;
+export const DAILY_SCORING_CAP_PER_PROJECT_SEARCH = 50;
 
-// Soft cap on Signal Scoring calls per ACCOUNT per day, summed across every
-// project that account owns (lib/reddit/poll.ts) — closes the gap where the
-// per-project cap above does nothing to stop one account from multiplying
-// its total AI spend by creating more projects. Deliberately more than
-// DAILY_SCORING_CAP_PER_PROJECT so 1-2 genuinely active projects on the same
-// account aren't throttled by each other on a busy day, but still bounds
-// the account's total blast radius regardless of how many projects exist.
-export const DAILY_SCORING_CAP_PER_ACCOUNT = 200;
+// Account-wide companions to the per-project sub-caps above, same reasoning
+// as before: closes the gap where a per-project cap alone does nothing to
+// stop one account multiplying its total AI spend by creating more
+// projects. Deliberately more than the per-project sub-caps so 1-2
+// genuinely active projects on the same account aren't throttled by each
+// other on a busy day, but still bounds the account's total blast radius
+// regardless of how many projects exist. Also split 50/50, same caveat.
+export const DAILY_SCORING_CAP_PER_ACCOUNT_POLL = 100;
+export const DAILY_SCORING_CAP_PER_ACCOUNT_SEARCH = 100;
 
 // After this many consecutive failed fetch attempts for one source, surface
 // it as "ingestion failing" (Sources page + Dashboard) rather than letting

@@ -11,7 +11,11 @@ import {
   type PendingFirstSignalBucket,
   type ScoringProduct,
 } from "@/lib/services/scoring-pipeline.service";
-import { DAILY_SCORING_CAP_PER_PROJECT, DAILY_SCORING_CAP_PER_ACCOUNT, isExemptFromLimits } from "@/lib/limits";
+import {
+  DAILY_SCORING_CAP_PER_PROJECT_SEARCH,
+  DAILY_SCORING_CAP_PER_ACCOUNT_SEARCH,
+  isExemptFromLimits,
+} from "@/lib/limits";
 import type { SearchPlatform, SearchResult, SourceType } from "@/generated/prisma/client";
 
 // Feeds a Phase-1-backfilled SearchResult row through the same Signal
@@ -176,6 +180,7 @@ async function runScoringBatch(
       author: match.author,
       postedAt: match.postedAt,
     })),
+    true,
     pendingFirstSignalEmails,
     {
       onScored: (index, relevanceScore, passed) => recordQueryOutcome(batch[index].queryId, relevanceScore, passed),
@@ -237,20 +242,53 @@ export async function runSearchIngestionForProduct(productId: string): Promise<S
     else byVenue.set(key, [result]);
   }
 
+  // Within whatever headroom this run ends up with (see below), matches
+  // close to falling out of isEligibleForScoring's age window should get a
+  // real shot before matches with no such deadline. Stack Exchange has no
+  // equivalent cutoff, so it never competes for priority against a match
+  // actually at risk of aging out unscored.
+  function daysUntilExpiry(result: SearchResult): number {
+    if (result.platform === "STACKEXCHANGE") return Infinity;
+    const ageDays = (Date.now() - result.postedAt.getTime()) / (24 * 60 * 60 * 1000);
+    return MAX_REDDIT_MATCH_AGE_DAYS - ageDays;
+  }
+  // Sorting each venue's own results, then ordering venues by their own
+  // most-urgent member (index 0, post-sort), approximates a global
+  // soonest-to-expire-first order without breaking the existing "one
+  // scoring batch per venue/Source" structure below — not a perfect global
+  // priority queue (a venue's 2nd-most-urgent match can't jump ahead of
+  // another venue's 1st), but a large improvement over the previous
+  // arbitrary Map-iteration order, where whichever venue happened to sort
+  // first in an unordered DB read won regardless of urgency.
+  for (const results of byVenue.values()) {
+    results.sort((a, b) => daysUntilExpiry(a) - daysUntilExpiry(b));
+  }
+  const venuesByUrgency = [...byVenue.entries()].sort(
+    ([, a], [, b]) => daysUntilExpiry(a[0]) - daysUntilExpiry(b[0])
+  );
+
+  // Filtered to viaSearch: true so this pathway's own cap only ever counts
+  // its own usage — lib/reddit/poll.ts's rows are invisible here, and vice
+  // versa (see limits.ts's DAILY_SCORING_CAP_PER_PROJECT_SEARCH comment for
+  // why: both pathways can run in the same invocation, and a single shared
+  // pool meant whichever ran first could exhaust it before the other got a
+  // turn).
   const exempt = isExemptFromLimits(product.user.email);
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
   const scoredTodayProject = exempt
     ? 0
-    : await prisma.scoredPost.count({ where: { source: { productId }, scoredAt: { gte: todayStart } } });
+    : await prisma.scoredPost.count({
+        where: { source: { productId }, scoredAt: { gte: todayStart }, viaSearch: true },
+      });
   const scoredTodayAccount = exempt
     ? 0
     : await prisma.scoredPost.count({
-        where: { source: { product: { userId: product.userId } }, scoredAt: { gte: todayStart } },
+        where: { source: { product: { userId: product.userId } }, scoredAt: { gte: todayStart }, viaSearch: true },
       });
 
-  const projectHeadroom = exempt ? Infinity : DAILY_SCORING_CAP_PER_PROJECT - scoredTodayProject;
-  const accountHeadroom = exempt ? Infinity : DAILY_SCORING_CAP_PER_ACCOUNT - scoredTodayAccount;
+  const projectHeadroom = exempt ? Infinity : DAILY_SCORING_CAP_PER_PROJECT_SEARCH - scoredTodayProject;
+  const accountHeadroom = exempt ? Infinity : DAILY_SCORING_CAP_PER_ACCOUNT_SEARCH - scoredTodayAccount;
   let remainingHeadroom = Math.min(projectHeadroom, accountHeadroom);
 
   // Set up every venue (find-or-create its Source, work out what's still
@@ -258,7 +296,7 @@ export async function runSearchIngestionForProduct(productId: string): Promise<S
   // concurrency limiter can pull from every venue at once instead of
   // draining one venue before starting the next.
   const jobs: ScoringBatchJob[] = [];
-  for (const [, results] of byVenue) {
+  for (const [, results] of venuesByUrgency) {
     if (remainingHeadroom <= 0) break;
 
     const first = results[0];

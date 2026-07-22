@@ -477,6 +477,15 @@ model ScoredPost {
   relevanceScore Float
   passed         Boolean
   scoredAt       DateTime @default(now())
+  // Which pathway produced this row — lib/reddit/poll.ts (false) or
+  // search-ingestion.service.ts (true), set in the one place both funnel
+  // through (scoring-pipeline.service.ts's scoreBatchAndCreateSignals).
+  // Lets each pathway count only its own daily scoring-cap usage
+  // (DAILY_SCORING_CAP_PER_PROJECT_POLL/_SEARCH in limits.ts) instead of
+  // sharing one pool where whichever pathway runs first in an invocation
+  // (poll, then search-mode ingestion — see cron/poll-signals/route.ts)
+  // could exhaust it before the other gets a turn.
+  viaSearch      Boolean  @default(false)
 
   @@unique([sourceId, externalId])
   @@map("scored_posts")

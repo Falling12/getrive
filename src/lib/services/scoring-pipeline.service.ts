@@ -135,6 +135,11 @@ export async function scoreBatchAndCreateSignals(
   source: ScoringSource,
   product: ScoringProduct,
   posts: ScorableCandidate[],
+  // Tags every ScoredPost this batch creates so poll.ts and
+  // search-ingestion.service.ts can each count only their own daily
+  // scoring-cap usage (see limits.ts's DAILY_SCORING_CAP_PER_PROJECT_POLL/
+  // _SEARCH) instead of racing for one shared pool.
+  viaSearch: boolean,
   pendingFirstSignalEmails: Map<string, PendingFirstSignalBucket>,
   hooks?: ScoreBatchHooks
 ): Promise<ScoreBatchResult> {
@@ -175,6 +180,7 @@ export async function scoreBatchAndCreateSignals(
           permalink: post.permalink,
           relevanceScore,
           passed,
+          viaSearch,
         },
       });
 
