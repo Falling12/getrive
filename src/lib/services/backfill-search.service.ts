@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { fetchRedditSearchMatches } from "@/lib/reddit/search-reddit";
 import { searchStackExchangeSite } from "@/lib/stackexchange/search-stackexchange";
+import { SE_QUOTA_LOW_THRESHOLD } from "@/lib/limits";
 import type { SearchPlatform } from "@/generated/prisma/client";
 
 // AGENTS.md Phase 1B — read-only backfill search. Runs every ACTIVE
@@ -48,6 +49,16 @@ export interface BackfillSummary {
   queriesRun: number;
   matchesStored: number;
   errors: { query: string; platform: SearchPlatform; message: string }[];
+}
+
+// Shared across every Stack Exchange query in one runBackfillSearchForProduct
+// call so the first query to observe an exhausted/low quota stops the rest of
+// that product's SE batch from independently making requests only to also
+// find it exhausted — and so the low-quota warning below fires once per run,
+// not once per query.
+interface SeQuotaState {
+  exhausted: boolean;
+  warnedLow: boolean;
 }
 
 interface NormalizedMatch {
@@ -195,14 +206,15 @@ async function runStackExchangeQuery(
   query: { id: string; text: string; variantType: string },
   seSites: string[],
   sinceDate: Date,
-  summary: BackfillSummary
+  summary: BackfillSummary,
+  quotaState: SeQuotaState
 ): Promise<void> {
   try {
     const isTag = query.variantType === "PLATFORM_IDIOMATIC";
     let totalMatches = 0;
     let newMatches = 0;
     for (const site of seSites) {
-      const { matches } = await searchStackExchangeSite({
+      const { matches, quotaRemaining } = await searchStackExchangeSite({
         site,
         text: isTag ? undefined : query.text,
         tag: isTag ? query.text : undefined,
@@ -226,6 +238,22 @@ async function runStackExchangeQuery(
           threadState: m.threadState,
         })),
       });
+
+      if (typeof quotaRemaining === "number") {
+        if (quotaRemaining <= 0) {
+          if (!quotaState.exhausted) {
+            console.warn(
+              `[backfill-search] Stack Exchange quota exhausted (site "${site}") — stopping remaining Stack Exchange queries this run`
+            );
+          }
+          quotaState.exhausted = true;
+          break;
+        }
+        if (quotaRemaining <= SE_QUOTA_LOW_THRESHOLD && !quotaState.warnedLow) {
+          console.warn(`[backfill-search] Stack Exchange quota running low: ${quotaRemaining} requests remaining`);
+          quotaState.warnedLow = true;
+        }
+      }
     }
     summary.matchesStored += totalMatches;
     await prisma.searchQuery.update({
@@ -282,6 +310,7 @@ export async function runBackfillSearchForProduct(
 
   const summary: BackfillSummary = { productId, queriesRun: 0, matchesStored: 0, errors: [] };
   const seSites = await stackExchangeSitesForProduct(productId);
+  const seQuotaState: SeQuotaState = { exhausted: false, warnedLow: false };
 
   const redditQueries = queries.filter((q) => q.platform === "REDDIT");
   const seQueries = queries.filter((q) => q.platform === "STACKEXCHANGE");
@@ -295,8 +324,8 @@ export async function runBackfillSearchForProduct(
     })(),
     (async () => {
       for (const query of seQueries) {
-        if (Date.now() >= deadline) break;
-        await runStackExchangeQuery(productId, query, seSites, sinceDate, summary);
+        if (Date.now() >= deadline || seQuotaState.exhausted) break;
+        await runStackExchangeQuery(productId, query, seSites, sinceDate, summary, seQuotaState);
       }
     })(),
   ]);

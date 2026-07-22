@@ -18,16 +18,6 @@ export const isLocalDev = process.env.NODE_ENV !== "production";
 // production. Not exposed anywhere in the UI; checked server-side only, via
 // isExemptFromLimits() below.
 //
-// Exported (along with isUnlimitedAccount) for
-// lib/services/search-pipeline-gate.service.ts, which gates the whole
-// search-intelligence pipeline (Phase 1/2/2C/3A) to these accounts only.
-// That gate deliberately uses isUnlimitedAccount directly, NOT
-// isExemptFromLimits — isExemptFromLimits also passes for isLocalDev
-// (true for any non-production run, including every local test script),
-// which would make the pipeline gate pass for every account whenever it's
-// invoked outside a production deploy — exactly where it's actually run
-// and tested. The pipeline gate needs to mean "this specific account",
-// full stop, not "this account, or anyone at all in dev".
 export const UNLIMITED_ACCOUNT_EMAILS = new Set(["senkcsani@gmail.com", "sonic002.96@gmail.com"]);
 
 export function isUnlimitedAccount(email?: string | null): boolean {
@@ -114,3 +104,11 @@ export const CONSECUTIVE_FAILURE_ALERT_THRESHOLD = 3;
 // failure mode (wrong endpoint, empty-by-construction query, upstream
 // serving nothing) and deserves its own alert rather than looking silent.
 export const CONSECUTIVE_EMPTY_POLL_ALERT_THRESHOLD = 2;
+
+// Below this many remaining Stack Exchange requests, backfill-search.service.ts
+// logs a warning before the shared daily quota is actually exhausted — unlike
+// the poll path's fetch-stackexchange.ts (which only warns once
+// quota_remaining hits exactly 0), a backfill sweep fires many sequential
+// requests across every ACTIVE query for a product, so a warning only at 0
+// gives zero lead time to whichever queries were about to run next.
+export const SE_QUOTA_LOW_THRESHOLD = 50;
