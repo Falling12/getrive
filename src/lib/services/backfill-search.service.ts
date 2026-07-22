@@ -152,12 +152,18 @@ async function storeMatches({
 
 async function runRedditQuery(
   productId: string,
-  query: { id: string; text: string },
-  sinceDate: Date,
+  query: { id: string; text: string; lastRunAt: Date | null },
+  windowFloor: Date,
   summary: BackfillSummary
 ): Promise<void> {
   try {
     await waitForRedditSearchSlot();
+    // First-ever run for this query searches the full BACKFILL_WINDOW_DAYS
+    // floor (the base-rate volume count depends on that initial sweep);
+    // every run after that only needs to search since the query's own last
+    // run, not re-fight the whole trailing window against Reddit's
+    // relevance-ranked, 100-result-capped search every time.
+    const effectiveSince = query.lastRunAt ?? windowFloor;
     // A single retry on 429: the ~60s interval above is Reddit's
     // documented steady-state limit, but a burst of other traffic
     // against this IP (or a prior run finishing recently) can still
@@ -165,12 +171,12 @@ async function runRedditQuery(
     // of those without failing the whole query outright.
     let matches;
     try {
-      matches = await fetchRedditSearchMatches(query.text, sinceDate);
+      matches = await fetchRedditSearchMatches(query.text, effectiveSince);
     } catch (error) {
       if (!(error instanceof Error) || !error.message.includes("429")) throw error;
       await sleep(REDDIT_SEARCH_INTERVAL_MS * 2);
       lastRedditSearchAt = Date.now();
-      matches = await fetchRedditSearchMatches(query.text, sinceDate);
+      matches = await fetchRedditSearchMatches(query.text, effectiveSince);
     }
     const newCount = await storeMatches({
       productId,
@@ -203,14 +209,19 @@ async function runRedditQuery(
 
 async function runStackExchangeQuery(
   productId: string,
-  query: { id: string; text: string; variantType: string },
+  query: { id: string; text: string; variantType: string; lastRunAt: Date | null },
   seSites: string[],
-  sinceDate: Date,
+  windowFloor: Date,
   summary: BackfillSummary,
   quotaState: SeQuotaState
 ): Promise<void> {
   try {
     const isTag = query.variantType === "PLATFORM_IDIOMATIC";
+    // See runRedditQuery's effectiveSince comment — same reasoning applies
+    // here, independent of Reddit's specific relevance-ranking problem,
+    // since Stack Exchange's fromdate is a real server-side filter and a
+    // narrower window is strictly less wasted request volume either way.
+    const effectiveSince = query.lastRunAt ?? windowFloor;
     let totalMatches = 0;
     let newMatches = 0;
     for (const site of seSites) {
@@ -218,7 +229,7 @@ async function runStackExchangeQuery(
         site,
         text: isTag ? undefined : query.text,
         tag: isTag ? query.text : undefined,
-        sinceDate,
+        sinceDate: effectiveSince,
       });
       totalMatches += matches.length;
       newMatches += await storeMatches({
@@ -296,7 +307,11 @@ export async function runBackfillSearchForProduct(
   options?: { deadline?: number }
 ): Promise<BackfillSummary> {
   const deadline = options?.deadline ?? Infinity;
-  const sinceDate = new Date(Date.now() - BACKFILL_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+  // The floor for a query's first-ever run only — runRedditQuery/
+  // runStackExchangeQuery use this just when a query's own lastRunAt is
+  // null; every subsequent run searches since that query's lastRunAt
+  // instead, not this shared 90-day window.
+  const windowFloor = new Date(Date.now() - BACKFILL_WINDOW_DAYS * 24 * 60 * 60 * 1000);
   // Stalest-lastRunAt-first (nulls — never run — first): the same
   // "resume where it left off" ordering measurement-run.service.ts already
   // applies across products, applied here across one product's own
@@ -319,13 +334,13 @@ export async function runBackfillSearchForProduct(
     (async () => {
       for (const query of redditQueries) {
         if (Date.now() >= deadline) break;
-        await runRedditQuery(productId, query, sinceDate, summary);
+        await runRedditQuery(productId, query, windowFloor, summary);
       }
     })(),
     (async () => {
       for (const query of seQueries) {
         if (Date.now() >= deadline || seQuotaState.exhausted) break;
-        await runStackExchangeQuery(productId, query, seSites, sinceDate, summary, seQuotaState);
+        await runStackExchangeQuery(productId, query, seSites, windowFloor, summary, seQuotaState);
       }
     })(),
   ]);
