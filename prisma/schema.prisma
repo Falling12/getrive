@@ -438,6 +438,20 @@ model SearchResult {
   hasAcceptedAnswer Boolean?
   threadState       String?
   fetchedAt         DateTime       @default(now())
+  // Cross-platform dedup link (e.g. the same question cross-posted to both
+  // Reddit and Stack Exchange) — distinct from the productId/platform/venue/
+  // externalId unique constraint above, which only dedups the exact same
+  // post re-found on the exact same platform+venue. NOT YET POPULATED: no
+  // code sets this today. Landing it now is schema-only groundwork; the
+  // actual title-similarity/postedAt-proximity matching logic is deferred
+  // to a follow-up, along with two open questions that need answering
+  // first — whether a linked duplicate should still count toward its
+  // query's matchCount (query-feedback.service.ts's retirement threshold),
+  // and whether venue-mining.service.ts's ScoredPost-based counts could
+  // still double-count a duplicate that was scored once per platform.
+  duplicateOfId     String?
+  duplicateOf       SearchResult?  @relation("SearchResultDuplicates", fields: [duplicateOfId], references: [id])
+  duplicates        SearchResult[] @relation("SearchResultDuplicates")
 
   @@unique([productId, platform, venue, externalId])
   @@index([productId])
