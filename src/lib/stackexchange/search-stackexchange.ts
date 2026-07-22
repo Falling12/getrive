@@ -1,4 +1,5 @@
 import { decodeHtmlEntities, stripHtmlToText } from "@/lib/html-text";
+import { isSemanticallyRelevant } from "@/lib/ai/embedding-relevance";
 
 // Phase 1 backfill search (AGENTS.md 1B) counterpart to
 // fetch-stackexchange.ts's poll-mode /questions fetch — hits /search/advanced
@@ -109,6 +110,31 @@ export async function searchStackExchangeSite({
     };
   });
 
+  // Embedding-similarity backstop, mirroring search-reddit.ts's — same
+  // layered-filter idea (a fast first-pass filter, embeddings on top of
+  // it), but SE has no separate client-side keyword backstop the way
+  // Reddit's isRelevantMatch is: /search/advanced's own server-side text/
+  // tag matching already plays that role, so this runs on every item SE's
+  // API returns rather than a pre-filtered subset. Runs in parallel, not
+  // sequentially like Reddit's per-candidate loop, since there's no
+  // ordering dependency and a single query can return up to
+  // SE_SEARCH_PAGE_SIZE items. Degrades to "keep the match" on any
+  // embedding failure — same reasoning as Reddit: an unrelated API error
+  // shouldn't make otherwise-valid results disappear, especially since this
+  // is the only relevance filter SE search has.
+  const queryText = text ?? tag ?? "";
+  const isRelevant = await Promise.all(
+    matches.map(async (match) => {
+      try {
+        return await isSemanticallyRelevant(queryText, `${match.title} ${match.selftext}`);
+      } catch (error) {
+        console.error(`[search-stackexchange] embedding relevance check failed for site "${site}"`, error);
+        return true;
+      }
+    })
+  );
+  const relevantMatches = matches.filter((_, index) => isRelevant[index]);
+
   // Same backoff/quota discipline as fetch-stackexchange.ts — the caller
   // (backfill-search.service.ts) reads quotaRemaining back to decide whether
   // to keep spending this product's/run's SE budget.
@@ -116,5 +142,5 @@ export async function searchStackExchangeSite({
     await sleep(data.backoff * 1000);
   }
 
-  return { matches, quotaRemaining: data.quota_remaining };
+  return { matches: relevantMatches, quotaRemaining: data.quota_remaining };
 }
