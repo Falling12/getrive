@@ -60,7 +60,10 @@ export default async function ResultsPage({
   return (
     <div className="flex w-full flex-col items-center pt-16 pb-16 md:pt-0">
       <div className="flex w-full max-w-6xl flex-col px-4 pt-8 md:px-8 md:pt-12">
-        <section className="relative mb-12 flex w-full flex-col border-b-2 border-border pb-12 md:mb-14 md:pb-16">
+        <section
+          data-tour="results-primary"
+          className="relative mb-12 flex w-full flex-col border-b-2 border-border pb-12 md:mb-14 md:pb-16"
+        >
           <div className="pointer-events-none absolute top-0 right-0 size-32 rounded-full bg-accent/10 blur-[80px]" />
 
           <h2 className="mb-6 flex items-center gap-3 font-mono text-[11px] tracking-[0.2em] text-muted-foreground uppercase md:mb-8">

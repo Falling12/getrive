@@ -20,7 +20,7 @@ function lineFor(event: MeasurementProgressEvent): string {
     case "product-start":
       return `Measuring ${event.name} (${event.index}/${event.total})`;
     case "product-done":
-      return `${event.name}: ${event.totalMatches} matches/90d — ${event.classification}`;
+      return `${event.name}: ${event.totalMatches} matches/90d — ${event.classification ?? "still gathering data"}`;
     case "product-error":
       return `${event.name}: measurement failed — ${event.message}`;
   }

@@ -80,7 +80,9 @@ export function NavList({
             isActive={isActive}
             badge={item.segment === "home" ? unrepliedSignalCount : undefined}
             onNavigate={onNavigate}
-            dataTour={item.segment === "targeting" ? "nav-targeting" : undefined}
+            dataTour={
+              item.segment === "targeting" ? "nav-targeting" : item.segment === "results" ? "nav-results" : undefined
+            }
           />
         );
       })}

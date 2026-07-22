@@ -41,16 +41,19 @@ const RUN_TIME_BUDGET_MS = 770_000;
 // fit in one budget just rotates through the rest on its next measurement
 // run instead of never finishing this one.
 //
-// Left unchanged when RUN_TIME_BUDGET_MS/maxDuration were raised — this
-// value was already "not derived from" the route ceiling, and the extra
-// sweep headroom is better spent letting more distinct products each get a
-// full slice per sweep (RUN_TIME_BUDGET_MS's job) than growing how much of
-// the sweep a single query-heavy product can consume.
-const PER_PRODUCT_BACKFILL_BUDGET_MS = 150_000;
+// Sized to fit one Reddit query's worst case (~75s throttle wait + fetch/
+// retry overhead) now that backfill-search.service.ts caps Reddit to
+// MAX_REDDIT_QUERIES_PER_BACKFILL_RUN=1/product/run — a 2nd Reddit query
+// was never going to run inside the previous 150s budget anyway (Stack
+// Exchange/HN aren't throttled and finish well inside either budget), so
+// the freed time goes toward RUN_TIME_BUDGET_MS's job instead: more
+// distinct products get touched per sweep, spreading Reddit's scarce
+// app-wide throttle budget across more of the portfolio.
+const PER_PRODUCT_BACKFILL_BUDGET_MS = 100_000;
 
 export type MeasurementProgressEvent =
   | { type: "product-start"; name: string; index: number; total: number }
-  | { type: "product-done"; name: string; totalMatches: number; classification: string }
+  | { type: "product-done"; name: string; totalMatches: number; classification: string | null }
   | { type: "product-error"; name: string; message: string };
 
 export interface MeasurementSweepSummary {

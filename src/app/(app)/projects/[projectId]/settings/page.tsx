@@ -160,8 +160,8 @@ export default async function SettingsPage({
         <SettingsSection title="Product tour" subtitle="Get re-oriented">
           <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
             <p className="max-w-md font-mono text-[11px] leading-relaxed text-muted-foreground">
-              Walk back through the dashboard, signals, and sources — the same guided tour you saw
-              right after onboarding.
+              Walk back through Home, Targeting, and Results — the same guided tour you saw right
+              after onboarding.
             </p>
             <Button
               variant="outline"

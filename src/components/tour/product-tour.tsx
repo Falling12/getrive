@@ -13,17 +13,23 @@ interface TourStep {
   // different segment triggers a real navigation before it can highlight
   // anything, so the tour walks the actual product instead of just the
   // Home page.
-  segment: "home" | "targeting";
+  segment: "home" | "targeting" | "results";
   target: string;
   title: string;
   description: string;
+  // Targeting (v2) is a single "control deck": three module buttons
+  // (positioning/sources/search) each open the same shared drawer below,
+  // and only one module's content ever exists in the DOM at a time. A step
+  // whose target lives inside that drawer has to click its module button
+  // open first — see the `openModule` handling in measure() below.
+  openModule?: "positioning" | "sources" | "search";
 }
 
 // Targets are `data-tour` attributes on the pages themselves (home,
-// targeting) and on both nav implementations (app-sidebar.tsx desktop,
-// mobile-nav-drawer.tsx mobile) — plain DOM selectors rather than refs, since
-// this component looks elements up by querySelector regardless of which
-// component rendered them or which viewport is active.
+// targeting, results) and on both nav implementations (app-sidebar.tsx
+// desktop, mobile-nav-drawer.tsx mobile) — plain DOM selectors rather than
+// refs, since this component looks elements up by querySelector regardless
+// of which component rendered them or which viewport is active.
 const STEPS: TourStep[] = [
   {
     segment: "home",
@@ -42,25 +48,47 @@ const STEPS: TourStep[] = [
     segment: "home",
     target: '[data-tour="nav-targeting"]',
     title: "Targeting",
-    description: "Who you're selling to and where Getrive listens — all the tuning lives on one page. Let's take a look.",
+    description: "Who you're selling to, where Getrive listens, and what it searches for — all the tuning lives on one page. Let's take a look.",
   },
   {
     segment: "targeting",
     target: '[data-tour="positioning"]',
+    openModule: "positioning",
     title: "Who you're selling to",
-    description: "Your positioning statement and ICP sharpen how every post is scored and how reply drafts sound.",
+    description: "Your positioning statement and ICP sharpen how every post is scored and how reply drafts sound. This is worth getting right first — sources and search both build on it.",
+  },
+  {
+    segment: "targeting",
+    target: '[data-tour="source-list"]',
+    openModule: "sources",
+    title: "Your channel mix",
+    description: "Hacker News is broad and immediate, Reddit and Stack Exchange are community/site-specific (mind each one's self-promo rules), and IndieHackers and Ask MetaFilter are more conversational.",
   },
   {
     segment: "targeting",
     target: '[data-tour="add-source"]',
+    openModule: "sources",
     title: "Add a source",
     description: "Add more channels anytime — everything here is fetched automatically, no manual setup required.",
   },
   {
     segment: "targeting",
-    target: '[data-tour="source-list"]',
-    title: "Your channel mix",
-    description: "Hacker News is broad and immediate, Reddit and Stack Exchange are community/site-specific (mind each one's self-promo rules), and IndieHackers and Ask MetaFilter are more conversational.",
+    target: '[data-tour="search-phrases"]',
+    openModule: "search",
+    title: "What Getrive searches for",
+    description: "Search phrases are written automatically from your positioning — approve the ones it proposes, or add your own. These are what actually pull matching posts in on every check.",
+  },
+  {
+    segment: "targeting",
+    target: '[data-tour="nav-results"]',
+    title: "Results",
+    description: "See whether all of this is actually working — users acquired, and which channel is driving them.",
+  },
+  {
+    segment: "results",
+    target: '[data-tour="results-primary"]',
+    title: "Your real outcome",
+    description: "Users acquired through Getrive, tracked back to the specific reply that brought them in.",
   },
 ];
 
@@ -170,7 +198,26 @@ export function ProductTour() {
     pendingWatchRef.current = null;
 
     const tryFind = () => {
-      const el = queryVisible(STEPS[stepIndex].target);
+      const step = STEPS[stepIndex];
+      // Targeting (v2) keeps exactly one module's content in the DOM at a
+      // time — a step targeting content inside that shared drawer has to
+      // open its module first. Checked (and re-clicked if needed) on every
+      // attempt, not just the first, so this self-heals regardless of
+      // whether the control deck has even hydrated yet: if the button isn't
+      // there, this falls through to "not found" and the observer below
+      // retries once it mounts; if it's there but closed, this clicks it and
+      // returns false for this attempt, letting the resulting re-render
+      // (caught by the observer) trigger the next attempt with the drawer
+      // now open.
+      if (step.openModule) {
+        const moduleButton = queryVisible(`[data-tour-module="${step.openModule}"]`);
+        if (!moduleButton) return false;
+        if (moduleButton.getAttribute("aria-expanded") !== "true") {
+          moduleButton.click();
+          return false;
+        }
+      }
+      const el = queryVisible(step.target);
       if (!el) return false;
       const r = el.getBoundingClientRect();
       // A zero-size rect means queryVisible fell through to its

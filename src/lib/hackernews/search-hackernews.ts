@@ -1,4 +1,5 @@
 import { stripHtmlToText } from "@/lib/html-text";
+import { isSemanticallyRelevant } from "@/lib/ai/embedding-relevance";
 
 // Phase 1 backfill search (AGENTS.md 1B) counterpart to
 // fetch-hackernews.ts's poll-mode Ask HN/Show HN feed fetch — hits HN's
@@ -72,5 +73,25 @@ export async function searchHackerNews({
       venue: "hackernews",
     }));
 
-  return { matches };
+  // Embedding-similarity backstop, mirroring search-stackexchange.ts's —
+  // search_by_date sorts purely by recency with no relevance ranking at
+  // all (unlike SE's own server-side text match or Reddit's keyword
+  // pre-filter), so without this every hit containing the query's literal
+  // words verbatim would count regardless of actual topical relevance.
+  // Degrades to "keep the match" on any embedding failure — same reasoning
+  // as the other two platforms: an unrelated API error shouldn't make an
+  // otherwise-valid result disappear.
+  const isRelevant = await Promise.all(
+    matches.map(async (match) => {
+      try {
+        return await isSemanticallyRelevant(text, `${match.title} ${match.selftext}`);
+      } catch (error) {
+        console.error(`[search-hackernews] embedding relevance check failed`, error);
+        return true;
+      }
+    })
+  );
+  const relevantMatches = matches.filter((_, index) => isRelevant[index]);
+
+  return { matches: relevantMatches };
 }

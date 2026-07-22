@@ -66,6 +66,8 @@ export async function getTargetingData(projectId: string) {
     baseRateClass: product.baseRateClass,
     baseRateMatchCount: product.baseRateMatchCount,
     baseRateMeasuredAt: product.baseRateMeasuredAt,
+    queriesEverRun: queries.filter((q) => q.lastSuccessfulRunAt !== null).length,
+    queriesRunnable: queries.filter((q) => q.status !== "PROPOSED").length,
     monthlyRate:
       product.baseRateMatchCount != null
         ? Math.round((product.baseRateMatchCount / 90) * 30)

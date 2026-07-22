@@ -88,7 +88,7 @@ export function PositioningPanel(props: {
 
   if (hasSelection && !editing) {
     return (
-      <div className="flex flex-col gap-3">
+      <div data-tour="positioning" className="flex flex-col gap-3">
         <p className="text-[15px] leading-relaxed text-foreground">{selectedStatement}</p>
         <p className="text-sm text-muted-foreground">
           Primary ICP: <span className="font-medium text-foreground">{selectedIcpName}</span>
@@ -106,7 +106,7 @@ export function PositioningPanel(props: {
 
   if (candidates.statementCandidates.length === 0) {
     return (
-      <div className="flex flex-col items-start gap-4">
+      <div data-tour="positioning" className="flex flex-col items-start gap-4">
         <p className="max-w-[60ch] text-sm leading-relaxed text-muted-foreground">
           Generate a positioning statement and candidate ICPs from your product description —
           you&apos;ll pick one of each.
@@ -121,7 +121,7 @@ export function PositioningPanel(props: {
   }
 
   return (
-    <div className="flex flex-col gap-10">
+    <div data-tour="positioning" className="flex flex-col gap-10">
       {stale && (
         <p className="text-[13px] leading-snug text-muted-foreground">
           <strong className="font-medium text-foreground">Product details changed</strong> since this

@@ -61,6 +61,7 @@ export function ControlDeck({
             <button
               key={module.id}
               type="button"
+              data-tour-module={module.id}
               aria-expanded={isOpen}
               aria-controls="targeting-deck-drawer"
               onClick={() => open(module.id)}

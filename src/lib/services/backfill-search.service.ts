@@ -19,6 +19,19 @@ export const BACKFILL_WINDOW_DAYS = 90;
 // requests in sequence, unlike poll.ts's one-combined-request-per-run shape.
 const REDDIT_SEARCH_INTERVAL_MS = 75_000;
 
+// The sweep's total Reddit throughput is hard-capped by the throttle above
+// regardless of how it's allocated (~RUN_TIME_BUDGET_MS / 75s ≈ 10 queries
+// per sweep, app-wide — see measurement-run.service.ts). The only real
+// lever is how many distinct PRODUCTS those queries land on: exhausting a
+// handful of products' full Reddit query sets before moving on (the old,
+// unbounded behavior) means most of the portfolio never gets any Reddit
+// signal for many sweep cycles. Capping to 1/product/run roughly doubles
+// how many products get touched per sweep for the same fixed budget — a
+// product denied a 2nd Reddit query this run just gets it stalest-first
+// next run (queries are already ordered that way below), so nothing is
+// lost, only spread out over more runs.
+const MAX_REDDIT_QUERIES_PER_BACKFILL_RUN = 1;
+
 // Stack Exchange site(s) to search when a product has no STACKEXCHANGE
 // source of its own yet. softwarerecs is the general-purpose "which tool/app
 // should I use for X" venue (see source-discovery.ts's reasoning for it) —
@@ -394,7 +407,9 @@ export async function runBackfillSearchForProduct(
   const seSites = await stackExchangeSitesForProduct(productId);
   const seQuotaState: SeQuotaState = { exhausted: false, warnedLow: false };
 
-  const redditQueries = queries.filter((q) => q.platform === "REDDIT");
+  const redditQueries = queries
+    .filter((q) => q.platform === "REDDIT")
+    .slice(0, MAX_REDDIT_QUERIES_PER_BACKFILL_RUN);
   const seQueries = queries.filter((q) => q.platform === "STACKEXCHANGE");
   const hackerNewsQueries = queries.filter((q) => q.platform === "HACKERNEWS");
 

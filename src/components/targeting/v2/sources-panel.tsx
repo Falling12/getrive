@@ -90,33 +90,35 @@ export function SourcesTargetingPanel({
 
   return (
     <div className="flex flex-col gap-6">
-      {sources.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No active sources yet — add one below.</p>
-      ) : (
-        <div className="flex flex-wrap gap-2">
-          {sources.map((source) => {
-            const tone = toneFor(source);
-            const isFocused = source.id === focusedId;
-            return (
-              <button
-                key={source.id}
-                type="button"
-                onClick={() => setFocusedId(isFocused ? null : source.id)}
-                aria-pressed={isFocused}
-                className={cn(
-                  "inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-sm transition-colors",
-                  isFocused
-                    ? "border-accent bg-accent/10 text-foreground"
-                    : "border-border text-muted-foreground hover:border-muted-foreground/50 hover:text-foreground"
-                )}
-              >
-                <StatusDot tone={tone} />
-                {formatSourceLabel(source.type, source.name)}
-              </button>
-            );
-          })}
-        </div>
-      )}
+      <div data-tour="source-list" className="flex flex-col gap-2">
+        {sources.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No active sources yet — add one below.</p>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {sources.map((source) => {
+              const tone = toneFor(source);
+              const isFocused = source.id === focusedId;
+              return (
+                <button
+                  key={source.id}
+                  type="button"
+                  onClick={() => setFocusedId(isFocused ? null : source.id)}
+                  aria-pressed={isFocused}
+                  className={cn(
+                    "inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-sm transition-colors",
+                    isFocused
+                      ? "border-accent bg-accent/10 text-foreground"
+                      : "border-border text-muted-foreground hover:border-muted-foreground/50 hover:text-foreground"
+                  )}
+                >
+                  <StatusDot tone={tone} />
+                  {formatSourceLabel(source.type, source.name)}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
       {focused && <SourceDetail key={focused.id} projectId={projectId} source={focused} />}
 
@@ -281,7 +283,7 @@ function AddSources({
   }
 
   return (
-    <div className="flex flex-col gap-6 rounded-2xl bg-secondary/10 p-5">
+    <div data-tour="add-source" className="flex flex-col gap-6 rounded-2xl bg-secondary/10 p-5">
       <div className="flex flex-col gap-2">
         <SectionLabel>Broad feeds</SectionLabel>
         <div className="flex flex-wrap gap-x-6 gap-y-2">

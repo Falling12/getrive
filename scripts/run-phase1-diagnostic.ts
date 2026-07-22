@@ -32,7 +32,7 @@ async function main() {
     productId: string;
     productName: string;
     totalMatches: number;
-    classification: string;
+    classification: string | null;
     byPlatformVenue: { platform: string; venue: string; count: number }[];
     queryErrors: { query: string; platform: string; message: string }[];
   }[] = [];

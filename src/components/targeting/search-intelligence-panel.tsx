@@ -7,6 +7,8 @@ export interface SearchIntelligenceData {
   baseRateClass: string | null;
   baseRateMatchCount: number | null;
   baseRateMeasuredAt: Date | null;
+  queriesEverRun: number;
+  queriesRunnable: number;
   monthlyRate: number | null;
   lastIngestionAt: Date | null;
   lastIngestionMatched: number | null;
@@ -51,7 +53,9 @@ export function SearchIntelligencePanel({
                 className={
                   data.baseRateClass === "HIGH"
                     ? "rounded-full border border-accent/30 bg-accent/10 px-2.5 py-0.5 font-mono text-[10px] tracking-wide text-accent"
-                    : "rounded-full border border-border bg-secondary/20 px-2.5 py-0.5 font-mono text-[10px] tracking-wide text-muted-foreground"
+                    : data.baseRateClass === "MEDIUM"
+                      ? "rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-0.5 font-mono text-[10px] tracking-wide text-amber-600 dark:text-amber-400"
+                      : "rounded-full border border-border bg-secondary/20 px-2.5 py-0.5 font-mono text-[10px] tracking-wide text-muted-foreground"
                 }
               >
                 {data.baseRateClass}
@@ -60,6 +64,10 @@ export function SearchIntelligencePanel({
                 asked about ~{data.monthlyRate}/month ({data.baseRateMatchCount}/90d)
               </span>
             </>
+          ) : data.queriesEverRun > 0 ? (
+            <span className="font-mono text-[11px] text-muted-foreground">
+              Still gathering data — {data.queriesEverRun} of {data.queriesRunnable} search queries have run so far
+            </span>
           ) : (
             <span className="font-mono text-[11px] text-muted-foreground">Not measured yet</span>
           )}

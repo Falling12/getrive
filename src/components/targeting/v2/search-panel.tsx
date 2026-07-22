@@ -35,6 +35,8 @@ export interface TargetingSearchData {
   baseRateClass: string | null;
   baseRateMatchCount: number | null;
   baseRateMeasuredAt: Date | null;
+  queriesEverRun: number;
+  queriesRunnable: number;
   monthlyRate: number | null;
   lastIngestionAt: Date | null;
   lastIngestionMatched: number | null;
@@ -82,9 +84,11 @@ export function SearchTargetingPanel({ projectId, data }: { projectId: string; d
           detail={
             data.baseRateClass
               ? `${data.baseRateClass.toLowerCase()} demand — ${data.baseRateMatchCount} matching posts in the last 90 days${data.baseRateMeasuredAt ? `, measured ${formatRelativeTime(data.baseRateMeasuredAt)}` : ""}.`
-              : "Not measured yet — this estimates how common this pain point already is across everywhere you're listening."
+              : data.queriesEverRun > 0
+                ? `Still gathering data — ${data.queriesEverRun} of ${data.queriesRunnable} search queries have run so far.`
+                : "Not measured yet — this estimates how common this pain point already is across everywhere you're listening."
           }
-          tone={data.baseRateClass === "HIGH" ? "good" : "neutral"}
+          tone={data.baseRateClass === "HIGH" ? "good" : data.baseRateClass === "MEDIUM" ? "medium" : "neutral"}
         >
           <MeasureNow projectId={projectId} initialIsActive={data.isMeasuring} />
         </Readout>
@@ -100,7 +104,7 @@ export function SearchTargetingPanel({ projectId, data }: { projectId: string; d
         />
       </div>
 
-      <div className="flex flex-col gap-5 rounded-2xl bg-secondary/10 p-5">
+      <div data-tour="search-phrases" className="flex flex-col gap-5 rounded-2xl bg-secondary/10 p-5">
         <div className="flex flex-col gap-3">
           <SectionLabel>Search phrases</SectionLabel>
           <p className="text-sm text-muted-foreground">
@@ -138,7 +142,7 @@ function Readout({
   label: string;
   value: string;
   detail: string;
-  tone: "good" | "attention" | "neutral";
+  tone: "good" | "attention" | "medium" | "neutral";
   children?: ReactNode;
 }) {
   return (
@@ -148,7 +152,13 @@ function Readout({
         <span
           className={cn(
             "font-mono text-lg tabular-nums",
-            tone === "attention" ? "text-destructive" : tone === "good" ? "text-accent" : "text-foreground"
+            tone === "attention"
+              ? "text-destructive"
+              : tone === "good"
+                ? "text-accent"
+                : tone === "medium"
+                  ? "text-amber-600 dark:text-amber-400"
+                  : "text-foreground"
           )}
         >
           {value}

@@ -145,10 +145,15 @@ model Product {
   // only "get this out of my way" mechanism for now.
   archivedAt                 DateTime?
   // Set by base-rate classification (see lib/services/base-rate.service.ts)
-  // from the trailing-90-day SearchResult count across every platform —
-  // ≥30 matches/90d is HIGH, below is LOW. Re-measured monthly, not on every
-  // backfill run, so this is a snapshot judgement, not a live count (read
-  // baseRateMatchCount for the raw number the classification was based on).
+  // from a rate — trailing-90-day SearchResult count divided by how many of
+  // the product's SearchQuery rows have ever successfully run — not the raw
+  // match count, so a product with a broader generated query set doesn't
+  // score higher for that reason alone. Null until enough queries have run
+  // to make the rate meaningful (see MIN_QUERIES_FOR_CLASSIFICATION), then
+  // HIGH/MEDIUM/LOW by comparing the rate to MEDIUM_MATCH_RATE_THRESHOLD/
+  // HIGH_MATCH_RATE_THRESHOLD. Re-measured on every sweep that reaches this
+  // product, not just monthly, so this is a snapshot judgement, not a live
+  // count (read baseRateMatchCount for the raw number it was based on).
   baseRateClass              BaseRateClass?
   baseRateMeasuredAt         DateTime?
   baseRateMatchCount         Int?
@@ -319,6 +324,7 @@ model Source {
 
 enum BaseRateClass {
   HIGH
+  MEDIUM
   LOW
 }
 
