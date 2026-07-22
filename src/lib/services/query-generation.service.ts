@@ -1,7 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { generateQuerySet, type QueryItem } from "@/lib/ai/query-generation";
 import { describeSelectedIcp } from "@/lib/services/positioning.service";
-import { assertSearchPipelineGate } from "@/lib/services/search-pipeline-gate.service";
 import type { SearchPlatform } from "@/generated/prisma/client";
 
 // AGENTS.md Phase 1A. Generates a product's QuerySet via the LLM and
@@ -10,9 +9,6 @@ import type { SearchPlatform } from "@/generated/prisma/client";
 // existing (productId, platform, text) row keeps its accumulated stats
 // (matchCount/passCount/avgMatchScore) instead of being duplicated or reset.
 export async function generateAndStoreQuerySet(productId: string): Promise<void> {
-  const { allowed } = await assertSearchPipelineGate(productId, "query-generation");
-  if (!allowed) return;
-
   const product = await prisma.product.findUniqueOrThrow({
     where: { id: productId },
     include: { positioning: true },

@@ -5,8 +5,7 @@ import { cn } from "@/lib/utils";
 import { useMeasureStream } from "@/lib/hooks/use-measure-stream";
 
 // Structurally mirrors components/signals/poll-now-button.tsx, adapted to
-// useMeasureStream's narrower status set (no rate-limit state — this is
-// allowlist-only, low volume).
+// useMeasureStream's narrower status set.
 export function MeasureNowButton({
   projectId,
   initialIsActive,

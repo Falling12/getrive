@@ -1,7 +1,8 @@
 import { requireSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { runMeasurementSweep, type MeasurementProgressEvent } from "@/lib/services/measurement-run.service";
-import { isUnlimitedAccount } from "@/lib/limits";
+import { checkRateLimit, RateLimitError } from "@/lib/rate-limit";
+import { isExemptFromLimits, MANUAL_MEASUREMENT_RATE_LIMIT } from "@/lib/limits";
 
 // Same rationale as api/poll-stream/route.ts: measurement can run for
 // minutes (Reddit's rate limit — see measurement-run.service.ts), and
@@ -16,16 +17,6 @@ const MEASUREMENT_STALE_MINUTES = 20;
 export async function GET(request: Request) {
   const session = await requireSession();
 
-  // This route is reachable by any logged-in user's browser, not just
-  // allowlisted ones — unlike the service-layer gate (which returns an
-  // empty/no-op result), a non-allowlisted caller hitting this endpoint
-  // directly gets a real 403, since there's no legitimate reason for their
-  // own browser to be calling it at all (the UI that would call it is
-  // itself allowlist-gated — see app/(app)/projects/[projectId]/search/page.tsx).
-  if (!isUnlimitedAccount(session.user.email)) {
-    return new Response("Not found", { status: 404 });
-  }
-
   const projectId = new URL(request.url).searchParams.get("projectId");
   if (!projectId) {
     return new Response("Missing projectId", { status: 400 });
@@ -36,6 +27,24 @@ export async function GET(request: Request) {
   });
   if (!product) {
     return new Response("Not found", { status: 404 });
+  }
+
+  // Same reasoning as api/poll-stream/route.ts's rate limit — bounds how
+  // much of Reddit/Stack Exchange's shared search quota and query-generation
+  // AI cost one project's impatient clicking can consume, now that this
+  // trigger runs for every founder instead of just the allowlist.
+  if (!isExemptFromLimits(session.user.email)) {
+    try {
+      await checkRateLimit(`measure:${projectId}`, MANUAL_MEASUREMENT_RATE_LIMIT);
+    } catch (error) {
+      if (error instanceof RateLimitError) {
+        return new Response(
+          "You've measured too many times recently. Please wait a few minutes.",
+          { status: 429 }
+        );
+      }
+      throw error;
+    }
   }
 
   if (product.activeMeasurementStartedAt) {

@@ -1,13 +1,14 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Plus, Check, X, Power } from "lucide-react";
+import { Plus, Check, X, Power, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   addManualQueryAction,
   setQueryActiveAction,
   approveProposedQueryAction,
   dismissProposedQueryAction,
+  deleteQueryAction,
 } from "@/app/(app)/projects/[projectId]/search/actions";
 import type { SearchPlatform, QueryVariantType } from "@/generated/prisma/client";
 
@@ -269,6 +270,9 @@ function ProposedRow({ projectId, query }: { projectId: string; query: QueryRowD
 function RetiredRow({ projectId, query }: { projectId: string; query: QueryRowData }) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [deleted, setDeleted] = useState(false);
+
+  if (deleted) return null;
 
   return (
     <div className="grid gap-2 p-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
@@ -284,21 +288,39 @@ function RetiredRow({ projectId, query }: { projectId: string; query: QueryRowDa
         <StatRow query={query} />
         {error && <p className="text-xs text-destructive">{error}</p>}
       </div>
-      <Button
-        type="button"
-        variant="outline"
-        disabled={isPending}
-        onClick={() =>
-          startTransition(async () => {
-            const result = await setQueryActiveAction(projectId, query.id, true);
-            if (result.error) setError(result.error);
-          })
-        }
-        className="w-fit shrink-0 rounded-md font-mono text-[11px] tracking-wider uppercase"
-      >
-        <Power className="size-3.5" />
-        Reactivate
-      </Button>
+      <div className="flex shrink-0 gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          disabled={isPending}
+          onClick={() =>
+            startTransition(async () => {
+              const result = await deleteQueryAction(projectId, query.id);
+              if (result.error) setError(result.error);
+              else setDeleted(true);
+            })
+          }
+          className="w-fit rounded-md font-mono text-[11px] tracking-wider uppercase"
+        >
+          <Trash2 className="size-3.5" />
+          Delete
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          disabled={isPending}
+          onClick={() =>
+            startTransition(async () => {
+              const result = await setQueryActiveAction(projectId, query.id, true);
+              if (result.error) setError(result.error);
+            })
+          }
+          className="w-fit rounded-md font-mono text-[11px] tracking-wider uppercase"
+        >
+          <Power className="size-3.5" />
+          Reactivate
+        </Button>
+      </div>
     </div>
   );
 }

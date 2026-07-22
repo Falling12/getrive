@@ -1,6 +1,5 @@
 import { prisma } from "@/lib/prisma";
 import { BACKFILL_WINDOW_DAYS } from "@/lib/services/backfill-search.service";
-import { assertSearchPipelineGate } from "@/lib/services/search-pipeline-gate.service";
 import type { BaseRateClass } from "@/generated/prisma/client";
 
 // AGENTS.md Phase 1C — classifies a product's real base rate from its
@@ -24,9 +23,6 @@ export interface BaseRateBreakdown {
 }
 
 export async function classifyBaseRate(productId: string): Promise<BaseRateBreakdown> {
-  const { allowed } = await assertSearchPipelineGate(productId, "base-rate");
-  if (!allowed) return { productId, totalMatches: 0, classification: "LOW", byPlatformVenue: [] };
-
   const sinceDate = new Date(Date.now() - BACKFILL_WINDOW_DAYS * 24 * 60 * 60 * 1000);
   const grouped = await prisma.searchResult.groupBy({
     by: ["platform", "venue"],

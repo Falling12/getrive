@@ -59,12 +59,15 @@ function extractTextFromHtml(html: string): { title: string; text: string } {
   return { title, text };
 }
 
-// Fetches a founder-supplied marketing/product URL for onboarding prefill.
-// Redirects are followed manually (not via fetch's `redirect: "follow"`) so
-// every hop — not just the original URL — gets re-validated by
-// assertPublicHttpUrl before being dialed; that's what closes off
-// redirect-based SSRF bypasses.
-export async function fetchPageText(rawUrl: string): Promise<{ title: string; text: string }> {
+// Fetches a founder-supplied URL's raw HTML — shared by fetchPageText below
+// (onboarding/settings prefill) and the tracking-snippet install check
+// (settings/actions.ts's checkSnippetInstallationAction), which needs the
+// unstripped markup since extractTextFromHtml below deliberately discards
+// <script> contents. Redirects are followed manually (not via fetch's
+// `redirect: "follow"`) so every hop — not just the original URL — gets
+// re-validated by assertPublicHttpUrl before being dialed; that's what
+// closes off redirect-based SSRF bypasses.
+export async function fetchRawHtml(rawUrl: string): Promise<{ html: string; finalUrl: string }> {
   let currentUrl = await assertPublicHttpUrl(rawUrl);
 
   for (let redirects = 0; ; redirects++) {
@@ -100,6 +103,12 @@ export async function fetchPageText(rawUrl: string): Promise<{ title: string; te
     }
 
     const html = await readWithCap(response, MAX_RESPONSE_BYTES);
-    return extractTextFromHtml(html);
+    return { html, finalUrl: currentUrl.toString() };
   }
+}
+
+// Fetches a founder-supplied marketing/product URL for onboarding prefill.
+export async function fetchPageText(rawUrl: string): Promise<{ title: string; text: string }> {
+  const { html } = await fetchRawHtml(rawUrl);
+  return extractTextFromHtml(html);
 }

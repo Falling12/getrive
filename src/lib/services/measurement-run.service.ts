@@ -3,21 +3,13 @@ import { generateAndStoreQuerySet } from "@/lib/services/query-generation.servic
 import { runBackfillSearchForProduct } from "@/lib/services/backfill-search.service";
 import { classifyBaseRate } from "@/lib/services/base-rate.service";
 import { captureServerEvent } from "@/lib/analytics/posthog-server";
-import { UNLIMITED_ACCOUNT_EMAILS } from "@/lib/limits";
 
-// Orchestrates AGENTS.md Phase 1 (query generation + backfill search +
-// base-rate classification) across every eligible product in one sweep —
-// the cron/on-demand-stream counterpart to lib/reddit/poll.ts's
-// pollAllSources, mirroring its shape: stalest-first ordering so a sweep
-// interrupted by the time budget below naturally resumes where it left off
-// next run, and a per-product try/catch so one product's failure doesn't
-// abort the rest.
-//
-// Every product this sweep touches still passes through
-// generateAndStoreQuerySet/runBackfillSearchForProduct/classifyBaseRate's
-// own assertSearchPipelineGate check — the allowlist filter below is about
-// not wasting a Reddit-throttled run on products the gate would just
-// no-op anyway, it is not the enforcement point.
+// Orchestrates Phase 1 (query generation + backfill search + base-rate
+// classification) across every eligible product in one sweep — the
+// cron/on-demand-stream counterpart to lib/reddit/poll.ts's pollAllSources,
+// mirroring its shape: stalest-first ordering so a sweep interrupted by the
+// time budget below naturally resumes where it left off next run, and a
+// per-product try/catch so one product's failure doesn't abort the rest.
 //
 // Reddit's real ~75s/query throttle (backfill-search.service.ts) means a
 // single product with several Reddit queries can exceed this budget (and
@@ -28,6 +20,7 @@ import { UNLIMITED_ACCOUNT_EMAILS } from "@/lib/limits";
 // (query upserts, SearchResult upserts) is idempotent, so a mid-product
 // kill just means that product's baseRateMeasuredAt isn't updated this
 // run, which keeps it stalest-first (and tried again first) next time.
+//
 const RUN_TIME_BUDGET_MS = 270_000;
 
 // Hard ceiling on how long a single product's backfill (the sequential,
@@ -63,11 +56,9 @@ export async function runMeasurementSweep(options?: {
   onProgress?: (event: MeasurementProgressEvent) => void;
 }): Promise<MeasurementSweepSummary> {
   const emit = options?.onProgress ?? (() => {});
-  const allowlistedEmails = [...UNLIMITED_ACCOUNT_EMAILS];
 
   const baseWhere = {
     archivedAt: null,
-    user: { email: { in: allowlistedEmails } },
     ...(options?.productId ? { id: options.productId } : {}),
   };
 

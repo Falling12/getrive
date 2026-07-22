@@ -5,7 +5,7 @@ import { fetchNewHackerNewsStories } from "@/lib/hackernews/fetch-hackernews";
 import { fetchNewIndieHackersPosts } from "@/lib/indiehackers/fetch-indiehackers";
 import { fetchNewQuestionsForSites } from "@/lib/stackexchange/fetch-stackexchange";
 import { fetchNewAskMetaFilterPosts } from "@/lib/askmetafilter/fetch-askmetafilter";
-import { scorePosts, MAX_POSTS_PER_SCORING_BATCH } from "@/lib/ai/signal-scoring";
+import { MAX_POSTS_PER_SCORING_BATCH } from "@/lib/ai/signal-scoring";
 import {
   DAILY_SCORING_CAP_PER_PROJECT,
   DAILY_SCORING_CAP_PER_ACCOUNT,
@@ -13,13 +13,13 @@ import {
   CONSECUTIVE_EMPTY_POLL_ALERT_THRESHOLD,
   isExemptFromLimits,
 } from "@/lib/limits";
-import { notifySignalCreated } from "@/lib/services/notification.service";
-import { sendEmail } from "@/lib/email";
-import { firstSignalsEmailTemplate, type DigestSignalItem } from "@/lib/email-templates";
+import {
+  scoreBatchAndCreateSignals,
+  flushPendingFirstSignalEmails,
+  type PendingFirstSignalBucket,
+} from "@/lib/services/scoring-pipeline.service";
 import { captureServerEvent } from "@/lib/analytics/posthog-server";
-import { describeSelectedIcp } from "@/lib/services/positioning.service";
 import { formatSourceLabel } from "@/lib/sources/format";
-import { appUrl } from "@/lib/config";
 import type { Source, Product, User, Positioning, SourceType } from "@/generated/prisma/client";
 
 // This file lives under lib/reddit/ from when Getrive only ingested Reddit;
@@ -86,7 +86,12 @@ const MAX_STACKEXCHANGE_SOURCES_PER_RUN = 20;
 // of being cut off mid-request, returning a real (partial) summary.
 // Sources it didn't reach are simply still the stalest candidates next
 // run, since lastPolledAt is only updated for sources actually attempted.
-const RUN_TIME_BUDGET_MS = 270_000;
+//
+// Trimmed from 270s to leave headroom for search-mode ingestion, which now
+// runs right after this in the same invocation (see
+// cron/poll-signals/route.ts and api/poll-stream/route.ts) and has no
+// time-budget cutoff of its own.
+const RUN_TIME_BUDGET_MS = 200_000;
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -257,10 +262,7 @@ export async function pollAllSources(options?: {
   // batch. Keyed by productId rather than sent inline per-signal so the
   // eventual email can pick the highest-scoring 2-3 across the whole
   // batch, not just whichever source happened to be processed first.
-  const pendingFirstSignalEmails = new Map<
-    string,
-    { productId: string; productName: string; userEmail: string; signals: DigestSignalItem[] }
-  >();
+  const pendingFirstSignalEmails = new Map<string, PendingFirstSignalBucket>();
 
   const totalSources = redditSources.length + nonRedditSources.length + stackExchangeSources.length;
   let processedCount = 0;
@@ -320,123 +322,40 @@ export async function pollAllSources(options?: {
       const batch = unscoredPosts.slice(i, i + batchSize);
       i += batchSize;
 
-      let results: { relevanceScore: number; reason: string }[];
-      try {
-        results = await scorePosts({
-          productDescription: source.product.description,
-          sourceType: source.type,
-          sourceName: source.name,
-          posts: batch.map((post) => ({ postTitle: post.title, postBody: post.selftext })),
-          icpContext: describeSelectedIcp(source.product.positioning),
-        });
-      } catch (error) {
-        // The whole batch failed together (network/parsing error) — none of
-        // these posts got a ScoredPost row, so they're simply still unscored
-        // next poll (same fault-tolerance as a single post failing before).
-        console.error(`[poll] failed to score a batch of ${batch.length} posts in ${source.name}`, error);
-        Sentry.captureException(error, { tags: { source: source.name, sourceType: source.type } });
-        summary.errors += batch.length;
-        continue;
-      }
-
-      summary.postsScored += results.length;
-      scoredTodayByProduct.set(source.product.id, scoredToday + results.length);
-      scoredTodayByAccount.set(source.product.userId, scoredTodayAccount + results.length);
-
-      for (const [batchIndex, post] of batch.entries()) {
-        try {
-          const { relevanceScore, reason } = results[batchIndex];
-          const passed = relevanceScore >= source.product.relevanceThreshold;
-          emit({
-            type: "post-scored",
-            sourceName: sourceLabel,
-            title: post.title,
-            score: relevanceScore,
-            passed,
-          });
-
-          await prisma.scoredPost.create({
-            data: {
-              sourceId: source.id,
-              externalId: post.id,
-              title: post.title,
-              permalink: post.permalink,
-              relevanceScore,
+      const batchResult = await scoreBatchAndCreateSignals(
+        { id: source.id, type: source.type, name: source.name },
+        source.product,
+        batch.map((post) => ({
+          externalId: post.id,
+          title: post.title,
+          body: post.selftext,
+          permalink: post.permalink,
+          author: post.author,
+          postedAt: post.createdAt,
+        })),
+        pendingFirstSignalEmails,
+        {
+          onScored: (index, relevanceScore, passed) => {
+            emit({
+              type: "post-scored",
+              sourceName: sourceLabel,
+              title: batch[index].title,
+              score: relevanceScore,
               passed,
-            },
-          });
-
-          if (passed) {
-            const signal = await prisma.signal.create({
-              data: {
-                sourceId: source.id,
-                externalId: post.id,
-                title: post.title,
-                body: post.selftext,
-                permalink: post.permalink,
-                author: post.author,
-                relevanceScore,
-                relevanceReason: reason,
-                postedAt: post.createdAt,
-              },
             });
+          },
+          onSignalCreated: (index) => {
             summary.signalsCreated += 1;
             signalsCreatedForSource += 1;
-            emit({ type: "signal-created", sourceName: sourceLabel, title: post.title });
-
-            // A project still waiting on its one-time "first signals ready"
-            // email gets this signal folded into that batch instead of the
-            // ongoing per-signal alert below — otherwise a brand-new
-            // founder's very first scan could fire off both the welcome
-            // email AND 2-3 separate "new signal" emails in the same
-            // minute. Once that email has gone out (or always did, for a
-            // project that predates this feature — see the migration
-            // backfill), this reverts to the normal per-signal alert.
-            if (!source.product.firstSignalsEmailSentAt) {
-              const bucket = pendingFirstSignalEmails.get(source.product.id) ?? {
-                productId: source.product.id,
-                productName: source.product.name,
-                userEmail: source.product.user.email,
-                signals: [],
-              };
-              bucket.signals.push({
-                title: post.title,
-                sourceLabel,
-                relevanceScore,
-                url: `${appUrl}/projects/${source.product.id}/signals/${signal.id}`,
-              });
-              pendingFirstSignalEmails.set(source.product.id, bucket);
-            } else {
-              await notifySignalCreated({
-                userEmail: source.product.user.email,
-                notifyNewSignal: source.product.user.notifyNewSignal,
-                productId: source.product.id,
-                productName: source.product.name,
-                sourceType: source.type,
-                sourceName: source.name,
-                signalId: signal.id,
-                title: post.title,
-                body: post.selftext,
-              });
-            }
-          }
-        } catch (error) {
-          // P2002 = unique constraint on (sourceId, externalId) — a
-          // concurrent poll run (cron overlapping a manual poll, or two
-          // manual polls back to back) already recorded this exact post
-          // for this exact source between our dedup check above and this
-          // insert. Expected under concurrency, not a real failure: the
-          // other run's insert is the source of truth for this post, so
-          // this one just skips it rather than logging/alerting as an error.
-          const isDuplicate =
-            typeof error === "object" && error !== null && "code" in error && error.code === "P2002";
-          if (!isDuplicate) {
-            console.error(`[poll] failed to persist scored post ${post.id} in ${source.name}`, error);
-            Sentry.captureException(error, { tags: { source: source.name, postId: post.id } });
-            summary.errors += 1;
-          }
+            emit({ type: "signal-created", sourceName: sourceLabel, title: batch[index].title });
+          },
         }
-      }
+      );
+
+      summary.postsScored += batchResult.scored;
+      summary.errors += batchResult.errors;
+      scoredTodayByProduct.set(source.product.id, scoredToday + batchResult.scored);
+      scoredTodayByAccount.set(source.product.userId, scoredTodayAccount + batchResult.scored);
     }
 
     // Server-side counterpart to the client-only funnel today — without
@@ -613,27 +532,7 @@ export async function pollAllSources(options?: {
   await pollNonRedditSources([...stackExchangeSources, ...nonRedditSources], stackExchangeSiteSlugs);
   await pollRedditSources(redditSources);
 
-  for (const bucket of pendingFirstSignalEmails.values()) {
-    // Conditional update as the atomic claim: if another process (a
-    // concurrent cron tick, or a manual poll racing the cron) already
-    // flipped this row, `count` comes back 0 and this run simply skips
-    // sending — the same compare-and-swap idea as the daily scoring caps
-    // above, applied to "has this email gone out yet" instead of "how much
-    // has been scored today".
-    const claimed = await prisma.product.updateMany({
-      where: { id: bucket.productId, firstSignalsEmailSentAt: null },
-      data: { firstSignalsEmailSentAt: new Date() },
-    });
-    if (claimed.count === 0) continue;
-
-    const topSignals = [...bucket.signals].sort((a, b) => b.relevanceScore - a.relevanceScore).slice(0, 3);
-    const { subject, html } = firstSignalsEmailTemplate({
-      productName: bucket.productName,
-      signals: topSignals,
-      dashboardUrl: `${appUrl}/projects/${bucket.productId}/home`,
-    });
-    await sendEmail({ to: bucket.userEmail, subject, html });
-  }
+  await flushPendingFirstSignalEmails(pendingFirstSignalEmails);
 
   return summary;
 }

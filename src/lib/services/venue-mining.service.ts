@@ -1,6 +1,5 @@
 import { prisma } from "@/lib/prisma";
 import { formatSourceLabel } from "@/lib/sources/format";
-import { assertSearchPipelineGate } from "@/lib/services/search-pipeline-gate.service";
 import type { SourceType } from "@/generated/prisma/client";
 
 // AGENTS.md Phase 3A — proposes new sources to monitor from real evidence
@@ -31,9 +30,6 @@ export interface VenueMiningCandidate {
 }
 
 export async function getVenueMiningCandidates(productId: string): Promise<VenueMiningCandidate[]> {
-  const { allowed } = await assertSearchPipelineGate(productId, "venue-mining");
-  if (!allowed) return [];
-
   const searchDiscoveredSources = await prisma.source.findMany({
     where: {
       productId,

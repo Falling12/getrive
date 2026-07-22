@@ -23,6 +23,10 @@ import {
   addDiscoveredSourceAction,
   type DiscoveredSourceView,
 } from "@/app/(app)/projects/[projectId]/sources/actions";
+import {
+  promoteVenueMiningSourceAction,
+  dismissVenueMiningCandidateAction,
+} from "@/app/(app)/projects/[projectId]/search/actions";
 import { useDiscoveryState, setDiscoveryState, getDiscoveryState } from "@/lib/sources/discovery-store";
 import { Checkbox, SectionLabel, StatusDot, TextAction } from "@/components/targeting/v2/kit";
 
@@ -443,18 +447,37 @@ function SuggestionCard({
 }) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [dismissed, setDismissed] = useState(false);
   const isActive = suggestion.alreadyActive || added;
+  if (dismissed) return null;
 
   function handleAdd() {
     setError(null);
     startTransition(async () => {
-      const result = await addDiscoveredSourceAction(projectId, {
-        type: suggestion.type,
-        name: suggestion.name,
-        reasoning: suggestion.reasoning,
-      });
+      const result = suggestion.evidence
+        ? await promoteVenueMiningSourceAction(projectId, {
+            type: suggestion.type,
+            name: suggestion.name,
+            reasoning: suggestion.reasoning,
+          })
+        : await addDiscoveredSourceAction(projectId, {
+            type: suggestion.type,
+            name: suggestion.name,
+            reasoning: suggestion.reasoning,
+          });
       if (result.error) setError(result.error);
       else onAdded();
+    });
+  }
+
+  function handleDismiss() {
+    const sourceId = suggestion.sourceId;
+    if (!sourceId) return;
+    setError(null);
+    startTransition(async () => {
+      const result = await dismissVenueMiningCandidateAction(projectId, sourceId);
+      if (result.error) setError(result.error);
+      else setDismissed(true);
     });
   }
 
@@ -470,16 +493,30 @@ function SuggestionCard({
       </div>
       <p className="line-clamp-3 flex-1 text-[13px] leading-relaxed text-muted-foreground">{suggestion.reasoning}</p>
       {error && <p className="text-xs text-destructive">{error}</p>}
-      <Button
-        type="button"
-        variant={isActive ? "outline" : "secondary"}
-        size="sm"
-        disabled={isActive || isPending}
-        onClick={handleAdd}
-        className="w-full rounded-md"
-      >
-        {isActive ? "Added" : isPending ? "Adding…" : "Add"}
-      </Button>
+      <div className="flex gap-2">
+        {!isActive && suggestion.sourceId && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={isPending}
+            onClick={handleDismiss}
+            className="flex-1 rounded-md"
+          >
+            Dismiss
+          </Button>
+        )}
+        <Button
+          type="button"
+          variant={isActive ? "outline" : "secondary"}
+          size="sm"
+          disabled={isActive || isPending}
+          onClick={handleAdd}
+          className="flex-1 rounded-md"
+        >
+          {isActive ? "Added" : isPending ? "Adding…" : "Add"}
+        </Button>
+      </div>
     </div>
   );
 }

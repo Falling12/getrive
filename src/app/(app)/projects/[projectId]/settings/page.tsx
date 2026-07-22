@@ -149,6 +149,7 @@ export default async function SettingsPage({
                 </p>
               </div>
               <TrackingSnippetCard
+                projectId={projectId}
                 captureSnippet={buildCaptureSnippet()}
                 reportSnippet={buildReportSnippet(appUrl)}
               />

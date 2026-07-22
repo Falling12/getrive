@@ -105,3 +105,23 @@ export function buildCaptureSnippet(): string {
 export function buildReportSnippet(appUrl: string): string {
   return `<script>\n${reportSnippetBody()}\n</script>`;
 }
+
+// Disjoint literal substrings from the two bodies above, used to detect
+// whether a founder has already pasted them into their live site (see
+// checkSnippetInstallationAction in settings/actions.ts). Plain substring
+// checks survive minification: minifiers rename identifiers but leave
+// string literals like 'getrive_attr' and '/api/track/signup' untouched.
+// Capture requires both markers since reportSnippetBody() also references
+// the 'getrive_attr' storage key — 'utm_content' only appears in capture.
+const CAPTURE_DETECTION_MARKERS = ["getrive_attr", "utm_content"];
+const REPORT_DETECTION_MARKER = "/api/track/signup";
+
+export function detectTrackingSnippets(html: string): {
+  captureDetected: boolean;
+  reportDetected: boolean;
+} {
+  return {
+    captureDetected: CAPTURE_DETECTION_MARKERS.every((marker) => html.includes(marker)),
+    reportDetected: html.includes(REPORT_DETECTION_MARKER),
+  };
+}

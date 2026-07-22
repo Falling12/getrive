@@ -18,10 +18,11 @@ export interface TargetingModule {
 // modules sharing borders like gauges on a single physical console, each
 // with a recessed numeral readout instead of a text label — rather than
 // three separate cards (v1) or a side-scrolling board (the previous v2
-// draft). Pressing a module opens one shared drawer beneath the strip;
-// pressing the open module again closes it. Nothing here implies a forced
-// sequence — a founder can leave everything collapsed and just read the
-// three readouts, which is the point when nothing needs a second look.
+// draft). Pressing a module opens it in the shared drawer beneath the
+// strip; exactly one module is open at all times (never zero) — pressing
+// the already-open one just keeps it open instead of collapsing down to
+// nothing, so a founder is never looking at a blank strip with no content
+// showing.
 export function ControlDeck({
   modules,
   defaultOpenId,
@@ -29,7 +30,7 @@ export function ControlDeck({
   modules: TargetingModule[];
   defaultOpenId: string | null;
 }) {
-  const [openId, setOpenId] = useState<string | null>(defaultOpenId);
+  const [openId, setOpenId] = useState<string>(defaultOpenId ?? modules[0]?.id ?? "");
   const restoredFromHash = useRef(false);
 
   useEffect(() => {
@@ -44,26 +45,25 @@ export function ControlDeck({
     }
   }, [modules]);
 
-  function toggle(id: string) {
-    const next = openId === id ? null : id;
-    setOpenId(next);
-    window.history.replaceState(null, "", next ? `#${next}` : window.location.pathname + window.location.search);
+  function open(id: string) {
+    setOpenId(id);
+    window.history.replaceState(null, "", `#${id}`);
   }
 
-  const activeModule = modules.find((m) => m.id === openId) ?? null;
+  const activeModule = modules.find((m) => m.id === openId) ?? modules[0] ?? null;
 
   return (
     <div className="flex flex-col">
       <div className="flex flex-col overflow-hidden rounded-xl border border-border/60 sm:flex-row">
         {modules.map((module, index) => {
-          const isOpen = module.id === openId;
+          const isOpen = module.id === activeModule?.id;
           return (
             <button
               key={module.id}
               type="button"
               aria-expanded={isOpen}
               aria-controls="targeting-deck-drawer"
-              onClick={() => toggle(module.id)}
+              onClick={() => open(module.id)}
               className={cn(
                 "group flex flex-1 flex-col items-center gap-3 border-border/60 px-6 py-6 text-center transition-colors",
                 index > 0 && "border-t sm:border-t-0 sm:border-l",
@@ -104,19 +104,12 @@ export function ControlDeck({
       </div>
 
       <div
-        className="grid transition-[grid-template-rows] duration-300 ease-out motion-reduce:transition-none"
-        style={{ gridTemplateRows: activeModule ? "1fr" : "0fr" }}
+        id="targeting-deck-drawer"
+        role="region"
+        aria-label={activeModule?.label}
+        className="mt-6 flex flex-col gap-5 rounded-2xl border border-border/60 bg-secondary/[0.06] p-5 sm:p-6"
       >
-        <div className="overflow-hidden pt-6">
-          <div
-            id="targeting-deck-drawer"
-            role="region"
-            aria-label={activeModule?.label}
-            className="flex flex-col gap-5 rounded-2xl border border-border/60 bg-secondary/[0.06] p-5 sm:p-6"
-          >
-            {activeModule?.content}
-          </div>
-        </div>
+        {activeModule?.content}
       </div>
     </div>
   );

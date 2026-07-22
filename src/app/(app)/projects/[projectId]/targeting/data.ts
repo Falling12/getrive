@@ -1,19 +1,16 @@
 import { requireSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
-import { isUnlimitedAccount } from "@/lib/limits";
 import { getSignupsBySource } from "@/lib/attribution";
-import { getVenueMiningCandidates } from "@/lib/services/venue-mining.service";
 import { isPositioningStale, type IcpCandidate } from "@/lib/services/positioning.service";
 import type { QueryRowData } from "@/components/search/query-management-panel";
 import type { SourceRowItem } from "@/components/targeting/sources-panel";
 import type { SearchIntelligenceData } from "@/components/targeting/search-intelligence-panel";
 
 const MEASUREMENT_STALE_MINUTES = 20;
-const INGESTION_STALE_MINUTES = 20;
 
-// Everything both Targeting layouts (stacked v1, phase-rail v2) need,
-// fetched once here so the two shells can't drift in what they show while
-// the layout experiment is running.
+// Everything the Targeting page needs, fetched once here. Also reused by
+// the retained-but-unlinked /targeting/v1 reference copy (see that page's
+// own comment) so it can't drift from the real page in what it shows.
 export async function getTargetingData(projectId: string) {
   const session = await requireSession();
   const product = await prisma.product.findFirstOrThrow({
@@ -21,25 +18,16 @@ export async function getTargetingData(projectId: string) {
     include: { positioning: true },
   });
 
-  // The search-intelligence pipeline (Phase 1/2/2C/3A) stays allowlist-only
-  // (see lib/limits.ts's UNLIMITED_ACCOUNT_EMAILS) — non-allowlisted
-  // founders simply don't get the section, same information boundary as the
-  // old /search page's notFound(), minus the dead URL.
-  const showSearchPipeline = isUnlimitedAccount(session.user.email);
-
-  const [sources, { bySource }, queries, venueCandidates] = await Promise.all([
+  const [sources, { bySource }, queries] = await Promise.all([
     prisma.source.findMany({
       where: { productId: product.id, selected: true },
       orderBy: [{ type: "asc" }, { rank: "asc" }],
     }),
     getSignupsBySource(product.id),
-    showSearchPipeline
-      ? prisma.searchQuery.findMany({
-          where: { productId: product.id },
-          orderBy: [{ platform: "asc" }, { matchCount: "desc" }],
-        })
-      : Promise.resolve([]),
-    showSearchPipeline ? getVenueMiningCandidates(product.id) : Promise.resolve([]),
+    prisma.searchQuery.findMany({
+      where: { productId: product.id },
+      orderBy: [{ platform: "asc" }, { matchCount: "desc" }],
+    }),
   ]);
 
   const positioning = product.positioning;
@@ -89,14 +77,9 @@ export async function getTargetingData(projectId: string) {
       product.activeMeasurementStartedAt &&
         now - product.activeMeasurementStartedAt.getTime() < MEASUREMENT_STALE_MINUTES * 60_000
     ),
-    isIngesting: Boolean(
-      product.activeIngestionStartedAt &&
-        now - product.activeIngestionStartedAt.getTime() < INGESTION_STALE_MINUTES * 60_000
-    ),
     active: queries.filter((q) => q.status === "ACTIVE").map(toRow),
     proposed: queries.filter((q) => q.status === "PROPOSED").map(toRow),
     retired: queries.filter((q) => q.status === "RETIRED").map(toRow),
-    venueCandidates,
   };
 
   return {
@@ -114,7 +97,6 @@ export async function getTargetingData(projectId: string) {
     hasHackerNews: sources.some((s) => s.type === "HACKERNEWS"),
     hasIndieHackers: sources.some((s) => s.type === "INDIEHACKERS"),
     hasAskMetaFilter: sources.some((s) => s.type === "ASKMETAFILTER"),
-    showSearchPipeline,
     searchData,
   };
 }

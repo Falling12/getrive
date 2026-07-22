@@ -1,22 +1,19 @@
 "use client";
 
 import { useState, useTransition, type FormEvent, type ReactNode } from "react";
-import { Check, Power, X } from "lucide-react";
+import { Check, Power, X, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { formatRelativeTime } from "@/lib/format";
-import { formatSourceLabel } from "@/lib/sources/format";
 import { useMeasureStream } from "@/lib/hooks/use-measure-stream";
 import {
   addManualQueryAction,
   setQueryActiveAction,
   approveProposedQueryAction,
   dismissProposedQueryAction,
-  runIngestionNowAction,
-  promoteVenueMiningSourceAction,
-  dismissVenueMiningCandidateAction,
+  deleteQueryAction,
 } from "@/app/(app)/projects/[projectId]/search/actions";
-import type { SearchPlatform, QueryVariantType, SourceType } from "@/generated/prisma/client";
+import type { SearchPlatform, QueryVariantType } from "@/generated/prisma/client";
 import { SectionLabel } from "@/components/targeting/v2/kit";
 
 export interface TargetingQueryRow {
@@ -28,15 +25,6 @@ export interface TargetingQueryRow {
   passCount: number;
   avgMatchScore: number | null;
   retiredReason: string | null;
-}
-
-export interface TargetingVenueCandidate {
-  sourceId: string;
-  type: SourceType;
-  name: string;
-  reasoning: string;
-  signalCount: number;
-  matchCount: number;
 }
 
 export interface TargetingSearchData {
@@ -51,11 +39,9 @@ export interface TargetingSearchData {
   lastIngestionSignals: number | null;
   lastIngestionErrors: number | null;
   isMeasuring: boolean;
-  isIngesting: boolean;
   active: TargetingQueryRow[];
   proposed: TargetingQueryRow[];
   retired: TargetingQueryRow[];
-  venueCandidates: TargetingVenueCandidate[];
 }
 
 const inputClass =
@@ -104,12 +90,10 @@ export function SearchTargetingPanel({ projectId, data }: { projectId: string; d
           detail={
             data.lastIngestionAt
               ? `Getrive fetched ${data.lastIngestionMatched ?? 0} matching posts and scored ${data.lastIngestionScored ?? 0} for relevance — ${data.lastIngestionSignals ?? 0} were worth replying to. Ran ${formatRelativeTime(data.lastIngestionAt)}.${data.lastIngestionErrors ? ` ${data.lastIngestionErrors} errors.` : ""}`
-              : "Hasn't run yet — this fetches matching posts and scores each one for relevance."
+              : "Runs automatically whenever Getrive checks for new posts — this fetches matching posts and scores each one for relevance."
           }
           tone={data.lastIngestionErrors ? "attention" : "neutral"}
-        >
-          <IngestionNow projectId={projectId} />
-        </Readout>
+        />
       </div>
 
       <div className="flex flex-col gap-5 rounded-2xl bg-secondary/10 p-5">
@@ -136,8 +120,6 @@ export function SearchTargetingPanel({ projectId, data }: { projectId: string; d
           <QueryTable title={`Retired (${data.retired.length})`} rows={data.retired} projectId={projectId} kind="retired" />
         )}
       </div>
-
-      <VenueMining projectId={projectId} candidates={data.venueCandidates} />
     </div>
   );
 }
@@ -153,7 +135,7 @@ function Readout({
   value: string;
   detail: string;
   tone: "good" | "attention" | "neutral";
-  children: ReactNode;
+  children?: ReactNode;
 }) {
   return (
     <div className="flex flex-col gap-2 rounded-2xl bg-secondary/10 p-4">
@@ -169,7 +151,7 @@ function Readout({
         </span>
       </div>
       <p className="text-xs text-muted-foreground">{detail}</p>
-      <div className="mt-1">{children}</div>
+      {children && <div className="mt-1">{children}</div>}
     </div>
   );
 }
@@ -182,31 +164,6 @@ function MeasureNow({ projectId, initialIsActive }: { projectId: string; initial
         {isRunning ? "Measuring…" : "Measure now"}
       </Button>
       {status.kind === "running" && <span className="truncate text-[11px] text-muted-foreground">{status.line}</span>}
-    </div>
-  );
-}
-
-function IngestionNow({ projectId }: { projectId: string }) {
-  const [isPending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
-  return (
-    <div className="flex flex-col gap-1">
-      <Button
-        variant="secondary"
-        size="sm"
-        disabled={isPending}
-        onClick={() =>
-          startTransition(async () => {
-            setError(null);
-            const result = await runIngestionNowAction(projectId);
-            if (result.error) setError(result.error);
-          })
-        }
-        className="w-full rounded-md"
-      >
-        {isPending ? "Ingesting…" : "Run ingestion"}
-      </Button>
-      {error && <span className="text-[11px] text-destructive">{error}</span>}
     </div>
   );
 }
@@ -400,16 +357,28 @@ function QueryTableRow({
             </>
           )}
           {kind === "retired" && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-sm"
-              disabled={isPending}
-              onClick={() => run(() => setQueryActiveAction(projectId, query.id, true))}
-              aria-label="Reactivate"
-            >
-              <Power className="size-3.5" />
-            </Button>
+            <>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                disabled={isPending}
+                onClick={() => run(() => deleteQueryAction(projectId, query.id), () => setResolved(true))}
+                aria-label="Delete"
+              >
+                <Trash2 className="size-3.5" />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                disabled={isPending}
+                onClick={() => run(() => setQueryActiveAction(projectId, query.id, true))}
+                aria-label="Reactivate"
+              >
+                <Power className="size-3.5" />
+              </Button>
+            </>
           )}
         </div>
       </td>
@@ -417,75 +386,3 @@ function QueryTableRow({
   );
 }
 
-function VenueMining({ projectId, candidates }: { projectId: string; candidates: TargetingVenueCandidate[] }) {
-  if (candidates.length === 0) return null;
-
-  return (
-    <div className="flex flex-col gap-3">
-      <SectionLabel>{`${candidates.length} communit${candidates.length === 1 ? "y" : "ies"} noticed`}</SectionLabel>
-      <div className="-mx-1 flex snap-x gap-3 overflow-x-auto px-1 pb-2">
-        {candidates.map((candidate) => (
-          <VenueCard key={candidate.sourceId} projectId={projectId} candidate={candidate} />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function VenueCard({ projectId, candidate }: { projectId: string; candidate: TargetingVenueCandidate }) {
-  const [isPending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
-  const [resolved, setResolved] = useState(false);
-  if (resolved) return null;
-
-  return (
-    <div className="flex w-64 shrink-0 snap-start flex-col gap-2 rounded-2xl bg-secondary/10 p-4">
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-sm font-medium text-foreground">{formatSourceLabel(candidate.type, candidate.name)}</span>
-        <span className="shrink-0 text-[11px] text-accent">
-          {candidate.signalCount}/{candidate.matchCount}
-        </span>
-      </div>
-      <p className="line-clamp-3 flex-1 text-[13px] leading-relaxed text-muted-foreground">{candidate.reasoning}</p>
-      {error && <p className="text-xs text-destructive">{error}</p>}
-      <div className="flex gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={isPending}
-          onClick={() =>
-            startTransition(async () => {
-              const result = await dismissVenueMiningCandidateAction(projectId, candidate.sourceId);
-              if (result.error) setError(result.error);
-              else setResolved(true);
-            })
-          }
-          className="flex-1 rounded-md"
-        >
-          Dismiss
-        </Button>
-        <Button
-          type="button"
-          variant="secondary"
-          size="sm"
-          disabled={isPending}
-          onClick={() =>
-            startTransition(async () => {
-              const result = await promoteVenueMiningSourceAction(projectId, {
-                type: candidate.type,
-                name: candidate.name,
-                reasoning: candidate.reasoning,
-              });
-              if (result.error) setError(result.error);
-              else setResolved(true);
-            })
-          }
-          className="flex-1 rounded-md"
-        >
-          Promote
-        </Button>
-      </div>
-    </div>
-  );
-}

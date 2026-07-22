@@ -1,7 +1,25 @@
-import Link from "next/link";
-import { Filter, Plus, Hash, HelpCircle, MessageCircleQuestion, RadioTower, Users } from "lucide-react";
+"use client";
+
+import Link, { useLinkStatus } from "next/link";
+import { Filter, Plus, Hash, HelpCircle, MessageCircleQuestion, RadioTower, Users, Loader2 } from "lucide-react";
 import type { SourceType } from "@/generated/prisma/client";
 import { cn } from "@/lib/utils";
+
+// Status-filter clicks stay on the same /home route (only searchParams
+// change), so Next's loading.tsx Suspense fallback — scoped to arriving at
+// Home from elsewhere, see home/loading.tsx's own comment — doesn't
+// reliably re-trigger here the way it does for a real cross-page nav. This
+// re-fetches real per-project data server-side, so without some feedback
+// the click just sits there until the new list pops in, reading as broken
+// rather than "working on it." Unmounted (not just hidden) while idle —
+// pills of different lengths ("All" vs. "Dismissed") looked visibly
+// mis-spaced with a permanently reserved icon slot, so a brief width shift
+// on click is the better trade-off here.
+function StatusPendingHint() {
+  const { pending } = useLinkStatus();
+  if (!pending) return null;
+  return <Loader2 aria-hidden className="ml-1.5 inline size-3 animate-spin align-[-1px]" />;
+}
 
 const STATUS_OPTIONS = [
   { value: "all", label: "All" },
@@ -67,6 +85,7 @@ export function SignalFilterBar({
             <Link
               key={option.value}
               href={hrefFor({ status: option.value })}
+              prefetch={false}
               className={cn(
                 "rounded px-4 py-1.5 font-mono text-[11px] tracking-wider whitespace-nowrap uppercase transition-colors",
                 activeStatus === option.value
@@ -75,6 +94,7 @@ export function SignalFilterBar({
               )}
             >
               {option.label}
+              <StatusPendingHint />
             </Link>
           ))}
         </div>

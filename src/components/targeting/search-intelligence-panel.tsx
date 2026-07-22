@@ -1,9 +1,6 @@
 import { formatRelativeTime } from "@/lib/format";
 import { MeasureNowButton } from "@/components/search/measure-now-button";
-import { IngestionNowButton } from "@/components/search/ingestion-now-button";
 import { QueryManagementPanel, type QueryRowData } from "@/components/search/query-management-panel";
-import type { VenueMiningRowData } from "@/components/search/venue-mining-panel";
-import { VenueMiningDisclosure } from "@/components/targeting/venue-mining-disclosure";
 
 export interface SearchIntelligenceData {
   hasPositioning: boolean;
@@ -17,15 +14,14 @@ export interface SearchIntelligenceData {
   lastIngestionSignals: number | null;
   lastIngestionErrors: number | null;
   isMeasuring: boolean;
-  isIngesting: boolean;
   active: QueryRowData[];
   proposed: QueryRowData[];
   retired: QueryRowData[];
-  venueCandidates: VenueMiningRowData[];
 }
 
-// The "What" section body (allowlist-only search pipeline), shared by both
-// Targeting layouts — see sources-panel.tsx for why the bodies are shared.
+// The "What" section body (search intelligence — query generation,
+// measurement, ingestion), shared by both Targeting layouts — see
+// sources-panel.tsx for why the bodies are shared.
 export function SearchIntelligencePanel({
   projectId,
   data,
@@ -94,12 +90,6 @@ export function SearchIntelligencePanel({
           ) : (
             <span className="font-mono text-[11px] text-muted-foreground">Not run yet</span>
           )}
-          {data.isIngesting && (
-            <span className="font-mono text-[10px] text-muted-foreground/60">a run is in progress</span>
-          )}
-          <span className="ml-auto">
-            <IngestionNowButton projectId={projectId} />
-          </span>
         </div>
       </div>
 
@@ -115,8 +105,6 @@ export function SearchIntelligencePanel({
           retired={data.retired}
         />
       </div>
-
-      <VenueMiningDisclosure projectId={projectId} candidates={data.venueCandidates} />
     </>
   );
 }

@@ -1,11 +1,14 @@
 import { requireSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { pollAllSources, POLL_STALE_MINUTES, type PollProgressEvent } from "@/lib/reddit/poll";
+import { runIngestionSweep } from "@/lib/services/ingestion-run.service";
 import { checkRateLimit, RateLimitError } from "@/lib/rate-limit";
 import { isExemptFromLimits, MANUAL_POLL_RATE_LIMIT } from "@/lib/limits";
 
 // Reddit's rate limit forces spacing between subreddits in a batch (see
 // lib/reddit/poll.ts) — a few minutes of wall-clock time per run.
+// Search-mode ingestion (chained after polling completes, below) adds
+// little to this — it has no external rate limit of its own.
 export const maxDuration = 300;
 
 // Streams live progress from a manual "Check for new posts" run as
@@ -81,6 +84,16 @@ export async function GET(request: Request) {
           onProgress: send,
         });
         send({ type: "done", summary });
+        // Scores whatever search-mode measurement has already backfilled
+        // for this project — fast, no external rate limit, so it
+        // piggybacks on the same "check for new posts" click instead of
+        // needing its own trigger. Its own failure shouldn't affect the
+        // poll result already sent above, so it gets its own try/catch.
+        try {
+          await runIngestionSweep({ productId: projectId });
+        } catch (error) {
+          console.error("[poll-stream] chained ingestion failed", error);
+        }
       } catch (error) {
         console.error("[poll-stream] run failed", error);
         send({

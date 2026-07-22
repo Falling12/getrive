@@ -3,24 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { requireSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
-import { isUnlimitedAccount, isExemptFromLimits } from "@/lib/limits";
+import { isExemptFromLimits } from "@/lib/limits";
 import { MAX_ACTIVE_QUERIES_PER_PLATFORM } from "@/lib/services/query-feedback.service";
-import { runIngestionSweep } from "@/lib/services/ingestion-run.service";
 import { addDiscoveredSourceAction } from "@/app/(app)/projects/[projectId]/sources/actions";
 import { captureServerEvent } from "@/lib/analytics/posthog-server";
 import type { SearchPlatform, QueryVariantType } from "@/generated/prisma/client";
-
-// Every action in this file gates on isUnlimitedAccount directly — the
-// underlying service functions (query-generation/backfill-search/
-// search-ingestion/venue-mining) already re-check
-// assertSearchPipelineGate, but these are new CRUD actions that sit above
-// that gate (adding/activating/dismissing a query or venue recommendation
-// isn't itself a pipeline entry point), so they need their own explicit
-// check — defense in depth, same reasoning as
-// search-pipeline-gate.service.ts's own comment.
-function requireAllowlisted(email: string | null | undefined): string | null {
-  return isUnlimitedAccount(email) ? null : "Not found.";
-}
 
 export type QueryActionState = { error?: string; success?: boolean };
 
@@ -33,9 +20,6 @@ export async function addManualQueryAction(
   input: { platform: SearchPlatform; text: string; variantType: QueryVariantType }
 ): Promise<QueryActionState> {
   const session = await requireSession();
-  const gateError = requireAllowlisted(session.user.email);
-  if (gateError) return { error: gateError };
-
   const text = input.text.trim();
   if (!text) return { error: "Query text can't be empty." };
 
@@ -80,9 +64,6 @@ export async function setQueryActiveAction(
   active: boolean
 ): Promise<QueryActionState> {
   const session = await requireSession();
-  const gateError = requireAllowlisted(session.user.email);
-  if (gateError) return { error: gateError };
-
   const query = await findOwnedQuery(queryId, projectId, session.user.id);
   if (!query) return { error: "Query not found." };
 
@@ -109,9 +90,6 @@ export async function setQueryActiveAction(
 
 export async function approveProposedQueryAction(projectId: string, queryId: string): Promise<QueryActionState> {
   const session = await requireSession();
-  const gateError = requireAllowlisted(session.user.email);
-  if (gateError) return { error: gateError };
-
   const query = await findOwnedQuery(queryId, projectId, session.user.id);
   if (!query || query.status !== "PROPOSED") return { error: "Query not found." };
 
@@ -138,9 +116,6 @@ export async function approveProposedQueryAction(projectId: string, queryId: str
 
 export async function dismissProposedQueryAction(projectId: string, queryId: string): Promise<QueryActionState> {
   const session = await requireSession();
-  const gateError = requireAllowlisted(session.user.email);
-  if (gateError) return { error: gateError };
-
   const query = await findOwnedQuery(queryId, projectId, session.user.id);
   if (!query || query.status !== "PROPOSED") return { error: "Query not found." };
 
@@ -153,37 +128,23 @@ export async function dismissProposedQueryAction(projectId: string, queryId: str
   return { success: true };
 }
 
-// Ingestion is fast enough (no external rate limit, see
-// ingestion-run.service.ts) for a plain Server Action rather than
-// measurement's SSE stream — same activeIngestionStartedAt lock shape as
-// activePollStartedAt/activeMeasurementStartedAt, just without needing a
-// streaming route to report live progress through.
-const INGESTION_STALE_MINUTES = 20;
-
-export async function runIngestionNowAction(projectId: string): Promise<QueryActionState> {
+// Scoped to RETIRED only — ACTIVE/PROPOSED queries already have their own
+// lifecycle actions (deactivate, approve/dismiss), and the schema's own
+// comment on QueryStatus.RETIRED explicitly wants retirement kept as an
+// audit trail, not bypassed by letting a still-in-play query vanish
+// outright. This lets a founder clear out one that's just clutter (a typo,
+// a duplicate, one the feedback loop auto-retired) once it's already been
+// decided it's not useful — cascade-deletes its SearchResult rows, but
+// ScoredPost/Signal rows have no FK back to SearchQuery, so any Signal this
+// query ever produced stays completely untouched.
+export async function deleteQueryAction(projectId: string, queryId: string): Promise<QueryActionState> {
   const session = await requireSession();
-  const gateError = requireAllowlisted(session.user.email);
-  if (gateError) return { error: gateError };
+  const query = await findOwnedQuery(queryId, projectId, session.user.id);
+  if (!query || query.status !== "RETIRED") return { error: "Query not found." };
 
-  const product = await prisma.product.findFirst({ where: { id: projectId, userId: session.user.id } });
-  if (!product) return { error: "Project not found." };
-
-  if (product.activeIngestionStartedAt) {
-    const ageMinutes = (Date.now() - product.activeIngestionStartedAt.getTime()) / 60_000;
-    if (ageMinutes < INGESTION_STALE_MINUTES) {
-      return { error: "An ingestion run is already in progress for this project." };
-    }
-  }
-
-  await prisma.product.update({ where: { id: product.id }, data: { activeIngestionStartedAt: new Date() } });
-  try {
-    await runIngestionSweep({ productId: product.id });
-  } finally {
-    await prisma.product.update({ where: { id: product.id }, data: { activeIngestionStartedAt: null } });
-  }
+  await prisma.searchQuery.delete({ where: { id: queryId } });
 
   revalidatePath(`/projects/${projectId}/targeting`);
-  revalidatePath(`/projects/${projectId}/home`);
   return { success: true };
 }
 
@@ -197,9 +158,6 @@ export async function promoteVenueMiningSourceAction(
   candidate: { type: import("@/generated/prisma/client").SourceType; name: string; reasoning: string }
 ): Promise<QueryActionState> {
   const session = await requireSession();
-  const gateError = requireAllowlisted(session.user.email);
-  if (gateError) return { error: gateError };
-
   const result = await addDiscoveredSourceAction(projectId, candidate);
   if (result.error) return result;
 
@@ -218,9 +176,6 @@ export async function dismissVenueMiningCandidateAction(
   sourceId: string
 ): Promise<QueryActionState> {
   const session = await requireSession();
-  const gateError = requireAllowlisted(session.user.email);
-  if (gateError) return { error: gateError };
-
   const source = await prisma.source.findFirst({
     where: { id: sourceId, productId: projectId, product: { userId: session.user.id } },
   });

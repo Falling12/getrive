@@ -234,11 +234,17 @@ export interface DiscoveredSourceView {
   name: string;
   reasoning: string;
   alreadyActive: boolean;
-  // Present only for venue-mining candidates (Phase 3A) — real evidence
-  // this venue already produced Signals, vs. an LLM guess with no track
-  // record. The UI uses this to visually separate "proven" from "guessed"
-  // instead of rendering both identically.
+  // Present only for venue-mining candidates — real evidence this venue
+  // already produced Signals, vs. an LLM guess with no track record. The
+  // UI uses this to visually separate "proven" from "guessed" instead of
+  // rendering both identically.
   evidence?: { signalCount: number; matchCount: number };
+  // Present only alongside `evidence` — the backing (unselected) Source row
+  // venue-mining already created for this venue, needed so the UI can let a
+  // founder dismiss the suggestion (setting venueMiningDismissedAt) instead
+  // of it reappearing on every future scan. An LLM guess has no backing row
+  // yet (it's just a name/type until added), so it never carries this.
+  sourceId?: string;
 }
 
 export type DiscoverSourcesState =
@@ -299,6 +305,7 @@ export async function discoverNewSourcesAction(projectId: string): Promise<Disco
         reasoning: c.reasoning,
         alreadyActive: existingKeys.has(`${c.type}:${c.name.toLowerCase()}`),
         evidence: { signalCount: c.signalCount, matchCount: c.matchCount },
+        sourceId: c.sourceId,
       })),
       ...suggestions.map((s) => ({
         type: s.type,

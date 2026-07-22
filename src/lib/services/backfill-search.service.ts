@@ -1,7 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { fetchRedditSearchMatches } from "@/lib/reddit/search-reddit";
 import { searchStackExchangeSite } from "@/lib/stackexchange/search-stackexchange";
-import { assertSearchPipelineGate } from "@/lib/services/search-pipeline-gate.service";
 import type { SearchPlatform } from "@/generated/prisma/client";
 
 // AGENTS.md Phase 1B — read-only backfill search. Runs every ACTIVE
@@ -268,9 +267,6 @@ export async function runBackfillSearchForProduct(
   productId: string,
   options?: { deadline?: number }
 ): Promise<BackfillSummary> {
-  const { allowed } = await assertSearchPipelineGate(productId, "backfill-search");
-  if (!allowed) return { productId, queriesRun: 0, matchesStored: 0, errors: [] };
-
   const deadline = options?.deadline ?? Infinity;
   const sinceDate = new Date(Date.now() - BACKFILL_WINDOW_DAYS * 24 * 60 * 60 * 1000);
   // Stalest-lastRunAt-first (nulls — never run — first): the same

@@ -9,6 +9,7 @@ import { isPositioningStale } from "@/lib/services/positioning.service";
 import { StatStrip } from "@/components/home/stat-strip";
 import { AttentionCards } from "@/components/home/attention-cards";
 import { AutoFirstScan } from "@/components/home/auto-first-scan";
+import { AutoFirstMeasurement } from "@/components/home/auto-first-measurement";
 import { ExampleSignalPreview } from "@/components/home/example-signal-preview";
 import { SignalFilterBar } from "@/components/signals/signal-filter-bar";
 import { SignalCard } from "@/components/signals/signal-card";
@@ -85,6 +86,23 @@ export default async function HomePage({
     product.activePollStartedAt &&
       Date.now() - product.activePollStartedAt.getTime() < POLL_STALE_MINUTES * 60_000
   );
+  // Same staleness shape as isPollActive/POLL_STALE_MINUTES, just for
+  // measurement's own in-progress lock — kept as a plain literal here
+  // rather than a shared export since measure-stream/route.ts and
+  // targeting/data.ts already each define this same 20-minute figure
+  // inline.
+  const MEASUREMENT_STALE_MINUTES = 20;
+  const isMeasuring = Boolean(
+    product.activeMeasurementStartedAt &&
+      Date.now() - product.activeMeasurementStartedAt.getTime() < MEASUREMENT_STALE_MINUTES * 60_000
+  );
+  // Durable, DB-derived, self-clearing — true exactly until this product's
+  // very first measurement run completes (see base-rate.service.ts's
+  // classifyBaseRate, which sets baseRateMeasuredAt unconditionally once it
+  // runs), then never again. Positioning is measurement's own real
+  // precondition (see measurement-run.service.ts), not an extra gate added
+  // here.
+  const needsFirstMeasurement = Boolean(product.positioning?.selectedStatement) && product.baseRateMeasuredAt === null;
 
   const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
   const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
@@ -234,6 +252,11 @@ export default async function HomePage({
     <div className="flex w-full flex-col items-center pt-16 pb-12 md:pt-0">
       <div className="flex w-full flex-col gap-6 px-4 pt-8 md:px-8 md:pt-12">
         <AutoFirstScan projectId={projectId} initialIsActive={isPollActive} needsFirstScan={needsFirstScan} />
+        <AutoFirstMeasurement
+          projectId={projectId}
+          initialIsActive={isMeasuring}
+          needsFirstMeasurement={needsFirstMeasurement}
+        />
 
         <StatStrip
           projectId={projectId}

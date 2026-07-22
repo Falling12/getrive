@@ -1,13 +1,17 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Sparkles, Radar, Plus, Check, Loader2 } from "lucide-react";
+import { Sparkles, Radar, Plus, Check, Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   discoverNewSourcesAction,
   addDiscoveredSourceAction,
   type DiscoveredSourceView,
 } from "@/app/(app)/projects/[projectId]/sources/actions";
+import {
+  promoteVenueMiningSourceAction,
+  dismissVenueMiningCandidateAction,
+} from "@/app/(app)/projects/[projectId]/search/actions";
 import { formatSourceLabel } from "@/lib/sources/format";
 import {
   useDiscoveryState,
@@ -150,18 +154,37 @@ function SuggestionRow({
 }) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [dismissed, setDismissed] = useState(false);
   const isActive = suggestion.alreadyActive || added;
+  if (dismissed) return null;
 
   function handleAdd() {
     setError(null);
     startTransition(async () => {
-      const result = await addDiscoveredSourceAction(projectId, {
-        type: suggestion.type,
-        name: suggestion.name,
-        reasoning: suggestion.reasoning,
-      });
+      const result = suggestion.evidence
+        ? await promoteVenueMiningSourceAction(projectId, {
+            type: suggestion.type,
+            name: suggestion.name,
+            reasoning: suggestion.reasoning,
+          })
+        : await addDiscoveredSourceAction(projectId, {
+            type: suggestion.type,
+            name: suggestion.name,
+            reasoning: suggestion.reasoning,
+          });
       if (result.error) setError(result.error);
       else onAdded();
+    });
+  }
+
+  function handleDismiss() {
+    const sourceId = suggestion.sourceId;
+    if (!sourceId) return;
+    setError(null);
+    startTransition(async () => {
+      const result = await dismissVenueMiningCandidateAction(projectId, sourceId);
+      if (result.error) setError(result.error);
+      else setDismissed(true);
     });
   }
 
@@ -183,27 +206,41 @@ function SuggestionRow({
         </p>
         {error && <p className="mt-1 text-xs text-destructive">{error}</p>}
       </div>
-      <Button
-        type="button"
-        variant={isActive ? "outline" : "default"}
-        disabled={isActive || isPending}
-        onClick={handleAdd}
-        className="w-fit shrink-0 rounded-md font-mono text-[11px] tracking-wider uppercase"
-      >
-        {isActive ? (
-          <>
-            <Check className="size-3.5" />
-            {suggestion.alreadyActive ? "Active" : "Added"}
-          </>
-        ) : isPending ? (
-          "Adding…"
-        ) : (
-          <>
-            <Plus className="size-3.5" />
-            Add
-          </>
+      <div className="flex shrink-0 items-center gap-2">
+        {!isActive && suggestion.sourceId && (
+          <Button
+            type="button"
+            variant="outline"
+            disabled={isPending}
+            onClick={handleDismiss}
+            className="w-fit rounded-md font-mono text-[11px] tracking-wider uppercase"
+          >
+            <X className="size-3.5" />
+            Dismiss
+          </Button>
         )}
-      </Button>
+        <Button
+          type="button"
+          variant={isActive ? "outline" : "default"}
+          disabled={isActive || isPending}
+          onClick={handleAdd}
+          className="w-fit rounded-md font-mono text-[11px] tracking-wider uppercase"
+        >
+          {isActive ? (
+            <>
+              <Check className="size-3.5" />
+              {suggestion.alreadyActive ? "Active" : "Added"}
+            </>
+          ) : isPending ? (
+            "Adding…"
+          ) : (
+            <>
+              <Plus className="size-3.5" />
+              Add
+            </>
+          )}
+        </Button>
+      </div>
     </div>
   );
 }

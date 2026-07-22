@@ -1,12 +1,14 @@
 import { prisma } from "@/lib/prisma";
 import { runSearchIngestionForProduct } from "@/lib/services/search-ingestion.service";
 import { captureServerEvent } from "@/lib/analytics/posthog-server";
-import { UNLIMITED_ACCOUNT_EMAILS } from "@/lib/limits";
 
-// Orchestrates AGENTS.md Phase 2A/2B/2C/3A (search-mode ingestion, scoring,
-// the query feedback loop, and — by producing the ScoredPost rows venue
-// mining reads — Phase 3A's evidence) across every eligible product in one
-// sweep, the cron/on-demand counterpart to measurement-run.service.ts.
+// Orchestrates search-mode ingestion, scoring, the query feedback loop, and
+// — by producing the ScoredPost rows venue mining reads — venue mining's
+// evidence, across every eligible product in one sweep. Called right after
+// polling in the same invocation (see cron/poll-signals/route.ts and
+// api/poll-stream/route.ts) — scoring whatever search-mode measurement has
+// already backfilled is fast and has no rate limit of its own, so it
+// piggybacks on poll's trigger rather than needing a separate one.
 //
 // Unlike measurement, ingestion has no external rate limit — Signal
 // Scoring runs concurrent batches against a fast, cheap model
@@ -16,22 +18,15 @@ import { UNLIMITED_ACCOUNT_EMAILS } from "@/lib/limits";
 // still processed in a stable, least-recently-run-first order for
 // consistency and so a future higher-volume future doesn't silently starve
 // a product that keeps landing last.
-//
-// runSearchIngestionForProduct re-checks assertSearchPipelineGate itself —
-// the allowlist filter below is about not wasting a run on products the
-// gate would just no-op anyway, it is not the enforcement point.
 export interface IngestionSweepSummary {
   productsIngested: number;
   errors: number;
 }
 
 export async function runIngestionSweep(options?: { productId?: string }): Promise<IngestionSweepSummary> {
-  const allowlistedEmails = [...UNLIMITED_ACCOUNT_EMAILS];
-
   const products = await prisma.product.findMany({
     where: {
       archivedAt: null,
-      user: { email: { in: allowlistedEmails } },
       searchResults: { some: {} },
       ...(options?.productId ? { id: options.productId } : {}),
     },

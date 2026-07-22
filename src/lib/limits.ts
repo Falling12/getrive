@@ -77,6 +77,13 @@ export const MAX_MONITORED_SOURCES_PER_ACCOUNT = 8;
 // back-to-back ones once each finishes.
 export const MANUAL_POLL_RATE_LIMIT = { max: 3, windowMinutes: 15 };
 
+// Enforced in /api/measure-stream, same shape and reasoning as
+// MANUAL_POLL_RATE_LIMIT — bounds how much of Reddit/Stack Exchange's
+// shared search quota and query-generation AI cost a project's impatient
+// clicking can consume, now that measurement isn't allowlist-only/
+// low-volume anymore.
+export const MANUAL_MEASUREMENT_RATE_LIMIT = { max: 3, windowMinutes: 15 };
+
 // Soft cap on Signal Scoring calls per project per day (lib/reddit/poll.ts),
 // covering all source types combined. Hitting this pauses scoring for that
 // project until the window rolls over; already-fetched-but-unscored posts
