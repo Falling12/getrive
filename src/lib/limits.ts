@@ -91,8 +91,8 @@ export const MANUAL_MEASUREMENT_RATE_LIMIT = { max: 3, windowMinutes: 15 };
 // that pathway's scoring for that project until the window rolls over;
 // already-fetched-but-unscored posts are simply re-attempted next run
 // (ScoredPost dedup only records posts actually scored).
-export const DAILY_SCORING_CAP_PER_PROJECT_POLL = 50;
-export const DAILY_SCORING_CAP_PER_PROJECT_SEARCH = 50;
+export const DAILY_SCORING_CAP_PER_PROJECT_POLL = 150;
+export const DAILY_SCORING_CAP_PER_PROJECT_SEARCH = 150;
 
 // Account-wide companions to the per-project sub-caps above, same reasoning
 // as before: closes the gap where a per-project cap alone does nothing to
@@ -101,8 +101,8 @@ export const DAILY_SCORING_CAP_PER_PROJECT_SEARCH = 50;
 // genuinely active projects on the same account aren't throttled by each
 // other on a busy day, but still bounds the account's total blast radius
 // regardless of how many projects exist. Also split 50/50, same caveat.
-export const DAILY_SCORING_CAP_PER_ACCOUNT_POLL = 100;
-export const DAILY_SCORING_CAP_PER_ACCOUNT_SEARCH = 100;
+export const DAILY_SCORING_CAP_PER_ACCOUNT_POLL = 200;
+export const DAILY_SCORING_CAP_PER_ACCOUNT_SEARCH = 150;
 
 // After this many consecutive failed fetch attempts for one source, surface
 // it as "ingestion failing" (Sources page + Dashboard) rather than letting
