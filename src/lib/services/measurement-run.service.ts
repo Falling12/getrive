@@ -74,12 +74,27 @@ export async function runMeasurementSweep(options?: {
   // a product with none yet can't be measured meaningfully. Skipped with a
   // log line per product, not an error, since this is an expected state
   // for a product still mid-onboarding, not a failure.
+  //
+  // Three-key priority, in order: (1) never-measured products
+  // (baseRateMeasuredAt null) ahead of already-measured ones, stalest
+  // first among the already-measured group; (2) within the never-measured
+  // group specifically, products with zero SearchQuery rows ahead of ones
+  // that already have some — a product with no queries yet has made
+  // strictly less progress toward its first real measurement than one
+  // that already has queries generated but just hasn't finished a
+  // backfill/classification pass (e.g. a prior sweep hit its time budget
+  // partway through), so it shouldn't have to wait behind that product on
+  // createdAt order alone; (3) createdAt as the final tiebreaker. Key (2)
+  // is a no-op for the already-measured group in practice (baseRateMeasuredAt
+  // is a precise timestamp, so ties there are effectively impossible),
+  // so it doesn't change that group's existing stalest-first behavior.
   const [products, skippedProducts] = await Promise.all([
     prisma.product.findMany({
       where: { ...baseWhere, positioning: { selectedStatement: { not: null } } },
       select: { id: true, name: true, userId: true },
       orderBy: [
         { baseRateMeasuredAt: { sort: "asc", nulls: "first" } },
+        { searchQueries: { _count: "asc" } },
         { createdAt: "asc" },
       ],
     }),
